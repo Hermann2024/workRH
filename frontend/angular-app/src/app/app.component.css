@@ -1,0 +1,227 @@
+:host {
+  display: block;
+}
+
+.shell {
+  min-height: 100vh;
+  padding: 28px;
+  background:
+    radial-gradient(circle at top left, rgba(0, 35, 149, 0.18), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(239, 51, 64, 0.14), transparent 24%),
+    linear-gradient(180deg, #eef3ff 0%, #f7f3ee 46%, #f4f6fb 100%);
+}
+
+.shell-grid {
+  max-width: 1480px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.shell-aside {
+  display: grid;
+  gap: 18px;
+  position: sticky;
+  top: 24px;
+}
+
+.brand-card,
+.status-card,
+.content-panel {
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(13, 17, 23, 0.08);
+  border-radius: 28px;
+  box-shadow: 0 24px 60px rgba(13, 17, 23, 0.08);
+  backdrop-filter: blur(16px);
+}
+
+.brand-card {
+  padding: 28px;
+  overflow: hidden;
+  position: relative;
+}
+
+.brand-card::after {
+  content: '';
+  position: absolute;
+  inset: auto -12% -20% auto;
+  width: 180px;
+  height: 180px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(0, 35, 149, 0.14), rgba(239, 51, 64, 0.18));
+  filter: blur(8px);
+}
+
+.eyebrow,
+.section-caption,
+.status-label {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 11px;
+  font-weight: 700;
+  color: #3450a3;
+}
+
+.brand-card h1 {
+  margin: 16px 0 12px;
+  font-size: clamp(2.2rem, 3vw, 3.3rem);
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+  color: #081225;
+}
+
+.brand-copy {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  max-width: 26rem;
+  color: rgba(8, 18, 37, 0.72);
+  font-size: 1rem;
+}
+
+.highlight-list {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.highlight-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(8, 18, 37, 0.05);
+  color: #081225;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-card {
+  padding: 22px 24px;
+  display: grid;
+  gap: 8px;
+}
+
+.status-card strong {
+  font-size: 1.1rem;
+  color: #081225;
+}
+
+.status-card span {
+  color: rgba(8, 18, 37, 0.68);
+  font-size: 0.95rem;
+}
+
+.shell-main {
+  display: grid;
+  gap: 18px;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 18px;
+  padding: 18px 22px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(13, 17, 23, 0.08);
+  border-radius: 24px;
+  box-shadow: 0 16px 36px rgba(13, 17, 23, 0.06);
+  backdrop-filter: blur(14px);
+}
+
+.nav-block,
+.account-block {
+  display: grid;
+  gap: 10px;
+}
+
+.account-block {
+  justify-items: end;
+}
+
+.nav {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.nav-link,
+.session-chip,
+.nav-logout {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(13, 17, 23, 0.08);
+  background: rgba(255, 255, 255, 0.86);
+  color: #081225;
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.nav-link:hover,
+.nav-logout:hover {
+  transform: translateY(-1px);
+  border-color: rgba(0, 35, 149, 0.2);
+  box-shadow: 0 10px 24px rgba(0, 35, 149, 0.1);
+}
+
+.active-link {
+  background: linear-gradient(135deg, #0a2f8a 0%, #ef3340 100%);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 14px 30px rgba(239, 51, 64, 0.22);
+}
+
+.session-chip {
+  background: rgba(8, 18, 37, 0.04);
+  color: rgba(8, 18, 37, 0.76);
+}
+
+.nav-logout {
+  cursor: pointer;
+}
+
+.content-panel {
+  padding: 18px;
+}
+
+@media (max-width: 1100px) {
+  .shell {
+    padding: 18px;
+  }
+
+  .shell-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .shell-aside {
+    position: static;
+  }
+}
+
+@media (max-width: 720px) {
+  .topbar {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .account-block {
+    justify-items: start;
+  }
+
+  .content-panel {
+    padding: 12px;
+  }
+}

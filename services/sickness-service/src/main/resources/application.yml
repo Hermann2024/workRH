@@ -1,0 +1,5 @@
+spring:
+  application:
+    name: sickness-service
+  config:
+    import: optional:configserver:http://localhost:8888

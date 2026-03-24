@@ -1,0 +1,53 @@
+<main class="shell">
+  <section class="shell-grid">
+    <aside class="shell-aside">
+      <div class="brand-card">
+        <p class="eyebrow">{{ shellSummary().badge }}</p>
+        <h1>{{ shellSummary().title }}</h1>
+        <p class="brand-copy">{{ shellSummary().description }}</p>
+
+        <div class="highlight-list">
+          <span class="highlight-pill" *ngFor="let item of shellSummary().highlights">{{ item }}</span>
+        </div>
+      </div>
+
+      <div class="status-card">
+        <p class="status-label">Etat</p>
+        <strong>{{ shellSummary().statusLabel }}</strong>
+        <span>{{ isAuthenticated() ? 'Navigation metier active' : 'Connectez-vous pour acceder aux modules securises' }}</span>
+      </div>
+    </aside>
+
+    <section class="shell-main">
+      <header class="topbar">
+        <div class="nav-block">
+          <p class="section-caption">Navigation</p>
+          <nav class="nav">
+            <a *ngFor="let item of navItems()"
+               [routerLink]="item.route"
+               routerLinkActive="active-link"
+               [routerLinkActiveOptions]="{ exact: item.route === '/login' || item.route === '/pricing' }"
+               class="nav-link">
+              {{ item.label }}
+            </a>
+          </nav>
+        </div>
+
+        <div class="account-block">
+          <span class="session-chip" *ngIf="session() as currentSession">
+            {{ currentSession.email }} - {{ currentSession.tenantId }}
+          </span>
+          <button class="nav-logout" *ngIf="isAuthenticated()" (click)="logout()">
+            Logout
+          </button>
+        </div>
+      </header>
+
+      <section class="content-panel">
+        <router-outlet></router-outlet>
+      </section>
+    </section>
+  </section>
+</main>
+
+<app-toast-container></app-toast-container>

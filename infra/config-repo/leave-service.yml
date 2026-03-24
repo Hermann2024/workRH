@@ -1,0 +1,7 @@
+server:
+  port: 8082
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5433/workrh_leaves
+    username: workrh
+    password: workrh

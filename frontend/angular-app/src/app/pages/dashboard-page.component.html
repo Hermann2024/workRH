@@ -1,0 +1,119 @@
+<ng-container *ngIf="vm() as data; else loadingState">
+  <section class="hero">
+    <div>
+      <p class="section-tag">Operations</p>
+      <h2>Conformite frontaliere et pilotage RH</h2>
+      <p class="lede">
+        Le dashboard combine la consommation annuelle fiscale, la politique hebdomadaire
+        et les droits fonctionnels issus du plan SaaS courant.
+      </p>
+    </div>
+
+    <div class="subscription-card" *ngIf="currentPlan() as plan">
+      <span class="pill">Plan actif</span>
+      <h3>{{ plan.name }}</h3>
+      <p class="pricing-amount" *ngIf="!plan.customPricing">{{ plan.monthlyPrice }}EUR/mois</p>
+      <p class="pricing-amount" *ngIf="plan.customPricing">Sur devis</p>
+      <p class="meta">{{ data.subscription.seatsPurchased }} utilisateurs</p>
+      <p class="meta">Statut: {{ data.subscription.status }}</p>
+      <p class="meta">Renouvellement: {{ data.subscription.renewsAt }}</p>
+    </div>
+  </section>
+
+  <section class="stats-grid">
+    <article class="metric-card">
+      <span>Jours utilises</span>
+      <strong>{{ data.dashboard.totalUsedDays }}</strong>
+    </article>
+    <article class="metric-card">
+      <span>Jours restants</span>
+      <strong>{{ data.dashboard.totalRemainingDays }}</strong>
+    </article>
+    <article class="metric-card alert-card">
+      <span>Alertes fiscales</span>
+      <strong>{{ data.dashboard.fiscalAlerts }}</strong>
+    </article>
+    <article class="metric-card alert-card">
+      <span>Alertes hebdo</span>
+      <strong>{{ data.dashboard.weeklyAlerts }}</strong>
+    </article>
+  </section>
+
+  <section class="grid-layout">
+    <section class="panel">
+      <div class="section-head">
+        <div>
+          <p class="section-tag">Droits</p>
+          <h2>Fonctionnalites actives</h2>
+        </div>
+        <p class="hint">Bloquees cote backend par le plan et les options de montee en gamme.</p>
+      </div>
+
+      <div class="entitlement-grid">
+        <article class="entitlement" [class.enabled]="isEntitled('TELEWORK_COMPLIANCE_34')">
+          <h3>Calcul 34 jours</h3>
+          <p>Controle fiscal annuel pour les salaries frontaliers.</p>
+        </article>
+        <article class="entitlement" [class.enabled]="isEntitled('SICKNESS_MANAGEMENT')">
+          <h3>Arrets maladie</h3>
+          <p>Disponible a partir du plan Pro.</p>
+        </article>
+        <article class="entitlement" [class.enabled]="isEntitled('EXPORTS')">
+          <h3>Exports</h3>
+          <p>CSV et PDF du reporting RH.</p>
+        </article>
+        <article class="entitlement" [class.enabled]="isEntitled('DECLARATION_AUDIT')">
+          <h3>Historique detaille</h3>
+          <p>Reserve aux offres Premium ou a l'option audit.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-head">
+        <div>
+          <p class="section-tag">Entreprise</p>
+          <h2>Vue entreprise</h2>
+        </div>
+        <p class="hint">Pays de reference : FR.</p>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Employe</th>
+            <th>Mois</th>
+            <th>Annuel</th>
+            <th>Restant</th>
+            <th>Hebdo</th>
+            <th>Fiscal</th>
+            <th>Politique</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let employee of data.companySummary.employees">
+            <td>#{{ employee.employeeId }}</td>
+            <td>{{ employee.monthUsedDays }}</td>
+            <td>{{ employee.annualUsedDays }}/{{ employee.policy.annualFiscalLimitDays }}</td>
+            <td>{{ employee.annualRemainingDays }}</td>
+            <td>{{ employee.policy.weeklyUsedDays }}/{{ employee.policy.weeklyCompanyLimitDays }}</td>
+            <td>
+              <span class="badge" [class.badge-alert]="employee.annualFiscalLimitExceeded">
+                {{ employee.annualFiscalLimitExceeded ? 'Alerte' : 'OK' }}
+              </span>
+            </td>
+            <td>
+              <span class="badge" [class.badge-alert]="employee.policy.weeklyCompanyLimitExceeded">
+                {{ employee.policy.weeklyCompanyLimitExceeded ? 'Alerte' : 'OK' }}
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </section>
+</ng-container>
+
+<ng-template #loadingState>
+  <app-loading-skeleton></app-loading-skeleton>
+</ng-template>

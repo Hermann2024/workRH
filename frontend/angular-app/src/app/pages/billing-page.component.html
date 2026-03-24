@@ -1,0 +1,164 @@
+<ng-container *ngIf="vm() as data; else loadingState">
+  <section class="panel billing-panel">
+    <div class="section-head">
+      <div>
+        <p class="section-tag">Facturation</p>
+        <h2>Abonnement et paiements</h2>
+      </div>
+      <p class="hint">Paiement Stripe par carte ou prelevement SEPA, avec 14 jours d'essai gratuit.</p>
+    </div>
+
+    <div class="checkout-banner success" *ngIf="checkoutState() === 'success'">
+      Checkout termine. Stripe mettra a jour l'abonnement apres confirmation du paiement ou le debut de l'essai.
+    </div>
+    <div class="checkout-banner cancelled" *ngIf="checkoutState() === 'cancelled'">
+      Checkout annule. Aucun changement n'a ete applique a l'abonnement.
+    </div>
+
+    <div class="billing-grid">
+      <article class="subscription-card billing-hero-card" *ngIf="currentPlan() as plan">
+        <div class="billing-card-top">
+          <div>
+            <span class="pill">Plan courant</span>
+            <h3>{{ plan.name }}</h3>
+          </div>
+          <span class="plan-code">{{ plan.code }}</span>
+        </div>
+
+        <div class="pricing-price-block billing-price-block">
+          <p class="pricing-amount" *ngIf="!plan.customPricing">{{ plan.monthlyPrice }}EUR/mois</p>
+          <p class="pricing-amount" *ngIf="plan.customPricing">Sur devis</p>
+          <span class="pricing-cycle">Abonnement actif avec renouvellement mensuel</span>
+        </div>
+
+        <div class="billing-facts">
+          <div class="billing-fact">
+            <span>Statut</span>
+            <strong>{{ data.subscription.status }}</strong>
+          </div>
+          <div class="billing-fact">
+            <span>Debut</span>
+            <strong>{{ data.subscription.startsAt }}</strong>
+          </div>
+          <div class="billing-fact">
+            <span>Prochaine echeance</span>
+            <strong>{{ data.subscription.renewsAt }}</strong>
+          </div>
+          <div class="billing-fact" *ngIf="daysRemaining() !== null">
+            <span>Jours restants</span>
+            <strong>{{ daysRemaining() }}</strong>
+          </div>
+        </div>
+
+        <div class="billing-notes">
+          <p class="meta" *ngIf="data.subscription.pendingPlanCode">Plan en attente: {{ data.subscription.pendingPlanCode }}</p>
+          <p class="meta" *ngIf="data.subscription.cancelAtPeriodEnd">Annulation programmee en fin de periode</p>
+          <p class="meta" *ngIf="data.subscription.cancellationReason">Motif: {{ data.subscription.cancellationReason }}</p>
+        </div>
+
+        <button class="checkout-button danger"
+                *ngIf="!data.subscription.cancelAtPeriodEnd"
+                (click)="cancelSubscription()"
+                [disabled]="actionLoading() === 'cancel'">
+          {{ actionLoading() === 'cancel' ? 'Annulation...' : "Annuler l'abonnement" }}
+        </button>
+        <button class="checkout-button outline"
+                *ngIf="data.subscription.cancelAtPeriodEnd"
+                (click)="reactivateSubscription()"
+                [disabled]="actionLoading() === 'reactivate'">
+          {{ actionLoading() === 'reactivate' ? 'Reactivation...' : "Reactiver l'abonnement" }}
+        </button>
+      </article>
+
+      <article class="panel subpanel billing-tech-card">
+        <div class="section-head">
+          <div>
+            <p class="section-tag">Stripe</p>
+            <h2>Etat technique</h2>
+          </div>
+        </div>
+
+        <div class="billing-tech-list">
+          <div class="billing-tech-item">
+            <span>Customer email</span>
+            <strong>{{ data.subscription.stripeCustomerEmail || 'Non renseigne' }}</strong>
+          </div>
+          <div class="billing-tech-item">
+            <span>Checkout session</span>
+            <strong>{{ data.subscription.stripeCheckoutSessionId || 'Aucune' }}</strong>
+          </div>
+          <div class="billing-tech-item">
+            <span>Subscription Stripe</span>
+            <strong>{{ data.subscription.stripeSubscriptionId || 'Aucune' }}</strong>
+          </div>
+          <div class="billing-tech-item" *ngIf="data.subscription.cancelledAt">
+            <span>Date d'annulation</span>
+            <strong>{{ data.subscription.cancelledAt }}</strong>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="panel billing-panel">
+    <div class="section-head">
+      <div>
+        <p class="section-tag">Upgrade</p>
+        <h2>Changer de plan</h2>
+      </div>
+      <p class="hint">L'essai est interrompu si aucun abonnement payant n'est converti apres 14 jours.</p>
+    </div>
+
+    <div class="pricing-grid pricing-grid-page">
+      <article class="pricing-card" *ngFor="let plan of visiblePlans()" [class.recommended]="plan.recommended">
+        <div class="pricing-glow"></div>
+        <div class="pricing-top pricing-top-page">
+          <div class="pricing-chip-row">
+            <span class="plan-code">{{ plan.code }}</span>
+            <span class="recommend-badge" *ngIf="plan.recommended">Recommande</span>
+          </div>
+          <div class="pricing-heading">
+            <h3>{{ plan.name }}</h3>
+          </div>
+          <div class="pricing-price-block">
+            <p class="pricing-amount" *ngIf="!plan.customPricing">{{ plan.monthlyPrice }}EUR</p>
+            <p class="pricing-amount" *ngIf="plan.customPricing">Sur devis</p>
+            <span class="pricing-cycle" *ngIf="!plan.customPricing">Changement de plan immediat depuis la facturation</span>
+          </div>
+        </div>
+
+        <button class="checkout-button"
+                *ngIf="!plan.customPricing"
+                (click)="startCheckout(plan.code)"
+                [disabled]="checkoutLoading() === plan.code">
+          {{ checkoutLoading() === plan.code ? 'Redirection...' : 'Passer sur ce plan' }}
+        </button>
+
+        <button class="checkout-button outline"
+                *ngIf="!plan.customPricing && data.subscription.planCode !== plan.code"
+                (click)="upgradeTo(plan.code)"
+                [disabled]="actionLoading() === 'upgrade-' + plan.code">
+          {{ actionLoading() === 'upgrade-' + plan.code ? 'Upgrade...' : 'Mise à jour' }}
+        </button>
+
+        <button class="checkout-button outline"
+                *ngIf="!plan.customPricing && data.subscription.planCode !== plan.code"
+                (click)="downgradeTo(plan.code)"
+                [disabled]="actionLoading() === 'downgrade-' + plan.code">
+          {{ actionLoading() === 'downgrade-' + plan.code ? 'Downgrade...' : 'Retrograder le plan' }}
+        </button>
+
+        <button class="checkout-button outline" *ngIf="plan.customPricing">
+          Contacter l'equipe commerciale
+        </button>
+      </article>
+    </div>
+  </section>
+</ng-container>
+
+<ng-template #loadingState>
+  <section class="panel loading-panel">
+    <h2>Chargement du billing</h2>
+    <p>Recuperation des statuts d'abonnement, de l'essai et des informations Stripe.</p>
+  </section>
+</ng-template>

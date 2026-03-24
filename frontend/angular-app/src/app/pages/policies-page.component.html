@@ -1,0 +1,88 @@
+<ng-container *ngIf="vm() as data; else loadingState">
+  <section class="panel policies-panel">
+    <div class="section-head">
+      <div>
+        <p class="section-tag">Policies</p>
+        <h2>Regles de teletravail par pays</h2>
+      </div>
+      <p class="hint">Les limites sont parametrees par tenant et par code pays.</p>
+    </div>
+
+    <div class="stats-grid policies-stats-grid">
+      <article class="metric-card policies-metric-card" *ngFor="let item of policyStats()">
+        <span>{{ item.label }}</span>
+        <strong>{{ item.value }}</strong>
+      </article>
+    </div>
+
+    <div class="policies-table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Employe</th>
+          <th>Pays</th>
+          <th>Limite fiscale</th>
+          <th>Restant</th>
+          <th>Limite hebdo</th>
+          <th>Utilise hebdo</th>
+          <th>Etat</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let employee of data.companySummary.employees">
+          <td>#{{ employee.employeeId }}</td>
+          <td>{{ employee.policy.countryCode }}</td>
+          <td>{{ employee.policy.annualFiscalLimitDays }}</td>
+          <td>{{ employee.policy.annualFiscalRemainingDays }}</td>
+          <td>
+            <span *ngIf="employee.policy.weeklyLimitEnabled">{{ employee.policy.weeklyCompanyLimitDays }}</span>
+            <span *ngIf="!employee.policy.weeklyLimitEnabled">Desactivee</span>
+          </td>
+          <td>{{ employee.policy.weeklyUsedDays }}</td>
+          <td>
+            <span class="badge" [class.badge-alert]="employee.policy.annualFiscalLimitExceeded || employee.policy.weeklyCompanyLimitExceeded">
+              {{ employee.policy.annualFiscalLimitExceeded || employee.policy.weeklyCompanyLimitExceeded ? 'Alerte' : 'OK' }}
+            </span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section class="panel policies-panel">
+    <div class="section-head">
+      <div>
+        <p class="section-tag">Admin</p>
+        <h2>Actions a raccorder</h2>
+      </div>
+      <p class="hint">Ces actions sont deja prises en charge cote backend.</p>
+    </div>
+
+    <div class="entitlement-grid">
+      <article class="entitlement enabled">
+        <h3>Creer une policy</h3>
+        <p>Endpoint disponible sur <code>/api/telework/policies</code>.</p>
+      </article>
+      <article class="entitlement enabled">
+        <h3>Modifier par pays</h3>
+        <p>Prise en charge de <code>FR</code>, <code>BE</code>, <code>DE</code> ou <code>DEFAULT</code>.</p>
+      </article>
+      <article class="entitlement enabled">
+        <h3>Desactiver la limite hebdomadaire</h3>
+        <p>Permet de conserver la seule contrainte fiscale annuelle.</p>
+      </article>
+      <article class="entitlement enabled">
+        <h3>Fallback tenant</h3>
+        <p>Une policy <code>DEFAULT</code> sert de base si aucun pays specifique n'est defini.</p>
+      </article>
+    </div>
+  </section>
+</ng-container>
+
+<ng-template #loadingState>
+  <section class="panel loading-panel">
+    <h2>Chargement des policies</h2>
+    <p>Recuperation des seuils fiscaux et RH par pays frontalier.</p>
+  </section>
+</ng-template>

@@ -1,0 +1,7 @@
+server:
+  port: 8085
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5436/workrh_notifications
+    username: workrh
+    password: workrh

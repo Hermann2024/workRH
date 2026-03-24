@@ -1,0 +1,285 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  NODE_VERSION: '18'
+  JAVA_VERSION: '17'
+
+jobs:
+  # ===== FRONTEND BUILD & TEST =====
+  frontend:
+    name: Frontend Build & Test
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend/angular-app
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: frontend/angular-app/package-lock.json
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Lint code
+      run: npm run lint
+
+    - name: Run unit tests
+      run: npm test -- --watch=false --browsers=ChromeHeadless
+
+    - name: Build production
+      run: npm run build --prod
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: frontend-build
+        path: frontend/angular-app/dist/
+        retention-days: 7
+
+  # ===== BACKEND BUILD & TEST =====
+  backend:
+    name: Backend Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ env.JAVA_VERSION }}
+        distribution: 'temurin'
+        cache: maven
+
+    - name: Cache Maven packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+        restore-keys: ${{ runner.os }}-m2
+
+    - name: Build with Maven
+      run: mvn clean compile -DskipTests
+
+    - name: Run unit tests
+      run: mvn test
+
+    - name: Run integration tests
+      run: mvn verify -Dspring.profiles.active=test
+
+    - name: Package application
+      run: mvn package -DskipTests
+
+    - name: Upload JAR artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: backend-jars
+        path: '**/target/*.jar'
+        retention-days: 7
+
+  # ===== SECURITY SCAN =====
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: [frontend, backend]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  # ===== DOCKER BUILD =====
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: [frontend, backend]
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download frontend build
+      uses: actions/download-artifact@v4
+      with:
+        name: frontend-build
+        path: frontend/angular-app/dist/
+
+    - name: Download backend JARs
+      uses: actions/download-artifact@v4
+      with:
+        name: backend-jars
+        path: target/
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Build and push API Gateway
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./platform/api-gateway/Dockerfile
+        push: true
+        tags: hermann2024/workrh-api-gateway:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Build and push User Service
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./services/user-service/Dockerfile
+        push: true
+        tags: hermann2024/workrh-user-service:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Build and push other services
+      run: |
+        for service in leave-service sickness-service telework-service reporting-service notification-service subscription-service; do
+          echo "Building $service..."
+          docker build -f services/$service/Dockerfile -t hermann2024/workrh-$service:latest .
+          docker push hermann2024/workrh-$service:latest
+        done
+
+  # ===== DEPLOYMENT =====
+  deploy:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [docker]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: staging
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure kubectl
+      uses: azure/k8s-set-context@v3
+      with:
+        method: kubeconfig
+        kubeconfig: ${{ secrets.KUBE_CONFIG }}
+
+    - name: Deploy to Kubernetes
+      run: |
+        # Update images in k8s manifests
+        sed -i 's|image:.*|image: hermann2024/workrh-api-gateway:latest|' infra/k8s/api-gateway-deployment.yaml
+        sed -i 's|image:.*|image: hermann2024/workrh-user-service:latest|' infra/k8s/user-service-deployment.yaml
+
+        # Apply k8s manifests
+        kubectl apply -f infra/k8s/
+
+        # Wait for rollout
+        kubectl rollout status deployment/api-gateway
+        kubectl rollout status deployment/user-service
+
+    - name: Run health checks
+      run: |
+        # Wait for services to be ready
+        sleep 30
+
+        # Check API Gateway health
+        curl -f http://api-gateway-service/health || exit 1
+
+        # Check User Service health
+        curl -f http://user-service/health || exit 1
+
+  # ===== NOTIFICATION =====
+  notify:
+    name: Notification
+    runs-on: ubuntu-latest
+    needs: [frontend, backend, security, docker, deploy]
+    if: always()
+
+    steps:
+    - name: Notify on success
+      if: needs.frontend.result == 'success' && needs.backend.result == 'success' && needs.security.result == 'success'
+      run: |
+        echo "✅ All checks passed!"
+        # Add Slack/Discord notification here
+
+    - name: Notify on failure
+      if: failure()
+      run: |
+        echo "❌ Pipeline failed!"
+        # Add failure notification here
+
+  # ===== PERFORMANCE TEST =====
+  performance:
+    name: Performance Test
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run Lighthouse CI
+      uses: treosh/lighthouse-ci-action@v10
+      with:
+        urls: |
+          http://staging.workrh.com/
+        configPath: .lighthouserc.json
+        uploadArtifacts: true
+        temporaryPublicStorage: true
+
+    - name: Run API load test
+      run: |
+        # Simple load test with curl
+        for i in {1..10}; do
+          curl -s -o /dev/null -w "%{http_code}\n" http://api-gateway-service/health &
+        done
+        wait
+
+# ===== CONFIGURATION =====
+# Required secrets in GitHub repository:
+# - DOCKERHUB_USERNAME
+# - DOCKERHUB_TOKEN
+# - KUBE_CONFIG (base64 encoded)
+#
+# Optional secrets:
+# - SLACK_WEBHOOK_URL
+# - DISCORD_WEBHOOK_URL
+#
+# Branch protection rules recommended:
+# - Require status checks to pass
+# - Require branches to be up to date
+# - Include administrators
+#
+# Environment protection:
+# - staging: requires approval for deployment
