@@ -14,6 +14,9 @@
     <div class="checkout-banner cancelled" *ngIf="checkoutState() === 'cancelled'">
       Checkout annule. Aucun changement n'a ete applique a l'abonnement.
     </div>
+    <div class="checkout-banner cancelled" *ngIf="checkoutError() as errorMessage">
+      {{ errorMessage }}
+    </div>
 
     <div class="billing-grid">
       <article class="subscription-card billing-hero-card" *ngIf="currentPlan() as plan">

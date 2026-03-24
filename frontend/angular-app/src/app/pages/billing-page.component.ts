@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../auth.service';
 import { SubscriptionCheckoutService } from '../subscription-checkout.service';
@@ -25,6 +26,7 @@ export class BillingPageComponent {
   readonly loading = signal(true);
   readonly checkoutLoading = signal<string | null>(null);
   readonly actionLoading = signal<string | null>(null);
+  readonly checkoutError = signal<string | null>(null);
   readonly vm = signal<WorkRhVm | null>(null);
   readonly checkoutState = signal<'success' | 'cancelled' | null>(null);
   readonly visiblePlans = computed(() => this.vm()?.plans.filter((plan) => plan.code !== 'ENTERPRISE') ?? []);
@@ -64,6 +66,7 @@ export class BillingPageComponent {
     }
 
     this.checkoutLoading.set(planCode);
+    this.checkoutError.set(null);
     this.checkoutService.createCheckout({
       planCode,
       seatsPurchased: this.vm()?.subscription.seatsPurchased ?? 25,
@@ -79,7 +82,10 @@ export class BillingPageComponent {
         this.checkoutLoading.set(null);
         window.location.href = response.checkoutUrl;
       },
-      error: () => this.checkoutLoading.set(null)
+      error: (error: HttpErrorResponse) => {
+        this.checkoutLoading.set(null);
+        this.checkoutError.set(error.error?.message ?? 'Le paiement a echoue. Verifiez la configuration Stripe et reessayez.');
+      }
     });
   }
 

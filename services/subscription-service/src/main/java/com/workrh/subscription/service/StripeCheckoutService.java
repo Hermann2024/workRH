@@ -28,6 +28,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
 @Service
@@ -114,11 +115,16 @@ public class StripeCheckoutService {
             addRecurringLineItem(form, lineIndex, "Advanced export option", EXPORT_OPTION_PRICE, advancedExportOptionStripePriceId);
         }
 
-        String response = restTemplate.postForObject(
-                stripeBaseUrl + "/v1/checkout/sessions",
-                new HttpEntity<>(form, headers),
-                String.class
-        );
+        String response;
+        try {
+            response = restTemplate.postForObject(
+                    stripeBaseUrl + "/v1/checkout/sessions",
+                    new HttpEntity<>(form, headers),
+                    String.class
+            );
+        } catch (HttpStatusCodeException exception) {
+            throw new BadRequestException(extractStripeErrorMessage(exception));
+        }
 
         try {
             JsonNode json = objectMapper.readTree(response);
@@ -386,6 +392,22 @@ public class StripeCheckoutService {
         return amount.multiply(BigDecimal.valueOf(100))
                 .setScale(0, RoundingMode.HALF_UP)
                 .toPlainString();
+    }
+
+    private String extractStripeErrorMessage(HttpStatusCodeException exception) {
+        String responseBody = exception.getResponseBodyAsString();
+        if (responseBody != null && !responseBody.isBlank()) {
+            try {
+                JsonNode json = objectMapper.readTree(responseBody);
+                String message = json.path("error").path("message").asText();
+                if (message != null && !message.isBlank()) {
+                    return "Stripe checkout error: " + message;
+                }
+            } catch (Exception ignored) {
+                // Fall back to a generic message when Stripe does not return a JSON error payload.
+            }
+        }
+        return "Stripe checkout error: " + exception.getStatusCode();
     }
 
     private SubscriptionPlan getPlan(PlanCode planCode) {
