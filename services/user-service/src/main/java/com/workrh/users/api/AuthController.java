@@ -2,6 +2,7 @@ package com.workrh.users.api;
 
 import com.workrh.users.api.dto.LoginRequest;
 import com.workrh.users.api.dto.LoginResponse;
+import com.workrh.users.api.dto.SignupRequest;
 import com.workrh.users.service.EmployeeService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,5 +23,10 @@ public class AuthController {
     @PostMapping("/login")
     public LoginResponse login(@Valid @RequestBody LoginRequest request) {
         return employeeService.login(request);
+    }
+
+    @PostMapping("/signup")
+    public LoginResponse signup(@Valid @RequestBody SignupRequest request) {
+        return employeeService.signup(request);
     }
 }

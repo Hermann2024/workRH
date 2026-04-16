@@ -2,11 +2,11 @@ spring:
   application:
     name: leave-service
   config:
-    import: optional:configserver:http://localhost:8888
+    import: optional:configserver:http://localhost:9888
   datasource:
-    url: jdbc:postgresql://localhost:5433/workrh_leaves
+    url: jdbc:postgresql://localhost:6433/workrh_leaves
     username: workrh
     password: workrh
 
 server:
-  port: 8082
+  port: 9082

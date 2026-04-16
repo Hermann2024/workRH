@@ -1,7 +1,12 @@
 server:
-  port: 8081
+  port: 9081
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/workrh_users
+    url: jdbc:postgresql://localhost:6432/workrh_users
     username: workrh
     password: workrh
+subscription:
+  service:
+    base-url: ${SUBSCRIPTION_SERVICE_BASE_URL:http://localhost:9087}
+  bootstrap:
+    key: ${WORKRH_SUBSCRIPTION_BOOTSTRAP_KEY:workrh-signup-bootstrap}

@@ -3,6 +3,7 @@ package com.workrh.reporting.api;
 import com.workrh.common.subscription.FeatureCode;
 import com.workrh.common.subscription.RequiresFeature;
 import com.workrh.reporting.api.dto.DashboardResponse;
+import com.workrh.reporting.api.dto.MonthlyStatsResponse;
 import com.workrh.reporting.service.ReportingService;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -26,9 +27,16 @@ public class ReportingController {
 
     @GetMapping("/dashboard")
     @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
-    @RequiresFeature(FeatureCode.DASHBOARD_ADVANCED)
+    @RequiresFeature(FeatureCode.DASHBOARD_BASIC)
     public DashboardResponse dashboard(@RequestParam int year, @RequestParam int month) {
         return reportingService.dashboard(year, month);
+    }
+
+    @GetMapping("/monthly-stats")
+    @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
+    @RequiresFeature(FeatureCode.MONTHLY_STATS)
+    public MonthlyStatsResponse monthlyStats(@RequestParam int year) {
+        return reportingService.monthlyStats(year);
     }
 
     @GetMapping(value = "/dashboard/export/csv", produces = "text/csv")

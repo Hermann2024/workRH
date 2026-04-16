@@ -1,101 +1,74 @@
-<ng-container *ngIf="vm() as data; else loadingState">
-  <section class="panel pricing-panel">
+<ng-container *ngIf="loadError() as errorMessage; else pricingState">
+  <section class="panel loading-panel">
+    <h2>Offres indisponibles</h2>
+    <p>{{ errorMessage }}</p>
+  </section>
+</ng-container>
+
+<ng-template #pricingState>
+  <ng-container *ngIf="vm() as data; else loadingState">
+    <section class="panel pricing-panel">
       <div class="section-head">
         <div>
           <p class="section-tag">Tarifs</p>
           <h2>Abonnements WorkRH</h2>
         </div>
-      <p class="hint">Carte et prelevement SEPA via Stripe Checkout, avec 14 jours d'essai gratuit.</p>
+        <p class="hint">Choisissez une offre puis connectez-vous pour la gerer.</p>
       </div>
 
-    <div class="pricing-grid pricing-grid-page">
-      <article class="pricing-card" *ngFor="let plan of visiblePlans()" [class.recommended]="plan.recommended">
-        <div class="pricing-glow"></div>
-        <div class="pricing-top pricing-top-page">
-          <div class="pricing-chip-row">
-            <span class="plan-code">{{ plan.code }}</span>
-            <span class="recommend-badge" *ngIf="plan.recommended">Recommande</span>
-          </div>
-
-          <div class="pricing-heading">
-            <h3>{{ plan.name }}</h3>
-            <p class="small-copy pricing-seat-copy">
-              <span *ngIf="plan.minEmployees">{{ plan.minEmployees }}+</span>
-              <span *ngIf="plan.maxEmployees"> a {{ plan.maxEmployees }}</span>
-              employes
-            </p>
-          </div>
-
-          <div class="pricing-price-block">
-            <p class="pricing-amount" *ngIf="!plan.customPricing">{{ plan.monthlyPrice }}EUR</p>
-            <p class="pricing-amount" *ngIf="plan.customPricing">Sur devis</p>
-            <span class="pricing-cycle" *ngIf="!plan.customPricing">par mois, sans engagement de longue duree</span>
-          </div>
-        </div>
-
-        <ul class="feature-list">
-          <li *ngFor="let feature of plan.features">
-            {{ feature }}
-          </li>
-        </ul>
-
-        <button class="checkout-button"
-                *ngIf="!plan.customPricing"
-                (click)="startCheckout(plan.code)"
-                [disabled]="showCheckoutLoading()">
-          {{ showCheckoutLoading() ? 'Configuration...' : 'Choisir ce plan' }}
-        </button>
-
-        <button class="checkout-button outline" *ngIf="plan.customPricing">
-          Contacter l'equipe commerciale
-        </button>
-      </article>
-    </div>
-  </section>
-
-  <section class="panel">
-    <div class="section-head">
-      <div>
-        <p class="section-tag">Upsell</p>
-        <h2>Options monetisables</h2>
+      <div class="checkout-banner success" *ngIf="previewModeActive() && showDemoHints">
+        Mode demo actif sur ce compte. Toutes les fonctionnalites sont accessibles sans passer par Stripe.
       </div>
-      <p class="hint">SMS, audit et exports avances pour augmenter l'ARPU.</p>
-    </div>
 
-    <div class="entitlement-grid">
-      <article class="entitlement enabled">
-        <h3>SMS</h3>
-        <p>Option additionnelle vendable au mois.</p>
-      </article>
-      <article class="entitlement enabled">
-        <h3>Audit RH automatique</h3>
-        <p>Monetisation ideale pour les organisations sensibles a la conformite.</p>
-      </article>
-      <article class="entitlement enabled">
-        <h3>Export avance</h3>
-        <p>Upsell naturel pour comptabilite et reporting.</p>
-      </article>
-      <article class="entitlement enabled">
-        <h3>Onboarding Premium</h3>
-        <p>Levier de revenus de service pour les comptes les plus exigeants.</p>
-      </article>
-    </div>
-  </section>
-</ng-container>
+      <div class="pricing-grid pricing-grid-page">
+        <article class="pricing-card" *ngFor="let plan of visiblePlans()" [class.recommended]="plan.recommended">
+          <div class="pricing-glow"></div>
+
+          <div class="pricing-top pricing-top-page">
+            <div class="pricing-chip-row">
+              <span class="plan-code">{{ plan.code }}</span>
+              <span class="recommend-badge" *ngIf="plan.recommended">Recommande</span>
+            </div>
+
+            <div class="pricing-heading">
+              <h3>{{ plan.name }}</h3>
+              <p class="small-copy pricing-seat-copy">
+                <span *ngIf="plan.minEmployees">{{ plan.minEmployees }}+</span>
+                <span *ngIf="plan.maxEmployees"> a {{ plan.maxEmployees }}</span>
+                employes
+              </p>
+            </div>
+
+            <div class="pricing-price-block">
+              <p class="pricing-amount" *ngIf="!plan.customPricing">{{ plan.monthlyPrice }}EUR</p>
+              <p class="pricing-amount" *ngIf="plan.customPricing">Sur devis</p>
+              <span class="pricing-cycle" *ngIf="!plan.customPricing">par mois, sans engagement</span>
+            </div>
+          </div>
+
+          <div class="plan-detail-block">
+            <h4>Fonctionnalites incluses</h4>
+            <ul class="feature-list compact">
+              <li *ngFor="let feature of plan.features">
+                {{ featureLabel(feature) }}
+              </li>
+            </ul>
+          </div>
+
+          <button class="checkout-button"
+                  [class.outline]="plan.customPricing"
+                  (click)="openPlan(plan)">
+            {{ planActionLabel(plan) }}
+          </button>
+        </article>
+      </div>
+    </section>
+  </ng-container>
+</ng-template>
 
 <ng-template #loadingState>
   <section class="panel loading-panel">
-    <h2>Chargement du pricing</h2>
-    <p>Recuperation du catalogue d'offres et des options monetisables.</p>
+    <h2>Chargement des offres</h2>
+    <p>Recuperation des offres.</p>
   </section>
 </ng-template>
-
-<!-- Composant de loading amélioré pour le checkout -->
-<app-checkout-loading
-  [isVisible]="showCheckoutLoading()"
-  [title]="'Configuration du paiement'"
-  [message]="checkoutMessage()"
-  [currentStep]="checkoutStep()"
-  [progress]="checkoutProgress()"
-  (onCancel)="cancelCheckout()">
-</app-checkout-loading>

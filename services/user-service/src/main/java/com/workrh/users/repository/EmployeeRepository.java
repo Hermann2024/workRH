@@ -9,6 +9,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     Optional<Employee> findByEmailAndTenantId(String email, String tenantId);
     List<Employee> findAllByTenantId(String tenantId);
     Optional<Employee> findByIdAndTenantId(Long id, String tenantId);
+    boolean existsByTenantId(String tenantId);
     boolean existsByEmailAndTenantId(String email, String tenantId);
     boolean existsByEmailAndTenantIdAndIdNot(String email, String tenantId, Long id);
 }

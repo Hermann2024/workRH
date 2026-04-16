@@ -1,5 +1,72 @@
+server:
+  port: 9085
+
 spring:
   application:
     name: notification-service
   config:
-    import: optional:configserver:http://localhost:8888
+    import: optional:configserver:http://localhost:9888
+  datasource:
+    url: jdbc:postgresql://localhost:6436/workrh_notifications
+    username: workrh
+    password: workrh
+    driver-class-name: org.postgresql.Driver
+  kafka:
+    bootstrap-servers: localhost:19092
+    consumer:
+      auto-offset-reset: earliest
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+  mail:
+    host: ${SMTP_HOST:}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${SMTP_AUTH:true}
+          starttls:
+            enable: ${SMTP_STARTTLS_ENABLE:true}
+
+security:
+  jwt:
+    secret: ${WORKRH_JWT_SECRET:c29tZS1yZWFsbHktbG9uZy1iYXNlNjQtc2VjcmV0LWZvci13b3JrcmgtZGVtby1vbmx5}
+    expiration: 86400
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:9761/eureka
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+notification:
+  automations:
+    enabled: ${WORKRH_AUTOMATION_EMAILS_ENABLED:true}
+    from-email: ${WORKRH_AUTOMATION_FROM_EMAIL:no-reply@workrh.app}
+    default-recipient: ${WORKRH_AUTOMATION_DEFAULT_RECIPIENT:}
+    threshold-recipient: ${WORKRH_AUTOMATION_THRESHOLD_RECIPIENT:}
+    leave-recipient: ${WORKRH_AUTOMATION_LEAVE_RECIPIENT:}
+  billing:
+    enabled: ${WORKRH_BILLING_EMAIL_ENABLED:true}
+    application-name: WorkRH
+    from-email: ${WORKRH_BILLING_FROM_EMAIL:no-reply@workrh.app}
+  support:
+    from-email: ${WORKRH_SUPPORT_FROM_EMAIL:support@workrh.app}
+    sla-hours-priority: ${WORKRH_SUPPORT_SLA_HOURS_PRIORITY:4}
+    sla-hours-onboarding: ${WORKRH_SUPPORT_SLA_HOURS_ONBOARDING:24}
+  sms:
+    enabled: ${WORKRH_SMS_ENABLED:true}
+    provider: ${WORKRH_SMS_PROVIDER:demo-webhook}
+    from: ${WORKRH_SMS_FROM:WorkRH}
+    webhook-url: ${WORKRH_SMS_WEBHOOK_URL:}
+    api-key: ${WORKRH_SMS_API_KEY:}

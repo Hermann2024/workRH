@@ -1,7 +1,14 @@
 server:
-  port: 8085
+  port: 9085
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5436/workrh_notifications
+    url: jdbc:postgresql://localhost:6436/workrh_notifications
     username: workrh
     password: workrh
+notification:
+  automations:
+    enabled: true
+    from-email: no-reply@workrh.app
+    default-recipient: ""
+    threshold-recipient: ""
+    leave-recipient: ""

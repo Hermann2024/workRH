@@ -1,0 +1,92 @@
+<section class="login-layout">
+  <article class="login-intro panel">
+    <p class="section-tag">Inscription</p>
+    <h2>Creer votre espace</h2>
+
+    <div class="login-points">
+      <div class="login-point">
+        <strong>1. Espace</strong>
+        <span>Choisissez le nom technique de votre tenant.</span>
+      </div>
+      <div class="login-point">
+        <strong>2. Compte RH</strong>
+        <span>Le premier compte est cree avec les droits admin et RH.</span>
+      </div>
+      <div class="login-point">
+        <strong>3. Facturation</strong>
+        <span>Vous serez redirige vers la facturation pour finaliser l'abonnement.</span>
+      </div>
+    </div>
+
+    <p class="hint" *ngIf="requestedPlan() as plan">Plan demande : <strong>{{ plan }}</strong></p>
+    <p class="hint">Vous utilisez votre propre adresse email. WorkRH ne cree pas de boite mail.</p>
+  </article>
+
+  <section class="panel login-panel">
+    <div class="login-panel-head">
+      <div>
+        <p class="section-tag">Nouveau compte</p>
+        <h2>Creer un compte</h2>
+        <p class="hint">Exemple de tenant: `acme-lu`.</p>
+      </div>
+    </div>
+
+    <div class="error-message" *ngIf="errorMessage()">
+      {{ errorMessage() }}
+    </div>
+
+    <form [formGroup]="signupForm" (ngSubmit)="submit()" class="login-form" novalidate>
+      <label class="login-field" [class.field-invalid]="hasFieldError('tenantId')">
+        <span>Tenant</span>
+        <input type="text" formControlName="tenantId" placeholder="acme-lu">
+        <small class="field-help">Doit etre unique. Exemple : `acme-lu`.</small>
+        <small class="field-error" *ngIf="fieldError('tenantId') as error">{{ error }}</small>
+      </label>
+
+      <label class="login-field" [class.field-invalid]="hasFieldError('firstName')">
+        <span>Prenom</span>
+        <input type="text" formControlName="firstName">
+        <small class="field-error" *ngIf="fieldError('firstName') as error">{{ error }}</small>
+      </label>
+
+      <label class="login-field" [class.field-invalid]="hasFieldError('lastName')">
+        <span>Nom</span>
+        <input type="text" formControlName="lastName">
+        <small class="field-error" *ngIf="fieldError('lastName') as error">{{ error }}</small>
+      </label>
+
+      <label class="login-field" [class.field-invalid]="hasFieldError('email')">
+        <span>Email</span>
+        <input type="email" formControlName="email">
+        <small class="field-error" *ngIf="fieldError('email') as error">{{ error }}</small>
+      </label>
+
+      <label class="login-field" [class.field-invalid]="hasFieldError('password')">
+        <span>Mot de passe</span>
+        <input type="password" formControlName="password">
+        <small class="field-help">Minimum 8 caracteres.</small>
+        <small class="field-error" *ngIf="fieldError('password') as error">{{ error }}</small>
+      </label>
+
+      <label class="login-field" [class.field-invalid]="hasFieldError('seatsPurchased')">
+        <span>Nombre d'employes</span>
+        <input
+          type="number"
+          [attr.min]="seatRules().min"
+          [attr.max]="seatRules().max"
+          formControlName="seatsPurchased">
+        <small class="field-help">{{ seatHelpText() }}</small>
+        <small class="field-error" *ngIf="fieldError('seatsPurchased') as error">{{ error }}</small>
+      </label>
+
+      <button type="submit" [disabled]="submitting()">
+        {{ submitting() ? 'Creation...' : 'Creer mon compte' }}
+      </button>
+    </form>
+
+    <p class="hint auth-switch-copy">
+      Vous avez deja un compte ?
+      <a routerLink="/login">Se connecter</a>
+    </p>
+  </section>
+</section>

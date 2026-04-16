@@ -1,5 +1,60 @@
+server:
+  port: 9087
+
 spring:
   application:
     name: subscription-service
   config:
-    import: optional:configserver:http://localhost:8888
+    import: optional:configserver:http://localhost:9888
+  datasource:
+    url: jdbc:postgresql://localhost:6438/workrh_subscriptions
+    username: workrh
+    password: workrh
+    driver-class-name: org.postgresql.Driver
+  kafka:
+    bootstrap-servers: localhost:19092
+    consumer:
+      auto-offset-reset: earliest
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+
+security:
+  jwt:
+    secret: ${WORKRH_JWT_SECRET:c29tZS1yZWFsbHktbG9uZy1iYXNlNjQtc2VjcmV0LWZvci13b3JrcmgtZGVtby1vbmx5}
+    expiration: 86400
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:9761/eureka
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+stripe:
+  base-url: https://api.stripe.com
+  secret-key: ${STRIPE_SECRET_KEY:}
+  webhook:
+    secret: ${STRIPE_WEBHOOK_SECRET:}
+  prices:
+    starter: ${STRIPE_PRICE_STARTER:}
+    pro: ${STRIPE_PRICE_PRO:}
+    premium: ${STRIPE_PRICE_PREMIUM:}
+    enterprise: ${STRIPE_PRICE_ENTERPRISE:}
+    sms-option: ${STRIPE_PRICE_SMS_OPTION:}
+    advanced-audit-option: ${STRIPE_PRICE_ADVANCED_AUDIT_OPTION:}
+    advanced-export-option: ${STRIPE_PRICE_ADVANCED_EXPORT_OPTION:}
+
+subscription:
+  preview-all-features:
+    enabled: ${WORKRH_PREVIEW_ALL_FEATURES_ENABLED:false}
+    user-emails: ${WORKRH_PREVIEW_ALL_FEATURES_USER_EMAILS:}
+  bootstrap:
+    key: ${WORKRH_SUBSCRIPTION_BOOTSTRAP_KEY:workrh-signup-bootstrap}

@@ -35,13 +35,19 @@ public class SicknessController {
 
     @GetMapping("/{sicknessId}")
     @PreAuthorize("hasAnyAuthority('ADMIN','HR','EMPLOYEE')")
-    public SicknessResponseDto findById(@PathVariable Long sicknessId) {
+    public SicknessResponseDto findById(@PathVariable("sicknessId") Long sicknessId) {
         return sicknessService.findById(sicknessId);
     }
 
     @GetMapping
     @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
-    public List<SicknessResponseDto> list(@RequestParam(required = false) Long employeeId) {
+    public List<SicknessResponseDto> list(@RequestParam(name = "employeeId", required = false) Long employeeId) {
         return employeeId == null ? sicknessService.list() : sicknessService.listByEmployee(employeeId);
+    }
+
+    @GetMapping("/me")
+    @PreAuthorize("hasAnyAuthority('ADMIN','HR','EMPLOYEE')")
+    public List<SicknessResponseDto> listCurrentEmployee() {
+        return sicknessService.listCurrentEmployee();
     }
 }

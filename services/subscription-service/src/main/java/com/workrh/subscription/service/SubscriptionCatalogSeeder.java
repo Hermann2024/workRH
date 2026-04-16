@@ -10,18 +10,24 @@ import java.time.Instant;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 @Component
+@Order(10)
 public class SubscriptionCatalogSeeder implements CommandLineRunner {
 
     private final SubscriptionPlanRepository subscriptionPlanRepository;
+
     @Value("${stripe.prices.starter:}")
     private String starterStripePriceId;
+
     @Value("${stripe.prices.pro:}")
     private String proStripePriceId;
+
     @Value("${stripe.prices.premium:}")
     private String premiumStripePriceId;
+
     @Value("${stripe.prices.enterprise:}")
     private String enterpriseStripePriceId;
 
@@ -31,14 +37,14 @@ public class SubscriptionCatalogSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        seed(PlanCode.STARTER, "Starter", new BigDecimal("49.00"), starterStripePriceId, 1, 10, false, false, Set.of(
+        seed(PlanCode.STARTER, "Starter", new BigDecimal("199.00"), starterStripePriceId, 1, 10, false, false, Set.of(
                 FeatureCode.EMPLOYEE_MANAGEMENT,
                 FeatureCode.LEAVE_MANAGEMENT,
                 FeatureCode.TELEWORK_BASIC,
                 FeatureCode.DASHBOARD_BASIC,
                 FeatureCode.EMAIL_SUPPORT
         ));
-        seed(PlanCode.PRO, "Pro", new BigDecimal("99.00"), proStripePriceId, 10, 50, true, false, Set.of(
+        seed(PlanCode.PRO, "Pro", new BigDecimal("299.00"), proStripePriceId, 10, 50, true, false, Set.of(
                 FeatureCode.EMPLOYEE_MANAGEMENT,
                 FeatureCode.LEAVE_MANAGEMENT,
                 FeatureCode.TELEWORK_BASIC,
@@ -54,7 +60,7 @@ public class SubscriptionCatalogSeeder implements CommandLineRunner {
                 FeatureCode.EMAIL_NOTIFICATIONS,
                 FeatureCode.PRIORITY_SUPPORT
         ));
-        seed(PlanCode.PREMIUM, "Premium", new BigDecimal("199.00"), premiumStripePriceId, 50, null, false, false, Set.of(
+        seed(PlanCode.PREMIUM, "Premium", new BigDecimal("399.00"), premiumStripePriceId, 50, null, false, false, Set.of(
                 FeatureCode.EMPLOYEE_MANAGEMENT,
                 FeatureCode.LEAVE_MANAGEMENT,
                 FeatureCode.TELEWORK_BASIC,
@@ -69,12 +75,8 @@ public class SubscriptionCatalogSeeder implements CommandLineRunner {
                 FeatureCode.EXPORTS,
                 FeatureCode.EMAIL_NOTIFICATIONS,
                 FeatureCode.PRIORITY_SUPPORT,
-                FeatureCode.ADVANCED_RBAC,
-                FeatureCode.FULL_REPORTING,
                 FeatureCode.DECLARATION_AUDIT,
-                FeatureCode.PUBLIC_API,
                 FeatureCode.SMS_NOTIFICATIONS,
-                FeatureCode.COMPANY_BRANDING,
                 FeatureCode.ACCOUNTING_EXPORT,
                 FeatureCode.SLA_SUPPORT,
                 FeatureCode.ONBOARDING_SUPPORT
@@ -94,16 +96,12 @@ public class SubscriptionCatalogSeeder implements CommandLineRunner {
                 FeatureCode.EXPORTS,
                 FeatureCode.EMAIL_NOTIFICATIONS,
                 FeatureCode.PRIORITY_SUPPORT,
-                FeatureCode.ADVANCED_RBAC,
-                FeatureCode.FULL_REPORTING,
                 FeatureCode.DECLARATION_AUDIT,
-                FeatureCode.PUBLIC_API,
                 FeatureCode.SMS_NOTIFICATIONS,
-                FeatureCode.COMPANY_BRANDING,
                 FeatureCode.ACCOUNTING_EXPORT,
                 FeatureCode.SLA_SUPPORT,
                 FeatureCode.ONBOARDING_SUPPORT,
-                FeatureCode.MULTI_TENANT_ADVANCED,
+                FeatureCode.PUBLIC_API,
                 FeatureCode.DEDICATED_HOSTING,
                 FeatureCode.HARDENED_SECURITY,
                 FeatureCode.SSO,

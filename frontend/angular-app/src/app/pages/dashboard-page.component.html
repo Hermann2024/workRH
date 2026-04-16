@@ -1,119 +1,264 @@
-<ng-container *ngIf="vm() as data; else loadingState">
-  <section class="hero">
-    <div>
-      <p class="section-tag">Operations</p>
-      <h2>Conformite frontaliere et pilotage RH</h2>
-      <p class="lede">
-        Le dashboard combine la consommation annuelle fiscale, la politique hebdomadaire
-        et les droits fonctionnels issus du plan SaaS courant.
-      </p>
-    </div>
-
-    <div class="subscription-card" *ngIf="currentPlan() as plan">
-      <span class="pill">Plan actif</span>
-      <h3>{{ plan.name }}</h3>
-      <p class="pricing-amount" *ngIf="!plan.customPricing">{{ plan.monthlyPrice }}EUR/mois</p>
-      <p class="pricing-amount" *ngIf="plan.customPricing">Sur devis</p>
-      <p class="meta">{{ data.subscription.seatsPurchased }} utilisateurs</p>
-      <p class="meta">Statut: {{ data.subscription.status }}</p>
-      <p class="meta">Renouvellement: {{ data.subscription.renewsAt }}</p>
-    </div>
-  </section>
-
-  <section class="stats-grid">
-    <article class="metric-card">
-      <span>Jours utilises</span>
-      <strong>{{ data.dashboard.totalUsedDays }}</strong>
-    </article>
-    <article class="metric-card">
-      <span>Jours restants</span>
-      <strong>{{ data.dashboard.totalRemainingDays }}</strong>
-    </article>
-    <article class="metric-card alert-card">
-      <span>Alertes fiscales</span>
-      <strong>{{ data.dashboard.fiscalAlerts }}</strong>
-    </article>
-    <article class="metric-card alert-card">
-      <span>Alertes hebdo</span>
-      <strong>{{ data.dashboard.weeklyAlerts }}</strong>
-    </article>
-  </section>
-
-  <section class="grid-layout">
-    <section class="panel">
-      <div class="section-head">
-        <div>
-          <p class="section-tag">Droits</p>
-          <h2>Fonctionnalites actives</h2>
-        </div>
-        <p class="hint">Bloquees cote backend par le plan et les options de montee en gamme.</p>
-      </div>
-
-      <div class="entitlement-grid">
-        <article class="entitlement" [class.enabled]="isEntitled('TELEWORK_COMPLIANCE_34')">
-          <h3>Calcul 34 jours</h3>
-          <p>Controle fiscal annuel pour les salaries frontaliers.</p>
-        </article>
-        <article class="entitlement" [class.enabled]="isEntitled('SICKNESS_MANAGEMENT')">
-          <h3>Arrets maladie</h3>
-          <p>Disponible a partir du plan Pro.</p>
-        </article>
-        <article class="entitlement" [class.enabled]="isEntitled('EXPORTS')">
-          <h3>Exports</h3>
-          <p>CSV et PDF du reporting RH.</p>
-        </article>
-        <article class="entitlement" [class.enabled]="isEntitled('DECLARATION_AUDIT')">
-          <h3>Historique detaille</h3>
-          <p>Reserve aux offres Premium ou a l'option audit.</p>
-        </article>
-      </div>
-    </section>
-
-    <section class="panel">
-      <div class="section-head">
-        <div>
-          <p class="section-tag">Entreprise</p>
-          <h2>Vue entreprise</h2>
-        </div>
-        <p class="hint">Pays de reference : FR.</p>
-      </div>
-
-      <table>
-        <thead>
-          <tr>
-            <th>Employe</th>
-            <th>Mois</th>
-            <th>Annuel</th>
-            <th>Restant</th>
-            <th>Hebdo</th>
-            <th>Fiscal</th>
-            <th>Politique</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let employee of data.companySummary.employees">
-            <td>#{{ employee.employeeId }}</td>
-            <td>{{ employee.monthUsedDays }}</td>
-            <td>{{ employee.annualUsedDays }}/{{ employee.policy.annualFiscalLimitDays }}</td>
-            <td>{{ employee.annualRemainingDays }}</td>
-            <td>{{ employee.policy.weeklyUsedDays }}/{{ employee.policy.weeklyCompanyLimitDays }}</td>
-            <td>
-              <span class="badge" [class.badge-alert]="employee.annualFiscalLimitExceeded">
-                {{ employee.annualFiscalLimitExceeded ? 'Alerte' : 'OK' }}
-              </span>
-            </td>
-            <td>
-              <span class="badge" [class.badge-alert]="employee.policy.weeklyCompanyLimitExceeded">
-                {{ employee.policy.weeklyCompanyLimitExceeded ? 'Alerte' : 'OK' }}
-              </span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
+<ng-container *ngIf="loadError() as errorMessage; else dashboardState">
+  <section class="panel loading-panel">
+    <h2>Dashboard RH indisponible</h2>
+    <p>{{ errorMessage }}</p>
   </section>
 </ng-container>
 
-<ng-template #loadingState>
-  <app-loading-skeleton></app-loading-skeleton>
+<ng-template #dashboardState>
+  <ng-container *ngIf="vm() as data; else loadingState">
+    <section class="hero">
+      <div>
+        <p class="section-tag">Operations RH</p>
+        <h2>Conformite frontaliere et pilotage RH</h2>
+      </div>
+
+      <div class="subscription-card" *ngIf="currentPlan() as plan">
+        <span class="pill">Plan actif</span>
+        <h3>{{ plan.name }}</h3>
+        <p class="pricing-amount" *ngIf="!plan.customPricing">{{ plan.monthlyPrice }}EUR/mois</p>
+        <p class="pricing-amount" *ngIf="plan.customPricing">Sur devis</p>
+        <p class="meta">{{ data.subscription.seatsPurchased }} utilisateurs</p>
+        <p class="meta">Statut: {{ data.subscription.status }}</p>
+        <p class="meta">Periode: {{ currentMonth }}/{{ currentYear }}</p>
+      </div>
+    </section>
+
+    <div class="checkout-banner success" *ngIf="opsMessage() as message">{{ message }}</div>
+    <div class="checkout-banner cancelled" *ngIf="opsError() as errorMessage">{{ errorMessage }}</div>
+
+    <section class="stats-grid">
+      <article class="metric-card"><span>Jours utilises</span><strong>{{ data.dashboard.totalUsedDays }}</strong></article>
+      <article class="metric-card"><span>Jours restants</span><strong>{{ data.dashboard.totalRemainingDays }}</strong></article>
+      <article class="metric-card alert-card"><span>Alertes fiscales</span><strong>{{ data.dashboard.fiscalAlerts }}</strong></article>
+      <article class="metric-card alert-card"><span>Alertes hebdo</span><strong>{{ data.dashboard.weeklyAlerts }}</strong></article>
+    </section>
+
+    <section class="grid-layout">
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <p class="section-tag">Droits</p>
+            <h2>Fonctionnalites actives</h2>
+          </div>
+        </div>
+
+        <div class="entitlement-grid">
+          <article class="entitlement" [class.enabled]="isEntitled('DASHBOARD_BASIC')"><h3>Dashboard RH</h3><p>Vue consolidee des jours utilises et des alertes.</p></article>
+          <article class="entitlement" [class.enabled]="isEntitled('TELEWORK_COMPLIANCE_34')"><h3>Conformite 34 jours</h3><p>Controle fiscal frontalier Luxembourg.</p></article>
+          <article class="entitlement" [class.enabled]="isEntitled('MONTHLY_STATS')"><h3>Stats mensuelles</h3><p>Tendance annuelle et charge RH.</p></article>
+          <article class="entitlement" [class.enabled]="isEntitled('EXPORTS')"><h3>Exports</h3><p>Exports CSV, PDF et synthese texte.</p></article>
+          <article class="entitlement" [class.enabled]="isEntitled('EMPLOYEE_MANAGEMENT')"><h3>Employes</h3><p>Creation et activation des comptes.</p></article>
+          <article class="entitlement" [class.enabled]="isEntitled('LEAVE_MANAGEMENT')"><h3>Conges</h3><p>Validation RH des demandes.</p></article>
+          <article class="entitlement" [class.enabled]="isEntitled('SICKNESS_MANAGEMENT')"><h3>Arrets maladie</h3><p>Lecture des absences maladie.</p></article>
+          <article class="entitlement" [class.enabled]="isEntitled('DECLARATION_AUDIT')"><h3>Audit declaratif</h3><p>Historique des jours declares.</p></article>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <p class="section-tag">Reporting</p>
+            <h2>Exports</h2>
+          </div>
+          <p class="hint" *ngIf="!isEntitled('EXPORTS')">Le plan actif ne permet pas les exports.</p>
+        </div>
+
+        <div class="action-row" *ngIf="isEntitled('EXPORTS')">
+          <button class="checkout-button small" (click)="downloadDashboardExport('csv')" [disabled]="exportLoading() === 'csv'">{{ exportLoading() === 'csv' ? 'Export CSV...' : 'Exporter CSV' }}</button>
+          <button class="checkout-button small" (click)="downloadDashboardExport('pdf')" [disabled]="exportLoading() === 'pdf'">{{ exportLoading() === 'pdf' ? 'Export PDF...' : 'Exporter PDF' }}</button>
+          <button class="checkout-button outline small" (click)="downloadDashboardExport('pdf-placeholder')" [disabled]="exportLoading() === 'pdf-placeholder'">{{ exportLoading() === 'pdf-placeholder' ? 'Generation...' : 'Version texte' }}</button>
+        </div>
+      </section>
+    </section>
+
+    <section class="panel">
+      <div class="section-head"><div><p class="section-tag">Tableau RH</p><h2>Vue de base</h2></div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Employe</th><th>Mois</th><th>Annuel</th><th>Restant</th><th>Hebdo</th><th>Fiscal</th><th>Politique</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let employee of data.dashboard.employees">
+              <td>#{{ employee.employeeId }}</td>
+              <td>{{ employee.usedDays }}</td>
+              <td>{{ employee.annualUsedDays }}</td>
+              <td>{{ employee.remainingDays }}</td>
+              <td>{{ employee.weeklyUsedDays }}</td>
+              <td><span class="badge" [class.badge-alert]="employee.annualFiscalLimitExceeded">{{ employee.annualFiscalLimitExceeded ? 'Alerte' : 'OK' }}</span></td>
+              <td><span class="badge" [class.badge-alert]="employee.weeklyCompanyLimitExceeded">{{ employee.weeklyCompanyLimitExceeded ? 'Alerte' : 'OK' }}</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" *ngIf="companySummary() as summary">
+      <div class="section-head"><div><p class="section-tag">Entreprise</p><h2>Vue avancee</h2></div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Employe</th><th>Mois</th><th>Annuel</th><th>Restant</th><th>Hebdo</th><th>Fiscal</th><th>Politique</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let employee of summary.employees">
+              <td>#{{ employee.employeeId }}</td>
+              <td>{{ employee.monthUsedDays }}</td>
+              <td>{{ employee.annualUsedDays }}/{{ employee.policy.annualFiscalLimitDays }}</td>
+              <td>{{ employee.annualRemainingDays }}</td>
+              <td>{{ employee.policy.weeklyUsedDays }}/{{ employee.policy.weeklyCompanyLimitDays }}</td>
+              <td><span class="badge" [class.badge-alert]="employee.annualFiscalLimitExceeded">{{ employee.annualFiscalLimitExceeded ? 'Alerte' : 'OK' }}</span></td>
+              <td><span class="badge" [class.badge-alert]="employee.policy.weeklyCompanyLimitExceeded">{{ employee.policy.weeklyCompanyLimitExceeded ? 'Alerte' : 'OK' }}</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="grid-layout employee-grid" *ngIf="isEntitled('EMPLOYEE_MANAGEMENT')">
+      <section class="panel">
+        <div class="section-head"><div><p class="section-tag">Employes</p><h2>Creation de comptes</h2></div></div>
+        <form class="workspace-form-card" [formGroup]="employeeForm" (ngSubmit)="createEmployee()">
+          <div class="workspace-inline-fields">
+            <label class="workspace-field"><span>Prenom</span><input type="text" formControlName="firstName"></label>
+            <label class="workspace-field"><span>Nom</span><input type="text" formControlName="lastName"></label>
+          </div>
+          <div class="workspace-inline-fields">
+            <label class="workspace-field"><span>Email</span><input type="email" formControlName="email"></label>
+            <label class="workspace-field"><span>Mot de passe</span><input type="password" formControlName="password"></label>
+          </div>
+          <div class="workspace-inline-fields">
+            <label class="workspace-field"><span>Residence</span><input type="text" formControlName="countryOfResidence"></label>
+            <label class="workspace-field"><span>Embauche</span><input type="date" formControlName="hireDate"></label>
+          </div>
+          <div class="workspace-inline-fields">
+            <label class="workspace-field"><span>Departement</span><input type="text" formControlName="department"></label>
+            <label class="workspace-field"><span>Poste</span><input type="text" formControlName="jobTitle"></label>
+          </div>
+          <label class="workspace-field"><span>Telephone</span><input type="text" formControlName="phoneNumber"></label>
+          <button class="checkout-button" type="submit" [disabled]="employeeSaving()">{{ employeeSaving() ? 'Creation...' : 'Creer le salarie' }}</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="section-head"><div><p class="section-tag">Comptes</p><h2>Employes du tenant</h2></div><p class="hint">{{ employees().length }} compte(s).</p></div>
+        <div class="table-wrap" *ngIf="employees().length; else emptyEmployees">
+          <table>
+            <thead><tr><th>Employe</th><th>Residence</th><th>Fonction</th><th>Statut</th><th>Actions</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let employee of employees()">
+                <td><strong>{{ employee.firstName }} {{ employee.lastName }}</strong><div class="small-copy">{{ employee.email }}</div></td>
+                <td>{{ employee.countryOfResidence || '-' }}</td>
+                <td>{{ employee.jobTitle || employee.department || '-' }}</td>
+                <td><span class="badge" [class.badge-alert]="!employee.active">{{ employee.active ? 'Actif' : 'Inactif' }}</span></td>
+                <td>
+                  <div class="action-row">
+                    <button class="checkout-button outline small" type="button" (click)="toggleEmployeeActive(employee)" [disabled]="employeeToggleId() === employee.id">{{ employeeToggleId() === employee.id ? 'Mise a jour...' : (employee.active ? 'Desactiver' : 'Reactiver') }}</button>
+                    <button class="checkout-button outline small" type="button" *ngIf="isEntitled('DECLARATION_AUDIT')" (click)="selectEmployee(employee.id)">{{ selectedEmployeeId() === employee.id ? 'Audit actif' : 'Voir audit' }}</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <section class="panel" *ngIf="isEntitled('LEAVE_MANAGEMENT')">
+      <div class="section-head"><div><p class="section-tag">Conges</p><h2>Validation RH</h2></div><p class="hint">{{ pendingLeaveRequests().length }} en attente.</p></div>
+      <div class="table-wrap" *ngIf="leaveRequests().length; else emptyLeaves">
+        <table>
+          <thead><tr><th>Employe</th><th>Type</th><th>Periode</th><th>Statut</th><th>Commentaire</th><th>Actions</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let leave of leaveRequests()">
+              <td>{{ employeeName(leave.employeeId) }}</td>
+              <td>{{ leaveTypeLabel(leave.type) }}</td>
+              <td>{{ leave.startDate }} - {{ leave.endDate }}</td>
+              <td><span class="badge" [class.badge-alert]="leave.status === 'REJECTED'">{{ leave.status }}</span></td>
+              <td>{{ leave.comment || '-' }}</td>
+              <td>
+                <div class="action-row" *ngIf="leave.status === 'REQUESTED'; else leaveDone">
+                  <button class="checkout-button small" type="button" (click)="approveLeave(leave)" [disabled]="leaveActionId() === 'approve-' + leave.id || leaveActionId() === 'reject-' + leave.id">{{ leaveActionId() === 'approve-' + leave.id ? 'Validation...' : 'Approuver' }}</button>
+                  <button class="checkout-button outline small" type="button" (click)="rejectLeave(leave)" [disabled]="leaveActionId() === 'approve-' + leave.id || leaveActionId() === 'reject-' + leave.id">{{ leaveActionId() === 'reject-' + leave.id ? 'Refus...' : 'Rejeter' }}</button>
+                </div>
+                <ng-template #leaveDone><span class="small-copy">Aucune action</span></ng-template>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" *ngIf="isEntitled('SICKNESS_MANAGEMENT')">
+      <div class="section-head"><div><p class="section-tag">Sante</p><h2>Arrets maladie</h2></div></div>
+      <div class="table-wrap" *ngIf="latestSicknessRecords().length; else emptySickness">
+        <table>
+          <thead><tr><th>Employe</th><th>Debut</th><th>Fin</th><th>Commentaire</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let record of latestSicknessRecords()">
+              <td>{{ employeeName(record.employeeId) }}</td>
+              <td>{{ record.startDate }}</td>
+              <td>{{ record.endDate }}</td>
+              <td>{{ record.comment || '-' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" *ngIf="isEntitled('DECLARATION_AUDIT')">
+      <div class="section-head"><div><p class="section-tag">Audit</p><h2>Historique declaratif</h2></div><p class="hint">Employe selectionne: {{ employeeLabel(selectedEmployee()) }}</p></div>
+      <div class="action-row" *ngIf="employees().length">
+        <button class="checkout-button outline small" type="button" *ngFor="let employee of employees().slice(0, 8)" (click)="selectEmployee(employee.id)">{{ selectedEmployeeId() === employee.id ? 'Audit actif' : (employee.firstName + ' ' + employee.lastName) }}</button>
+      </div>
+      <div class="checkout-banner success" *ngIf="auditLoading()">Chargement de l'audit...</div>
+      <div class="table-wrap" *ngIf="!auditLoading() && latestAuditHistory().length; else emptyAuditHistory">
+        <table>
+          <thead><tr><th>Date</th><th>Pays</th><th>Statut</th><th>Minutes</th><th>Fiscal</th><th>Social</th><th>Alertes</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let item of latestAuditHistory()">
+              <td>{{ item.workDate }}</td>
+              <td>{{ item.countryCode }}</td>
+              <td>{{ item.status }}</td>
+              <td>{{ item.totalWorkMinutes }}</td>
+              <td>{{ item.countsTowardFiscalThreshold ? 'Compte' : 'Exclu' }}</td>
+              <td>{{ item.countsTowardSocialSecurityTelework ? 'Compte' : 'Exclu' }}</td>
+              <td><span class="badge" [class.badge-alert]="item.annualFiscalLimitExceeded || item.weeklyCompanyLimitExceeded">{{ item.annualFiscalLimitExceeded || item.weeklyCompanyLimitExceeded ? 'Alerte' : 'OK' }}</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="grid-layout">
+      <section class="panel" *ngIf="monthlyStats() as stats">
+        <div class="section-head"><div><p class="section-tag">Stats</p><h2>Statistiques mensuelles</h2></div></div>
+        <div class="monthly-stats-grid">
+          <article class="monthly-stat-card" *ngFor="let month of stats.months">
+            <span>{{ monthLabel(month.month) }}</span>
+            <strong>{{ month.usedDays }} j</strong>
+            <small>{{ month.employeesTracked }} employes suivis</small>
+            <small>{{ month.fiscalAlerts + month.weeklyAlerts }} alertes</small>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel" *ngIf="isEntitled('EMAIL_NOTIFICATIONS')">
+        <div class="section-head"><div><p class="section-tag">Alertes</p><h2>Historique automatise</h2></div></div>
+        <div class="timeline-list" *ngIf="latestNotifications().length; else emptyNotifications">
+          <article class="timeline-card" *ngFor="let notification of latestNotifications()">
+            <div><strong>{{ notification.subject }}</strong><p>{{ notification.payload }}</p></div>
+            <div class="timeline-meta">
+              <span class="badge" [class.badge-alert]="notification.channel.includes('FAILED') || notification.channel.includes('SKIPPED')">{{ notification.channel }}</span>
+              <small>{{ notification.sentAt }}</small>
+            </div>
+          </article>
+        </div>
+      </section>
+    </section>
+  </ng-container>
 </ng-template>
+
+<ng-template #emptyNotifications><p class="hint">Aucune notification automatisee journalisee pour le moment.</p></ng-template>
+<ng-template #emptyEmployees><p class="hint">Aucun compte salarie charge pour le tenant actif.</p></ng-template>
+<ng-template #emptyLeaves><p class="hint">Aucune demande de conge remontee par le backend pour le moment.</p></ng-template>
+<ng-template #emptySickness><p class="hint">Aucun arret maladie remonte pour le moment.</p></ng-template>
+<ng-template #emptyAuditHistory><p class="hint">Aucun historique declaratif disponible pour l'employe selectionne.</p></ng-template>
+<ng-template #loadingState><app-loading-skeleton></app-loading-skeleton></ng-template>

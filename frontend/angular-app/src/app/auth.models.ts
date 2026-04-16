@@ -6,7 +6,8 @@ export interface AuthSession {
 }
 
 export interface LoginApiResponse {
-  token: string;
+  accessToken?: string;
+  token?: string;
   tenantId: string;
   roles: string[];
 }

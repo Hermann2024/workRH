@@ -25,6 +25,10 @@ import java.util.Set;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 class SubscriptionServiceTest {
 
@@ -36,6 +40,7 @@ class SubscriptionServiceTest {
     @AfterEach
     void cleanup() {
         TenantContext.clear();
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -54,6 +59,42 @@ class SubscriptionServiceTest {
 
         assertThat(response.allowed()).isTrue();
         assertThat(response.planCode()).isEqualTo("PRO");
+    }
+
+    @Test
+    void shouldGrantAllFeaturesToPreviewUser() {
+        TenantContext.setTenantId("demo-lu");
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                "rh@company.com",
+                null,
+                java.util.List.of(new SimpleGrantedAuthority("HR"))
+        ));
+        ReflectionTestUtils.setField(subscriptionService, "previewAllFeaturesEnabled", true);
+        ReflectionTestUtils.setField(subscriptionService, "previewAllFeaturesUserEmails", "rh@company.com");
+
+        SubscriptionPlan plan = buildPlan(PlanCode.STARTER, 1, 10, Set.of(FeatureCode.EMPLOYEE_MANAGEMENT));
+        TenantSubscription subscription = new TenantSubscription();
+        subscription.setId(1L);
+        subscription.setTenantId("demo-lu");
+        subscription.setPlanCode(PlanCode.STARTER);
+        subscription.setStatus(SubscriptionStatus.ACTIVE);
+        subscription.setSeatsPurchased(5);
+        subscription.setStartsAt(LocalDate.now());
+        subscription.setRenewsAt(LocalDate.now().plusMonths(1));
+
+        when(subscriptionRepository.findByTenantId("demo-lu")).thenReturn(Optional.of(subscription));
+        when(planRepository.findByCode(PlanCode.STARTER)).thenReturn(Optional.of(plan));
+
+        var featureCheck = subscriptionService.checkFeature(FeatureCode.SSO.name());
+        var currentSubscription = subscriptionService.currentSubscription();
+
+        assertThat(featureCheck.allowed()).isTrue();
+        assertThat(featureCheck.reason()).contains("Preview override");
+        assertThat(currentSubscription.entitlements()).contains(
+                FeatureCode.SSO.name(),
+                FeatureCode.HARDENED_SECURITY.name(),
+                FeatureCode.TELEWORK_COMPLIANCE_34.name()
+        );
     }
 
     @Test
@@ -79,10 +120,10 @@ class SubscriptionServiceTest {
     void shouldUpgradeSubscription() {
         TenantContext.setTenantId("demo-lu");
         SubscriptionPlan starter = buildPlan(PlanCode.STARTER, 1, 10, Set.of(FeatureCode.EMPLOYEE_MANAGEMENT));
-        starter.setMonthlyPrice(new BigDecimal("49.00"));
+        starter.setMonthlyPrice(new BigDecimal("199.00"));
         SubscriptionPlan pro = buildPlan(PlanCode.PRO, 10, 50, Set.of(FeatureCode.TELEWORK_COMPLIANCE_34));
         pro.setId(2L);
-        pro.setMonthlyPrice(new BigDecimal("99.00"));
+        pro.setMonthlyPrice(new BigDecimal("299.00"));
 
         TenantSubscription subscription = new TenantSubscription();
         subscription.setTenantId("demo-lu");

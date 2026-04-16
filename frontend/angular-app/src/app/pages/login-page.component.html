@@ -1,41 +1,57 @@
 <section class="login-layout">
   <article class="login-intro panel">
-    <p class="section-tag">Auth</p>
-    <h2>Connexion WorkRH</h2>
-    <p class="lede">
-      Un acces unique pour les RH, la conformite frontaliere et la gestion des abonnements.
-    </p>
+    <p class="section-tag">Accès</p>
+    <h2>{{ showDemoHints ? 'Comptes de démonstration' : 'Connexion sécurisée' }}</h2>
 
-    <div class="login-points">
+    <div class="login-points" *ngIf="showDemoHints; else productionIntro">
+      <button type="button" class="login-point" (click)="fillCredentials('demo@company.com')">
+        <strong>Compte démo</strong>
+        <span>demo&#64;company.com</span>
+      </button>
       <div class="login-point">
-        <strong>Tenant de demo</strong>
-        <span>demo-lu</span>
+        <strong>Tenant</strong>
+        <span>{{ loginForm.controls.tenantId.value || 'demo-lu' }}</span>
       </div>
-      <div class="login-point">
+      <button type="button" class="login-point" (click)="fillCredentials('rh@company.com')">
         <strong>Compte RH</strong>
         <span>rh&#64;company.com</span>
-      </div>
+      </button>
       <div class="login-point">
         <strong>Compte admin</strong>
         <span>admin&#64;company.com</span>
       </div>
+      <div class="login-point">
+        <strong>Compte employé</strong>
+        <span>employee&#64;company.com</span>
+      </div>
     </div>
 
-    <p class="hint">Le mode demo prend le relais si le backend de connexion n'est pas encore branche.</p>
+    <ng-template #productionIntro>
+      <div class="login-points">
+        <div class="login-point">
+          <strong>Tenant dédié</strong>
+          <span>Chaque entreprise se connecte sur son propre espace.</span>
+        </div>
+        <div class="login-point">
+          <strong>Accès par rôles</strong>
+          <span>Parcours séparés pour RH, administrateurs et employés.</span>
+        </div>
+        <div class="login-point">
+          <strong>Conformité tracée</strong>
+          <span>Suivi du télétravail, des congés et des alertes dans un même espace.</span>
+        </div>
+      </div>
+    </ng-template>
+
+    <p class="hint" *ngIf="showDemoHints">Mot de passe: <strong>{{ loginForm.controls.password.value || 'secret' }}</strong>.</p>
+    <p class="hint" *ngIf="!showDemoHints">Utilisez les identifiants transmis lors de l'onboarding WorkRH.</p>
   </article>
 
   <section class="panel login-panel">
     <div class="login-panel-head">
       <div>
         <p class="section-tag">Session</p>
-        <h2>Acceder au cockpit</h2>
-        <p class="hint">Choisissez un tenant puis connectez-vous.</p>
-      </div>
-
-      <div class="login-status-card">
-        <span class="login-status-label">Acces</span>
-        <strong>Securise</strong>
-        <span class="login-status-copy">Connexion RH, admin ou demo locale</span>
+        <h2>Se connecter</h2>
       </div>
     </div>
 
@@ -46,12 +62,12 @@
     <form [formGroup]="loginForm" (ngSubmit)="submit()" class="login-form">
       <label class="login-field">
         <span>Tenant</span>
-        <input type="text" formControlName="tenantId">
+        <input type="text" formControlName="tenantId" placeholder="acme-lu">
       </label>
 
       <label class="login-field">
         <span>Email</span>
-        <input type="email" formControlName="email">
+        <input type="email" formControlName="email" placeholder="contact@entreprise.com">
       </label>
 
       <label class="login-field">
@@ -63,5 +79,10 @@
         {{ submitting() ? 'Connexion...' : 'Se connecter' }}
       </button>
     </form>
+
+    <p class="hint auth-switch-copy">
+      Nouveau sur WorkRH ?
+      <a routerLink="/signup">Créer un compte</a>
+    </p>
   </section>
 </section>

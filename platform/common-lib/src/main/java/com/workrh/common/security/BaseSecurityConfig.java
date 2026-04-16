@@ -1,13 +1,14 @@
 package com.workrh.common.security;
 
+import com.workrh.common.tenant.TenantFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import com.workrh.common.tenant.TenantFilter;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 
 @Configuration
 @EnableMethodSecurity
@@ -23,12 +24,21 @@ public class BaseSecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/actuator/health", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/subscriptions/webhooks/stripe").permitAll()
+                        .requestMatchers(
+                                new AntPathRequestMatcher("/actuator/health"),
+                                new AntPathRequestMatcher("/actuator/health/**"),
+                                new AntPathRequestMatcher("/actuator/info"),
+                                new AntPathRequestMatcher("/error"),
+                                new AntPathRequestMatcher("/swagger-ui/**"),
+                                new AntPathRequestMatcher("/v3/api-docs/**"),
+                                new AntPathRequestMatcher("/api/auth/**"),
+                                new AntPathRequestMatcher("/api/subscriptions/plans", "GET"),
+                                new AntPathRequestMatcher("/api/subscriptions/bootstrap", "POST"),
+                                new AntPathRequestMatcher("/api/subscriptions/webhooks/stripe", "POST")
+                        ).permitAll()
                         .anyRequest().authenticated())
-                .addFilterBefore(tenantFilter, JwtAuthenticationFilter.class)
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(tenantFilter, AuthorizationFilter.class)
+                .addFilterBefore(jwtAuthenticationFilter, AuthorizationFilter.class)
                 .build();
     }
 }

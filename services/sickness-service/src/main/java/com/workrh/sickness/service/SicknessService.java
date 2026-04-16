@@ -1,6 +1,7 @@
 package com.workrh.sickness.service;
 
 import com.workrh.common.events.SicknessDeclaredEvent;
+import com.workrh.common.security.SecurityUtils;
 import com.workrh.common.tenant.TenantContext;
 import com.workrh.common.web.BadRequestException;
 import com.workrh.common.web.NotFoundException;
@@ -10,11 +11,16 @@ import com.workrh.sickness.domain.SicknessRecord;
 import com.workrh.sickness.repository.SicknessRepository;
 import java.time.Instant;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 @Service
 public class SicknessService {
+
+    private static final Logger log = LoggerFactory.getLogger(SicknessService.class);
 
     private final SicknessRepository sicknessRepository;
     private final KafkaTemplate<String, Object> kafkaTemplate;
@@ -25,6 +31,7 @@ public class SicknessService {
     }
 
     public SicknessResponseDto declare(SicknessRequestDto request) {
+        assertCanAccessEmployee(request.employeeId());
         validatePeriod(request.startDate(), request.endDate());
         SicknessRecord record = new SicknessRecord();
         record.setTenantId(TenantContext.getTenantId());
@@ -35,14 +42,7 @@ public class SicknessService {
         record.setCreatedAt(Instant.now());
         record.setUpdatedAt(Instant.now());
         SicknessRecord saved = sicknessRepository.save(record);
-        kafkaTemplate.send("sickness-events", new SicknessDeclaredEvent(
-                saved.getTenantId(),
-                saved.getEmployeeId(),
-                saved.getId(),
-                saved.getStartDate(),
-                saved.getEndDate(),
-                Instant.now()
-        ));
+        publishSicknessDeclared(saved);
         return toDto(saved);
     }
 
@@ -51,14 +51,21 @@ public class SicknessService {
     }
 
     public List<SicknessResponseDto> listByEmployee(Long employeeId) {
+        assertCanAccessEmployee(employeeId);
         return sicknessRepository.findAllByTenantIdAndEmployeeId(TenantContext.getTenantId(), employeeId).stream()
                 .map(this::toDto)
                 .toList();
     }
 
     public SicknessResponseDto findById(Long sicknessId) {
-        return toDto(sicknessRepository.findByIdAndTenantId(sicknessId, TenantContext.getTenantId())
-                .orElseThrow(() -> new NotFoundException("Sickness record not found")));
+        SicknessRecord record = sicknessRepository.findByIdAndTenantId(sicknessId, TenantContext.getTenantId())
+                .orElseThrow(() -> new NotFoundException("Sickness record not found"));
+        assertCanAccessEmployee(record.getEmployeeId());
+        return toDto(record);
+    }
+
+    public List<SicknessResponseDto> listCurrentEmployee() {
+        return listByEmployee(requireCurrentEmployeeId());
     }
 
     private void validatePeriod(java.time.LocalDate startDate, java.time.LocalDate endDate) {
@@ -77,5 +84,57 @@ public class SicknessService {
                 record.getCreatedAt(),
                 record.getUpdatedAt()
         );
+    }
+
+    private void assertCanAccessEmployee(Long employeeId) {
+        if (!SecurityUtils.hasAuthority("EMPLOYEE")) {
+            return;
+        }
+
+        Long currentEmployeeId = requireCurrentEmployeeId();
+        if (!currentEmployeeId.equals(employeeId)) {
+            throw new AccessDeniedException("Employees can only access their own sickness records");
+        }
+    }
+
+    private Long requireCurrentEmployeeId() {
+        Long employeeId = SecurityUtils.currentEmployeeId();
+        if (employeeId == null) {
+            throw new AccessDeniedException("Missing employee context");
+        }
+        return employeeId;
+    }
+
+    private void publishSicknessDeclared(SicknessRecord record) {
+        SicknessDeclaredEvent event = new SicknessDeclaredEvent(
+                record.getTenantId(),
+                record.getEmployeeId(),
+                record.getId(),
+                record.getStartDate(),
+                record.getEndDate(),
+                Instant.now()
+        );
+        try {
+            kafkaTemplate.send("sickness-events", event)
+                    .whenComplete((result, exception) -> {
+                        if (exception != null) {
+                            log.warn(
+                                    "Failed to publish sickness event for tenant {} employee {} record {}",
+                                    record.getTenantId(),
+                                    record.getEmployeeId(),
+                                    record.getId(),
+                                    exception
+                            );
+                        }
+                    });
+        } catch (RuntimeException exception) {
+            log.warn(
+                    "Failed to publish sickness event for tenant {} employee {} record {}",
+                    record.getTenantId(),
+                    record.getEmployeeId(),
+                    record.getId(),
+                    exception
+            );
+        }
     }
 }

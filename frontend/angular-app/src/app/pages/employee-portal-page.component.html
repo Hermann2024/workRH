@@ -1,0 +1,369 @@
+<ng-container *ngIf="loadError() as errorMessage; else workspaceState">
+  <section class="panel loading-panel">
+    <h2>Espace employe indisponible</h2>
+    <p>{{ errorMessage }}</p>
+  </section>
+</ng-container>
+
+<ng-template #workspaceState>
+<ng-container *ngIf="workspace() as data; else loadingState">
+  <section class="hero employee-hero">
+    <div>
+      <p class="section-tag">Mon espace</p>
+      <h2>{{ data.profile.firstName }} {{ data.profile.lastName }}</h2>
+
+      <div class="employee-meta-grid">
+        <article class="employee-meta-card">
+          <span>Rôle</span>
+          <strong>{{ data.profile.roles.join(', ') }}</strong>
+        </article>
+        <article class="employee-meta-card">
+          <span>Résidence</span>
+          <strong>{{ data.profile.countryOfResidence || 'Non renseignée' }}</strong>
+        </article>
+        <article class="employee-meta-card">
+          <span>Département</span>
+          <strong>{{ data.profile.department || 'Non renseigné' }}</strong>
+        </article>
+      </div>
+    </div>
+
+    <div class="subscription-card employee-summary-card">
+      <span class="pill">Vue rapide</span>
+      <h3>Statut personnel</h3>
+      <p class="meta">Télétravail résidence ce mois : {{ currentMonthTeleworkCount() }} jour(s)</p>
+      <p class="meta">Jours fiscaux hors Luxembourg cette année : {{ currentYearTeleworkCount() }} jour(s)</p>
+      <p class="meta">Demandes de congé en attente : {{ requestedLeavesCount() }}</p>
+      <p class="meta">Compte actif : {{ data.profile.active ? 'Oui' : 'Non' }}</p>
+    </div>
+  </section>
+
+  <section class="stats-grid">
+    <article class="metric-card">
+      <span>Télétravail mois</span>
+      <strong>{{ currentMonthTeleworkCount() }}</strong>
+    </article>
+    <article class="metric-card">
+      <span>Demandes de congé</span>
+      <strong>{{ data.leaves.length }}</strong>
+    </article>
+    <article class="metric-card alert-card">
+      <span>Arrêts maladie</span>
+      <strong>{{ data.sickness.length }}</strong>
+    </article>
+    <article class="metric-card alert-card">
+      <span>Conformité 34 jours</span>
+      <strong>{{ data.complianceAvailable ? 'Active' : 'Non incluse' }}</strong>
+    </article>
+  </section>
+
+  <section class="grid-layout employee-grid">
+    <section class="panel">
+      <div class="section-head">
+        <div>
+          <p class="section-tag">Actions</p>
+          <h2>Déclarer et demander</h2>
+        </div>
+      </div>
+
+      <div class="workspace-form-grid">
+        <form class="workspace-form-card" [formGroup]="teleworkForm" (ngSubmit)="submitTelework()">
+          <div class="workspace-form-head">
+            <div>
+              <h3>Activité hors Luxembourg</h3>
+              <p>Enregistrez une journée travaillée hors Luxembourg.</p>
+            </div>
+            <span class="pill neutral">Fiscal / A1</span>
+          </div>
+
+          <label class="workspace-field">
+            <span>Date travaillée</span>
+            <input type="date" formControlName="workDate">
+          </label>
+
+          <label class="workspace-field">
+            <span>Pays de résidence</span>
+            <input type="text" formControlName="countryCode" maxlength="7" placeholder="FR, BE, DE">
+          </label>
+
+          <div class="workspace-inline-fields">
+            <label class="workspace-field">
+              <span>Minutes travaillées</span>
+              <input type="number" min="1" formControlName="totalWorkMinutes">
+            </label>
+
+            <label class="workspace-field">
+              <span>Télétravail résidence</span>
+              <input type="number" min="0" formControlName="residenceTeleworkMinutes">
+            </label>
+          </div>
+
+          <div class="workspace-inline-fields">
+            <label class="workspace-field">
+              <span>Autre activité résidence</span>
+              <input type="number" min="0" formControlName="residenceNonTeleworkMinutes">
+            </label>
+
+            <label class="workspace-field">
+              <span>Autre pays</span>
+              <input type="number" min="0" formControlName="otherForeignWorkMinutes">
+            </label>
+          </div>
+
+          <label class="workspace-field">
+            <span>Code autre pays</span>
+            <input type="text" formControlName="otherForeignCountryCode" maxlength="7" placeholder="DE, BE, CH...">
+          </label>
+
+          <label class="workspace-field checkbox-field">
+            <span>Connexion aux outils employeur</span>
+            <input type="checkbox" formControlName="connectedToEmployerInfrastructure">
+          </label>
+
+          <p class="workspace-helper">
+            Le total hors Luxembourg ne peut pas dépasser les minutes travaillées. Si rien d'autre n'est précisé,
+            la déclaration reste interprétée comme une journée complète de télétravail dans le pays de résidence.
+          </p>
+
+          <button class="checkout-button" type="submit" [disabled]="submittingTelework()">
+            {{ submittingTelework() ? 'Enregistrement...' : 'Déclarer ce jour' }}
+          </button>
+        </form>
+
+        <form class="workspace-form-card" [formGroup]="leaveForm" (ngSubmit)="submitLeave()">
+          <div class="workspace-form-head">
+            <div>
+              <h3>Congé</h3>
+              <p>Choisissez le type et la période.</p>
+            </div>
+            <span class="pill neutral">Congés</span>
+          </div>
+
+          <label class="workspace-field">
+            <span>Type de congé</span>
+            <select formControlName="type">
+              <option *ngFor="let option of leaveTypeOptions" [value]="option.value">{{ option.label }}</option>
+            </select>
+          </label>
+
+          <div class="workspace-inline-fields">
+            <label class="workspace-field">
+              <span>Début</span>
+              <input type="date" formControlName="startDate">
+            </label>
+
+            <label class="workspace-field">
+              <span>Fin</span>
+              <input type="date" formControlName="endDate">
+            </label>
+          </div>
+
+          <label class="workspace-field">
+            <span>Commentaire</span>
+            <textarea formControlName="comment" rows="3" placeholder="Contexte ou précision utile"></textarea>
+          </label>
+
+          <p class="workspace-helper">{{ selectedLeaveHelper() }}</p>
+
+          <button class="checkout-button" type="submit" [disabled]="submittingLeave()">
+            {{ submittingLeave() ? 'Transmission...' : 'Envoyer la demande' }}
+          </button>
+        </form>
+
+        <form class="workspace-form-card" [formGroup]="sicknessForm" (ngSubmit)="submitSickness()">
+          <div class="workspace-form-head">
+            <div>
+              <h3>Arrêt maladie</h3>
+              <p>Renseignez la période d'absence.</p>
+            </div>
+            <span class="pill neutral">Maladie</span>
+          </div>
+
+          <div class="workspace-inline-fields">
+            <label class="workspace-field">
+              <span>Début</span>
+              <input type="date" formControlName="startDate">
+            </label>
+
+            <label class="workspace-field">
+              <span>Fin</span>
+              <input type="date" formControlName="endDate">
+            </label>
+          </div>
+
+          <label class="workspace-field">
+            <span>Commentaire</span>
+            <textarea formControlName="comment" rows="3" placeholder="Précision utile pour l'équipe RH"></textarea>
+          </label>
+
+          <button class="checkout-button" type="submit" [disabled]="submittingSickness()">
+            {{ submittingSickness() ? 'Transmission...' : "Déclarer l'arrêt" }}
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-head">
+        <div>
+          <p class="section-tag">Conformité</p>
+          <h2>Lecture personnelle</h2>
+        </div>
+      </div>
+
+      <ng-container *ngIf="data.teleworkSummary as summary; else complianceFallback">
+        <div class="employee-compliance-stack">
+          <article class="entitlement enabled">
+            <h3>Seuil fiscal</h3>
+            <p>{{ summary.fiscal.thresholdDaysUsed }} / {{ summary.fiscal.thresholdLimitDays }} jour(s) hors Luxembourg</p>
+          </article>
+          <article class="entitlement" [class.enabled]="!summary.annualFiscalLimitExceeded">
+            <h3>Reste estimé</h3>
+            <p>{{ summary.fiscal.thresholdDaysRemaining }} jour(s) disponibles sur le seuil actuel.</p>
+          </article>
+          <article class="entitlement" [class.enabled]="!summary.policy.weeklyCompanyLimitExceeded">
+            <h3>Part imposable Luxembourg</h3>
+            <p>{{ summary.fiscal.luxembourgTaxableSharePercent }} % du temps suivi reste imposable au Luxembourg.</p>
+          </article>
+          <article class="entitlement" [class.enabled]="summary.socialSecurity.frameworkAgreementApplicable || summary.socialSecurity.likelyApplicableLegislationCountryCode === 'LU'">
+            <h3>Sécurité sociale</h3>
+            <p>{{ summary.socialSecurity.residenceTeleworkPercent }} % télétravail résidence, mode {{ summary.socialSecurity.evaluationMode }}</p>
+          </article>
+        </div>
+
+        <div class="legal-note-card">
+          <h3>{{ summary.policy.taxRuleLabel }}</h3>
+          <p>{{ summary.policy.notes }}</p>
+          <p class="small-copy">Référence : {{ summary.policy.legalReference }}</p>
+          <p class="small-copy">{{ summary.fiscal.explanation }}</p>
+          <p class="small-copy">{{ summary.socialSecurity.explanation }}</p>
+        </div>
+
+        <div class="employee-compliance-stack">
+          <article class="entitlement enabled">
+            <h3>A1 / CCSS</h3>
+            <p>{{ summary.socialSecurity.a1Required ? 'A1 requis' : 'A1 non requis' }} - canal {{ summary.socialSecurity.certificatePath }}</p>
+          </article>
+          <article class="entitlement enabled">
+            <h3>Législation probable</h3>
+            <p>{{ summary.socialSecurity.likelyApplicableLegislationCountryCode }}</p>
+          </article>
+          <article class="entitlement enabled">
+            <h3>Rétroactivité max.</h3>
+            <p>{{ summary.socialSecurity.maxRetroactivityMonths }} mois depuis le 1 juillet 2024</p>
+          </article>
+        </div>
+
+        <div class="legal-note-card" *ngIf="summary.socialSecurity.warnings.length">
+          <h3>Points de vigilance</h3>
+          <p *ngFor="let warning of summary.socialSecurity.warnings">{{ warning }}</p>
+        </div>
+      </ng-container>
+
+      <ng-template #complianceFallback>
+        <article class="entitlement">
+          <h3>Résumé conformité indisponible</h3>
+          <p>La déclaration des jours de télétravail reste disponible.</p>
+        </article>
+      </ng-template>
+    </section>
+  </section>
+
+  <section class="grid-layout employee-history-grid">
+    <section class="panel">
+      <div class="section-head">
+        <div>
+          <p class="section-tag">Historique</p>
+          <h2>Mes jours hors Luxembourg</h2>
+        </div>
+      </div>
+
+      <div class="history-list" *ngIf="latestTeleworkEntries().length; else emptyTelework">
+        <article class="history-card" *ngFor="let item of latestTeleworkEntries()">
+          <div>
+            <strong>{{ item.workDate | date:'dd/MM/yyyy' }}</strong>
+            <p class="small-copy">
+              {{ item.countryCode }} - {{ item.residenceTeleworkMinutes }} min télétravail -
+              {{ item.otherForeignWorkMinutes }} min autre pays - statut {{ item.status }}
+            </p>
+          </div>
+          <div class="history-badges">
+            <span class="badge" [class.badge-alert]="item.annualFiscalLimitExceeded">
+              {{ item.annualUsedDays }} fiscal
+            </span>
+            <span class="badge" [class.badge-alert]="item.weeklyCompanyLimitExceeded">
+              {{ item.weeklyUsedDays }} télétravail hebdo
+            </span>
+          </div>
+        </article>
+      </div>
+
+      <ng-template #emptyTelework>
+        <p class="hint">Aucune déclaration de télétravail pour le moment.</p>
+      </ng-template>
+    </section>
+
+    <section class="panel">
+      <div class="section-head">
+        <div>
+          <p class="section-tag">Congés</p>
+          <h2>Mes demandes</h2>
+        </div>
+      </div>
+
+      <div class="history-list" *ngIf="latestLeaveEntries().length; else emptyLeaves">
+        <article class="history-card" *ngFor="let item of latestLeaveEntries()">
+          <div>
+            <strong>{{ leaveTypeLabel(item.type) }}</strong>
+            <p class="small-copy">{{ item.startDate | date:'dd/MM/yyyy' }} -> {{ item.endDate | date:'dd/MM/yyyy' }}</p>
+          </div>
+          <div class="history-actions">
+            <span class="badge" [class.badge-alert]="item.status === 'REJECTED'">{{ item.status }}</span>
+            <button
+              *ngIf="canCancelLeave(item)"
+              type="button"
+              class="checkout-button outline small"
+              (click)="cancelLeave(item)">
+              Annuler
+            </button>
+          </div>
+        </article>
+      </div>
+
+      <ng-template #emptyLeaves>
+        <p class="hint">Aucune demande de congé pour le moment.</p>
+      </ng-template>
+    </section>
+  </section>
+
+  <section class="panel">
+    <div class="section-head">
+      <div>
+        <p class="section-tag">Santé</p>
+        <h2>Mes arrêts maladie</h2>
+      </div>
+    </div>
+
+    <div class="history-list" *ngIf="latestSicknessEntries().length; else emptySickness">
+      <article class="history-card" *ngFor="let item of latestSicknessEntries()">
+        <div>
+          <strong>{{ item.startDate | date:'dd/MM/yyyy' }} -> {{ item.endDate | date:'dd/MM/yyyy' }}</strong>
+          <p class="small-copy">{{ item.comment || 'Sans commentaire' }}</p>
+        </div>
+        <span class="badge">Enregistré</span>
+      </article>
+    </div>
+
+    <ng-template #emptySickness>
+      <p class="hint">Aucun arrêt maladie enregistré.</p>
+    </ng-template>
+  </section>
+</ng-container>
+</ng-template>
+
+<ng-template #loadingState>
+  <section class="panel loading-panel">
+    <h2>Chargement de l'espace employé</h2>
+    <p>Récupération de vos données.</p>
+  </section>
+</ng-template>

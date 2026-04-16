@@ -6,6 +6,8 @@ public record TeleworkSummaryResponse(
         int annualRemainingDays,
         int monthUsedDays,
         boolean annualFiscalLimitExceeded,
-        TeleworkPolicySnapshot policy
+        TeleworkPolicySnapshot policy,
+        TeleworkFiscalSummary fiscal,
+        TeleworkSocialSecuritySummary socialSecurity
 ) {
 }

@@ -20,39 +20,36 @@ export class AppComponent {
   readonly shellSummary = computed(() => {
     if (this.isAuthenticated()) {
       const currentSession = this.session();
-      const primaryRole = currentSession?.roles[0] ?? 'EMPLOYEE';
       return {
-        badge: 'Workspace',
-        title: 'Pilotage RH frontalier',
-        description: `Tenant ${currentSession?.tenantId} connecte avec le role ${primaryRole}.`,
-        highlights: ['Dashboard unifie', 'Conformite Luxembourg', 'Billing SaaS'],
+        badge: 'Espace WorkRH',
+        title: 'WorkRH',
         statusLabel: currentSession?.email ?? 'Session active'
       };
     }
 
     return {
-      badge: 'WorkRH Platform',
-      title: 'RH, teletravail et abonnement dans le meme cockpit',
-      description: 'Une interface unique pour les operations RH, la conformite frontaliere et la monetisation SaaS.',
-      highlights: ['Login demo', 'Pricing clair', 'Modules securises'],
-      statusLabel: 'Session non connectee'
+      badge: 'WorkRH',
+      title: 'Gestion RH',
+      statusLabel: 'Non connecté'
     };
   });
   readonly navItems = computed(() => {
     const items = [
-      { label: 'Pricing', route: '/pricing' }
+      { label: 'Offres', route: '/pricing' }
     ];
 
     if (this.isAuthenticated()) {
-      items.unshift({ label: 'Dashboard', route: '/dashboard' });
-      if (this.authService.hasRole('HR') || this.authService.hasRole('ADMIN')) {
-        items.push({ label: 'Billing', route: '/billing' });
+      if (this.authService.hasRole('EMPLOYEE')) {
+        items.unshift({ label: 'Mon espace', route: '/employee' });
       }
       if (this.authService.hasRole('HR') || this.authService.hasRole('ADMIN')) {
-        items.push({ label: 'Policies', route: '/policies' });
+        items.unshift({ label: 'Tableau de bord', route: '/dashboard' });
+        items.push({ label: 'Facturation', route: '/billing' });
+        items.push({ label: 'Règles', route: '/policies' });
       }
     } else {
-      items.unshift({ label: 'Login', route: '/login' });
+      items.unshift({ label: 'Connexion', route: '/login' });
+      items.unshift({ label: 'Inscription', route: '/signup' });
     }
 
     return items;

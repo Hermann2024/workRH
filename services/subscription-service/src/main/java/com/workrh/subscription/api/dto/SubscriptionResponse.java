@@ -23,6 +23,7 @@ public record SubscriptionResponse(
         String stripeCustomerEmail,
         String stripeCheckoutSessionId,
         String stripeSubscriptionId,
+        boolean previewAllFeaturesActive,
         Set<String> entitlements
 ) {
 }

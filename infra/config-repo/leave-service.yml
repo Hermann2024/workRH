@@ -1,7 +1,7 @@
 server:
-  port: 8082
+  port: 9082
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5433/workrh_leaves
+    url: jdbc:postgresql://localhost:6433/workrh_leaves
     username: workrh
     password: workrh

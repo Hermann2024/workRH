@@ -1,9 +1,11 @@
 package com.workrh.reporting.service;
 
 import com.workrh.common.events.TeleworkDeclaredEvent;
+import com.workrh.common.events.ThresholdAlertEvent;
 import com.workrh.common.events.ThresholdExceededEvent;
 import com.workrh.common.tenant.TenantContext;
 import com.workrh.reporting.api.dto.DashboardResponse;
+import com.workrh.reporting.api.dto.MonthlyStatsResponse;
 import com.workrh.reporting.domain.TeleworkMetricSnapshot;
 import com.workrh.reporting.repository.TeleworkMetricRepository;
 import java.io.ByteArrayOutputStream;
@@ -11,7 +13,10 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -55,12 +60,21 @@ public class ReportingService {
     }
 
     @KafkaListener(topics = "alert-events", groupId = "reporting-service")
-    public void onThresholdExceeded(ThresholdExceededEvent event) {
-        List<TeleworkMetricSnapshot> metrics = teleworkMetricRepository.findAllByTenantIdAndEmployeeId(event.tenantId(), event.employeeId());
+    public void onAlertEvent(Object event) {
+        if (event instanceof ThresholdAlertEvent) {
+            return;
+        }
+        if (!(event instanceof ThresholdExceededEvent thresholdExceededEvent)) {
+            return;
+        }
+        List<TeleworkMetricSnapshot> metrics = teleworkMetricRepository.findAllByTenantIdAndEmployeeId(
+                thresholdExceededEvent.tenantId(),
+                thresholdExceededEvent.employeeId()
+        );
         metrics.forEach(metric -> {
             metric.setAnnualFiscalLimitExceeded(true);
-            metric.setAnnualUsedDays(Math.max(metric.getAnnualUsedDays(), event.annualUsedDays()));
-            metric.setAnnualRemainingDays(Math.max(event.annualLimit() - event.annualUsedDays(), 0));
+            metric.setAnnualUsedDays(Math.max(metric.getAnnualUsedDays(), thresholdExceededEvent.annualUsedDays()));
+            metric.setAnnualRemainingDays(Math.max(thresholdExceededEvent.annualLimit() - thresholdExceededEvent.annualUsedDays(), 0));
             metric.setUpdatedAt(Instant.now());
             teleworkMetricRepository.save(metric);
         });
@@ -83,6 +97,39 @@ public class ReportingService {
                         metric.isWeeklyCompanyLimitExceeded()))
                 .toList();
         return new DashboardResponse(metrics.size(), totalUsed, totalRemaining, fiscalAlerts, weeklyAlerts, employees);
+    }
+
+    public MonthlyStatsResponse monthlyStats(int year) {
+        List<TeleworkMetricSnapshot> metrics = teleworkMetricRepository.findAllByTenantIdAndYearOrderByMonthAsc(TenantContext.getTenantId(), year);
+        Map<Integer, List<TeleworkMetricSnapshot>> byMonth = metrics.stream()
+                .collect(Collectors.groupingBy(TeleworkMetricSnapshot::getMonth));
+
+        List<MonthlyStatsResponse.MonthlyStatItem> months = java.util.stream.IntStream.rangeClosed(1, 12)
+                .mapToObj(month -> {
+                    List<TeleworkMetricSnapshot> monthMetrics = byMonth.getOrDefault(month, List.of());
+                    int usedDays = monthMetrics.stream().mapToInt(TeleworkMetricSnapshot::getUsedDays).sum();
+                    int remainingDays = monthMetrics.stream().mapToInt(TeleworkMetricSnapshot::getAnnualRemainingDays).sum();
+                    int fiscalAlerts = (int) monthMetrics.stream().filter(TeleworkMetricSnapshot::isAnnualFiscalLimitExceeded).count();
+                    int weeklyAlerts = (int) monthMetrics.stream().filter(TeleworkMetricSnapshot::isWeeklyCompanyLimitExceeded).count();
+                    return new MonthlyStatsResponse.MonthlyStatItem(
+                            month,
+                            usedDays,
+                            remainingDays,
+                            fiscalAlerts,
+                            weeklyAlerts,
+                            monthMetrics.size()
+                    );
+                })
+                .sorted(Comparator.comparingInt(MonthlyStatsResponse.MonthlyStatItem::month))
+                .toList();
+
+        int trackedEmployees = (int) metrics.stream().map(TeleworkMetricSnapshot::getEmployeeId).distinct().count();
+        int peakUsedDays = months.stream().mapToInt(MonthlyStatsResponse.MonthlyStatItem::usedDays).max().orElse(0);
+        int totalAlertMonths = (int) months.stream()
+                .filter(month -> month.fiscalAlerts() > 0 || month.weeklyAlerts() > 0)
+                .count();
+
+        return new MonthlyStatsResponse(year, trackedEmployees, peakUsedDays, totalAlertMonths, months);
     }
 
     public byte[] exportCsv(int year, int month) {

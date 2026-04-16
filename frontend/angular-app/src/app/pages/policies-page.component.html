@@ -1,11 +1,19 @@
+<ng-container *ngIf="loadError() as errorMessage; else policiesState">
+  <section class="panel loading-panel">
+    <h2>Regles indisponibles</h2>
+    <p>{{ errorMessage }}</p>
+  </section>
+</ng-container>
+
+<ng-template #policiesState>
 <ng-container *ngIf="vm() as data; else loadingState">
   <section class="panel policies-panel">
     <div class="section-head">
       <div>
-        <p class="section-tag">Policies</p>
-        <h2>Regles de teletravail par pays</h2>
+        <p class="section-tag">Règles</p>
+        <h2>Règles de télétravail par pays</h2>
       </div>
-      <p class="hint">Les limites sont parametrees par tenant et par code pays.</p>
+      <p class="hint">Les limites sont paramétrées par tenant et par code pays.</p>
     </div>
 
     <div class="stats-grid policies-stats-grid">
@@ -15,28 +23,28 @@
       </article>
     </div>
 
-    <div class="policies-table-wrap">
+    <div class="policies-table-wrap" *ngIf="companySummary() as summary; else emptyCompanySummary">
     <table>
       <thead>
         <tr>
-          <th>Employe</th>
+          <th>Employé</th>
           <th>Pays</th>
           <th>Limite fiscale</th>
           <th>Restant</th>
           <th>Limite hebdo</th>
-          <th>Utilise hebdo</th>
-          <th>Etat</th>
+          <th>Utilisé hebdo</th>
+          <th>État</th>
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let employee of data.companySummary.employees">
+        <tr *ngFor="let employee of summary.employees">
           <td>#{{ employee.employeeId }}</td>
           <td>{{ employee.policy.countryCode }}</td>
           <td>{{ employee.policy.annualFiscalLimitDays }}</td>
           <td>{{ employee.policy.annualFiscalRemainingDays }}</td>
           <td>
             <span *ngIf="employee.policy.weeklyLimitEnabled">{{ employee.policy.weeklyCompanyLimitDays }}</span>
-            <span *ngIf="!employee.policy.weeklyLimitEnabled">Desactivee</span>
+            <span *ngIf="!employee.policy.weeklyLimitEnabled">Désactivée</span>
           </td>
           <td>{{ employee.policy.weeklyUsedDays }}</td>
           <td>
@@ -50,39 +58,273 @@
     </div>
   </section>
 
-  <section class="panel policies-panel">
-    <div class="section-head">
-      <div>
-        <p class="section-tag">Admin</p>
-        <h2>Actions a raccorder</h2>
+  <section class="grid-layout employee-grid">
+    <section class="panel policies-panel">
+      <div class="section-head">
+        <div>
+          <p class="section-tag">Catalogue</p>
+          <h2>Règles disponibles</h2>
+        </div>
+        <div class="action-row" *ngIf="isAdmin()">
+          <button type="button" class="checkout-button outline small" (click)="startNewPolicy()">
+            Nouvelle règle
+          </button>
+        </div>
       </div>
-      <p class="hint">Ces actions sont deja prises en charge cote backend.</p>
-    </div>
 
-    <div class="entitlement-grid">
-      <article class="entitlement enabled">
-        <h3>Creer une policy</h3>
-        <p>Endpoint disponible sur <code>/api/telework/policies</code>.</p>
-      </article>
-      <article class="entitlement enabled">
-        <h3>Modifier par pays</h3>
-        <p>Prise en charge de <code>FR</code>, <code>BE</code>, <code>DE</code> ou <code>DEFAULT</code>.</p>
-      </article>
-      <article class="entitlement enabled">
-        <h3>Desactiver la limite hebdomadaire</h3>
-        <p>Permet de conserver la seule contrainte fiscale annuelle.</p>
-      </article>
-      <article class="entitlement enabled">
-        <h3>Fallback tenant</h3>
-        <p>Une policy <code>DEFAULT</code> sert de base si aucun pays specifique n'est defini.</p>
-      </article>
-    </div>
+      <div class="checkout-banner success" *ngIf="policyMessage() as message">
+        {{ message }}
+      </div>
+      <div class="checkout-banner cancelled" *ngIf="policyError() as errorMessage">
+        {{ errorMessage }}
+      </div>
+
+      <div class="policy-card-grid">
+        <article
+          class="workspace-form-card policy-card"
+          *ngFor="let policy of policies()"
+          [class.policy-card-selected]="selectedCountryCode() === policy.countryCode">
+          <div class="policy-card-head">
+            <div>
+              <h3>{{ policy.countryCode }}</h3>
+              <p class="small-copy">{{ policySourceLabel(policy) }}</p>
+            </div>
+            <span class="pill neutral" *ngIf="!policy.active">Inactive</span>
+          </div>
+
+          <div class="billing-tech-list policy-facts">
+            <div class="billing-tech-item">
+              <span>Fiscal</span>
+              <strong>{{ policy.annualFiscalLimitDays }} j</strong>
+            </div>
+            <div class="billing-tech-item">
+              <span>Hebdo</span>
+              <strong>{{ policy.weeklyLimitEnabled ? (policy.weeklyCompanyLimitDays + ' j') : 'Désactivée' }}</strong>
+            </div>
+            <div class="billing-tech-item">
+              <span>Cadre social</span>
+              <strong>{{ policy.socialSecurityFrameworkThresholdPercent }} %</strong>
+            </div>
+            <div class="billing-tech-item">
+              <span>Jour standard</span>
+              <strong>{{ policy.standardDailyWorkMinutes }} min</strong>
+            </div>
+          </div>
+
+          <p class="workspace-helper">{{ policy.taxRuleLabel || 'Sans libellé fiscal personnalisé.' }}</p>
+
+          <div class="action-row">
+            <button type="button" class="checkout-button outline small" (click)="selectPolicy(policy.countryCode)">
+              {{ selectedCountryCode() === policy.countryCode ? 'Sélectionnée' : (isAdmin() ? 'Modifier' : 'Voir le détail') }}
+            </button>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel policies-panel">
+      <div class="section-head">
+        <div>
+          <p class="section-tag">{{ isAdmin() ? 'Édition' : 'Lecture' }}</p>
+          <h2>{{ selectedPolicyLabel() }}</h2>
+        </div>
+        <p class="hint" *ngIf="selectedPolicy() as policy">
+          {{ policy.id ? 'Cette règle surcharge le catalogue par défaut pour ce tenant.' : 'Cette règle provient du catalogue standard et peut être surchargée.' }}
+        </p>
+      </div>
+
+      <ng-container *ngIf="isAdmin(); else readOnlyPolicy">
+        <form class="workspace-form-grid" [formGroup]="policyForm" (ngSubmit)="savePolicy()">
+          <article class="workspace-form-card">
+            <div class="workspace-form-head">
+              <div>
+                <h3>Cadre principal</h3>
+                <p>Configurez les limites fiscales et sociales par pays.</p>
+              </div>
+              <span class="pill neutral">{{ selectedPolicy()?.id ? 'Mise à jour' : 'Création' }}</span>
+            </div>
+
+            <div class="workspace-inline-fields">
+              <label class="workspace-field">
+                <span>Pays</span>
+                <input type="text" formControlName="countryCode" maxlength="12" placeholder="FR, BE, DE, DEFAULT, CH">
+              </label>
+              <label class="workspace-field">
+                <span>Limite fiscale annuelle</span>
+                <input type="number" min="1" formControlName="annualFiscalLimitDays">
+              </label>
+            </div>
+
+            <div class="workspace-inline-fields">
+              <label class="workspace-field">
+                <span>Limite hebdo</span>
+                <input type="number" min="0" formControlName="weeklyCompanyLimitDays">
+              </label>
+              <label class="workspace-field">
+                <span>Jour standard</span>
+                <input type="number" min="60" formControlName="standardDailyWorkMinutes">
+              </label>
+            </div>
+
+            <div class="workspace-inline-fields">
+              <label class="workspace-field">
+                <span>Seuil sécurité sociale standard</span>
+                <input type="number" min="1" formControlName="socialSecurityStandardThresholdPercent">
+              </label>
+              <label class="workspace-field">
+                <span>Seuil accord-cadre</span>
+                <input type="number" min="1" formControlName="socialSecurityFrameworkThresholdPercent">
+              </label>
+            </div>
+
+            <label class="workspace-field">
+              <span>Tolérance courte activité</span>
+              <input type="number" min="0" formControlName="shortActivityToleranceMinutes">
+            </label>
+          </article>
+
+          <article class="workspace-form-card">
+            <div class="workspace-form-head">
+              <div>
+                <h3>Métadonnées juridiques</h3>
+                <p>Texte visible dans les écrans employé et RH.</p>
+              </div>
+            </div>
+
+            <label class="workspace-field">
+              <span>Libellé fiscal</span>
+              <input type="text" formControlName="taxRuleLabel">
+            </label>
+
+            <label class="workspace-field">
+              <span>Référence légale</span>
+              <input type="text" formControlName="legalReference">
+            </label>
+
+            <div class="workspace-inline-fields">
+              <label class="workspace-field">
+                <span>Source fiscale</span>
+                <input type="url" formControlName="taxSourceUrl">
+              </label>
+              <label class="workspace-field">
+                <span>Source sécurité sociale</span>
+                <input type="url" formControlName="socialSecuritySourceUrl">
+              </label>
+            </div>
+
+            <label class="workspace-field">
+              <span>Notes</span>
+              <textarea rows="4" formControlName="notes"></textarea>
+            </label>
+          </article>
+
+          <article class="workspace-form-card">
+            <div class="workspace-form-head">
+              <div>
+                <h3>Comportement de calcul</h3>
+                <p>Activez ou non les règles de calcul spécifiques.</p>
+              </div>
+            </div>
+
+            <div class="policy-checkbox-grid">
+              <label class="workspace-field checkbox-field">
+                <span>Limite hebdomadaire active</span>
+                <input type="checkbox" formControlName="weeklyLimitEnabled">
+              </label>
+              <label class="workspace-field checkbox-field">
+                <span>Accord-cadre éligible</span>
+                <input type="checkbox" formControlName="socialSecurityFrameworkAgreementEligible">
+              </label>
+              <label class="workspace-field checkbox-field">
+                <span>Jour partiel compte comme plein</span>
+                <input type="checkbox" formControlName="partialDayCountsAsFullDay">
+              </label>
+              <label class="workspace-field checkbox-field">
+                <span>Proratisation du seuil</span>
+                <input type="checkbox" formControlName="thresholdProrated">
+              </label>
+              <label class="workspace-field checkbox-field">
+                <span>Jours pays tiers comptés</span>
+                <input type="checkbox" formControlName="thirdCountryDaysCounted">
+              </label>
+              <label class="workspace-field checkbox-field">
+                <span>Règle active</span>
+                <input type="checkbox" formControlName="active">
+              </label>
+            </div>
+
+            <div class="action-row">
+              <button type="submit" class="checkout-button small" [disabled]="saving()">
+                {{ saving() ? 'Enregistrement...' : 'Enregistrer la règle' }}
+              </button>
+              <button type="button" class="checkout-button outline small" (click)="resetPolicyForm()" [disabled]="saving()">
+                Réinitialiser
+              </button>
+            </div>
+          </article>
+        </form>
+      </ng-container>
+
+      <ng-template #readOnlyPolicy>
+        <article class="workspace-form-card" *ngIf="selectedPolicy() as policy; else noSelectedPolicy">
+          <div class="workspace-form-head">
+            <div>
+              <h3>{{ policy.countryCode }}</h3>
+              <p>{{ policy.taxRuleLabel || 'Sans libellé fiscal personnalisé.' }}</p>
+            </div>
+            <span class="pill neutral">{{ policySourceLabel(policy) }}</span>
+          </div>
+
+          <div class="billing-tech-list policy-facts">
+            <div class="billing-tech-item">
+              <span>Limite fiscale</span>
+              <strong>{{ policy.annualFiscalLimitDays }} jours</strong>
+            </div>
+            <div class="billing-tech-item">
+              <span>Limite hebdo</span>
+              <strong>{{ policy.weeklyLimitEnabled ? (policy.weeklyCompanyLimitDays + ' jours') : 'Désactivée' }}</strong>
+            </div>
+            <div class="billing-tech-item">
+              <span>Accord-cadre</span>
+              <strong>{{ policy.socialSecurityFrameworkAgreementEligible ? 'Éligible' : 'Non éligible' }}</strong>
+            </div>
+            <div class="billing-tech-item">
+              <span>Tolérance courte</span>
+              <strong>{{ policy.shortActivityToleranceMinutes }} min</strong>
+            </div>
+          </div>
+
+          <div class="legal-note-card">
+            <h3>Références</h3>
+            <p>{{ policy.legalReference || 'Aucune référence spécifique renseignée.' }}</p>
+            <p class="small-copy" *ngIf="policy.taxSourceUrl">Fiscal: {{ policy.taxSourceUrl }}</p>
+            <p class="small-copy" *ngIf="policy.socialSecuritySourceUrl">Social: {{ policy.socialSecuritySourceUrl }}</p>
+            <p class="small-copy" *ngIf="policy.notes">{{ policy.notes }}</p>
+          </div>
+        </article>
+      </ng-template>
+    </section>
   </section>
 </ng-container>
+</ng-template>
+
+<ng-template #emptyCompanySummary>
+  <article class="entitlement enabled">
+    <h3>Vue entreprise indisponible</h3>
+    <p>Les policies restent consultables, mais le résumé consolidé n'a pas pu être chargé.</p>
+  </article>
+</ng-template>
+
+<ng-template #noSelectedPolicy>
+  <article class="entitlement enabled">
+    <h3>Aucune règle sélectionnée</h3>
+    <p>Sélectionnez un pays à gauche, ou créez une nouvelle règle si vous êtes administrateur.</p>
+  </article>
+</ng-template>
 
 <ng-template #loadingState>
   <section class="panel loading-panel">
     <h2>Chargement des policies</h2>
-    <p>Recuperation des seuils fiscaux et RH par pays frontalier.</p>
+    <p>Récupération des seuils fiscaux et RH par pays frontalier.</p>
   </section>
 </ng-template>

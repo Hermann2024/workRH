@@ -4,17 +4,12 @@
       <div class="brand-card">
         <p class="eyebrow">{{ shellSummary().badge }}</p>
         <h1>{{ shellSummary().title }}</h1>
-        <p class="brand-copy">{{ shellSummary().description }}</p>
-
-        <div class="highlight-list">
-          <span class="highlight-pill" *ngFor="let item of shellSummary().highlights">{{ item }}</span>
-        </div>
       </div>
 
       <div class="status-card">
-        <p class="status-label">Etat</p>
+        <p class="status-label">État</p>
         <strong>{{ shellSummary().statusLabel }}</strong>
-        <span>{{ isAuthenticated() ? 'Navigation metier active' : 'Connectez-vous pour acceder aux modules securises' }}</span>
+        <span>{{ isAuthenticated() ? 'Modules disponibles' : 'Connexion requise' }}</span>
       </div>
     </aside>
 
@@ -38,7 +33,7 @@
             {{ currentSession.email }} - {{ currentSession.tenantId }}
           </span>
           <button class="nav-logout" *ngIf="isAuthenticated()" (click)="logout()">
-            Logout
+            Déconnexion
           </button>
         </div>
       </header>

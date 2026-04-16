@@ -39,27 +39,34 @@ public class TeleworkController {
     @PreAuthorize("hasAnyAuthority('ADMIN','HR','EMPLOYEE')")
     @RequiresFeature(FeatureCode.TELEWORK_COMPLIANCE_34)
     public TeleworkSummaryResponse summary(
-            @PathVariable Long employeeId,
-            @RequestParam int year,
-            @RequestParam int month,
-            @RequestParam(required = false) String countryCode) {
+            @PathVariable("employeeId") Long employeeId,
+            @RequestParam("year") int year,
+            @RequestParam("month") int month,
+            @RequestParam(name = "countryCode", required = false) String countryCode) {
         return teleworkService.summary(employeeId, year, month, countryCode);
     }
 
     @GetMapping("/history/{employeeId}")
     @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
     @RequiresFeature(FeatureCode.DECLARATION_AUDIT)
-    public List<TeleworkDeclarationResponse> history(@PathVariable Long employeeId) {
+    public List<TeleworkDeclarationResponse> history(@PathVariable("employeeId") Long employeeId) {
         return teleworkService.history(employeeId);
+    }
+
+    @GetMapping("/me/history")
+    @PreAuthorize("hasAnyAuthority('ADMIN','HR','EMPLOYEE')")
+    @RequiresFeature(FeatureCode.TELEWORK_BASIC)
+    public List<TeleworkDeclarationResponse> currentEmployeeHistory() {
+        return teleworkService.currentEmployeeHistory();
     }
 
     @GetMapping("/company-summary")
     @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
     @RequiresFeature(FeatureCode.DASHBOARD_ADVANCED)
     public TeleworkCompanySummaryResponse companySummary(
-            @RequestParam int year,
-            @RequestParam int month,
-            @RequestParam(required = false) String countryCode) {
+            @RequestParam("year") int year,
+            @RequestParam("month") int month,
+            @RequestParam(name = "countryCode", required = false) String countryCode) {
         return teleworkService.companySummary(year, month, countryCode);
     }
 }

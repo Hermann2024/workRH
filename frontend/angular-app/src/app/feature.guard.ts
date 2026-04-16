@@ -1,17 +1,36 @@
 import { CanActivateFn, Router } from '@angular/router';
 import { inject } from '@angular/core';
 import { AuthService } from './auth.service';
-import { WorkRhApiService, WorkRhVm } from './workrh-api.service';
-import { map } from 'rxjs';
+import { WorkRhApiService } from './workrh-api.service';
+import { catchError, map, of } from 'rxjs';
 
-export const authGuard: CanActivateFn = () => {
+export const landingGuard: CanActivateFn = () => {
+  const authService = inject(AuthService);
+  const router = inject(Router);
+
+  if (!authService.isAuthenticated()) {
+    return true;
+  }
+
+  const employeeOnly = authService.hasRole('EMPLOYEE')
+    && !authService.hasRole('HR')
+    && !authService.hasRole('ADMIN');
+
+  return router.parseUrl(employeeOnly ? '/employee' : '/dashboard');
+};
+
+export const authGuard: CanActivateFn = (_route, state) => {
   const authService = inject(AuthService);
   const router = inject(Router);
 
   if (authService.isAuthenticated()) {
     return true;
   }
-  return router.parseUrl('/login');
+  return router.createUrlTree(['/login'], {
+    queryParams: {
+      returnUrl: state.url
+    }
+  });
 };
 
 export const hrGuard: CanActivateFn = () => {
@@ -21,7 +40,7 @@ export const hrGuard: CanActivateFn = () => {
   if (authService.hasRole('HR') || authService.hasRole('ADMIN')) {
     return true;
   }
-  return router.parseUrl('/dashboard');
+  return router.parseUrl(authService.hasRole('EMPLOYEE') ? '/employee' : '/pricing');
 };
 
 export const featureGuard = (feature: string): CanActivateFn => {
@@ -29,11 +48,9 @@ export const featureGuard = (feature: string): CanActivateFn => {
     const router = inject(Router);
     const api = inject(WorkRhApiService);
 
-    return api.loadViewModel().pipe(
-      map((vm: WorkRhVm) => {
-        const allowed = vm.subscription.entitlements.includes(feature);
-        return allowed ? true : router.parseUrl('/pricing');
-      })
+    return api.checkFeature(feature).pipe(
+      map((response) => response.allowed ? true : router.parseUrl('/pricing')),
+      catchError(() => of(router.parseUrl('/pricing')))
     );
   };
 };

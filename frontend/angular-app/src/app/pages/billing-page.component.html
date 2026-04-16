@@ -1,3 +1,11 @@
+<ng-container *ngIf="loadError() as errorMessage; else billingState">
+  <section class="panel loading-panel">
+    <h2>Facturation indisponible</h2>
+    <p>{{ errorMessage }}</p>
+  </section>
+</ng-container>
+
+<ng-template #billingState>
 <ng-container *ngIf="vm() as data; else loadingState">
   <section class="panel billing-panel">
     <div class="section-head">
@@ -5,17 +13,26 @@
         <p class="section-tag">Facturation</p>
         <h2>Abonnement et paiements</h2>
       </div>
-      <p class="hint">Paiement Stripe par carte ou prelevement SEPA, avec 14 jours d'essai gratuit.</p>
+      <p class="hint">Tous les abonnements sont sans engagement, payables par Stripe, avec 14 jours d'essai gratuit.</p>
     </div>
 
     <div class="checkout-banner success" *ngIf="checkoutState() === 'success'">
-      Checkout termine. Stripe mettra a jour l'abonnement apres confirmation du paiement ou le debut de l'essai.
+      Paiement terminé. Stripe mettra à jour l'abonnement après confirmation du paiement ou le début de l'essai.
     </div>
     <div class="checkout-banner cancelled" *ngIf="checkoutState() === 'cancelled'">
-      Checkout annule. Aucun changement n'a ete applique a l'abonnement.
+      Paiement annulé. Aucun changement n'a été appliqué à l'abonnement.
     </div>
     <div class="checkout-banner cancelled" *ngIf="checkoutError() as errorMessage">
       {{ errorMessage }}
+    </div>
+    <div class="checkout-banner success" *ngIf="opsMessage() as message">
+      {{ message }}
+    </div>
+    <div class="checkout-banner cancelled" *ngIf="opsError() as errorMessage">
+      {{ errorMessage }}
+    </div>
+    <div class="checkout-banner success" *ngIf="previewModeActive()">
+      {{ previewBannerMessage() }}
     </div>
 
     <div class="billing-grid">
@@ -31,7 +48,7 @@
         <div class="pricing-price-block billing-price-block">
           <p class="pricing-amount" *ngIf="!plan.customPricing">{{ plan.monthlyPrice }}EUR/mois</p>
           <p class="pricing-amount" *ngIf="plan.customPricing">Sur devis</p>
-          <span class="pricing-cycle">Abonnement actif avec renouvellement mensuel</span>
+          <span class="pricing-cycle">Abonnement mensuel sans engagement</span>
         </div>
 
         <div class="billing-facts">
@@ -40,11 +57,11 @@
             <strong>{{ data.subscription.status }}</strong>
           </div>
           <div class="billing-fact">
-            <span>Debut</span>
+            <span>Début</span>
             <strong>{{ data.subscription.startsAt }}</strong>
           </div>
           <div class="billing-fact">
-            <span>Prochaine echeance</span>
+            <span>Prochaine échéance</span>
             <strong>{{ data.subscription.renewsAt }}</strong>
           </div>
           <div class="billing-fact" *ngIf="daysRemaining() !== null">
@@ -54,49 +71,50 @@
         </div>
 
         <div class="billing-notes">
-          <p class="meta" *ngIf="data.subscription.pendingPlanCode">Plan en attente: {{ data.subscription.pendingPlanCode }}</p>
-          <p class="meta" *ngIf="data.subscription.cancelAtPeriodEnd">Annulation programmee en fin de periode</p>
-          <p class="meta" *ngIf="data.subscription.cancellationReason">Motif: {{ data.subscription.cancellationReason }}</p>
+          <p class="meta" *ngIf="data.subscription.pendingPlanCode">Plan en attente : {{ data.subscription.pendingPlanCode }}</p>
+          <p class="meta" *ngIf="data.subscription.cancelAtPeriodEnd">Résiliation prise en compte en fin de période mensuelle</p>
+          <p class="meta" *ngIf="data.subscription.cancellationReason">Motif : {{ data.subscription.cancellationReason }}</p>
+          <p class="meta" *ngIf="data.subscription.previewAllFeaturesActive && showDemoHints">Mode démo actif sur {{ data.subscription.tenantId }}.</p>
         </div>
 
         <button class="checkout-button danger"
-                *ngIf="!data.subscription.cancelAtPeriodEnd"
+                *ngIf="!data.subscription.cancelAtPeriodEnd && !previewModeActive()"
                 (click)="cancelSubscription()"
                 [disabled]="actionLoading() === 'cancel'">
           {{ actionLoading() === 'cancel' ? 'Annulation...' : "Annuler l'abonnement" }}
         </button>
         <button class="checkout-button outline"
-                *ngIf="data.subscription.cancelAtPeriodEnd"
+                *ngIf="data.subscription.cancelAtPeriodEnd && !previewModeActive()"
                 (click)="reactivateSubscription()"
                 [disabled]="actionLoading() === 'reactivate'">
-          {{ actionLoading() === 'reactivate' ? 'Reactivation...' : "Reactiver l'abonnement" }}
+          {{ actionLoading() === 'reactivate' ? 'Réactivation...' : "Réactiver l'abonnement" }}
         </button>
       </article>
 
       <article class="panel subpanel billing-tech-card">
         <div class="section-head">
           <div>
-            <p class="section-tag">Stripe</p>
-            <h2>Etat technique</h2>
+            <p class="section-tag">Opérations</p>
+            <h2>Options actives</h2>
           </div>
         </div>
 
         <div class="billing-tech-list">
           <div class="billing-tech-item">
-            <span>Customer email</span>
-            <strong>{{ data.subscription.stripeCustomerEmail || 'Non renseigne' }}</strong>
+            <span>Support prioritaire</span>
+            <strong>{{ hasEntitlement('PRIORITY_SUPPORT') ? 'Actif' : 'Non inclus' }}</strong>
           </div>
           <div class="billing-tech-item">
-            <span>Checkout session</span>
-            <strong>{{ data.subscription.stripeCheckoutSessionId || 'Aucune' }}</strong>
+            <span>Support SLA</span>
+            <strong>{{ hasEntitlement('SLA_SUPPORT') ? 'Actif' : 'Non inclus' }}</strong>
           </div>
           <div class="billing-tech-item">
-            <span>Subscription Stripe</span>
-            <strong>{{ data.subscription.stripeSubscriptionId || 'Aucune' }}</strong>
+            <span>Notifications SMS</span>
+            <strong>{{ hasEntitlement('SMS_NOTIFICATIONS') ? 'Actif' : 'Non inclus' }}</strong>
           </div>
-          <div class="billing-tech-item" *ngIf="data.subscription.cancelledAt">
-            <span>Date d'annulation</span>
-            <strong>{{ data.subscription.cancelledAt }}</strong>
+          <div class="billing-tech-item">
+            <span>Export comptable</span>
+            <strong>{{ hasEntitlement('ACCOUNTING_EXPORT') ? 'Actif' : 'Non inclus' }}</strong>
           </div>
         </div>
       </article>
@@ -106,10 +124,10 @@
   <section class="panel billing-panel">
     <div class="section-head">
       <div>
-        <p class="section-tag">Upgrade</p>
+        <p class="section-tag">Évolution</p>
         <h2>Changer de plan</h2>
       </div>
-      <p class="hint">L'essai est interrompu si aucun abonnement payant n'est converti apres 14 jours.</p>
+      <p class="hint">Tous les changements de plan se font sans engagement, sur une base mensuelle.</p>
     </div>
 
     <div class="pricing-grid pricing-grid-page">
@@ -118,7 +136,7 @@
         <div class="pricing-top pricing-top-page">
           <div class="pricing-chip-row">
             <span class="plan-code">{{ plan.code }}</span>
-            <span class="recommend-badge" *ngIf="plan.recommended">Recommande</span>
+            <span class="recommend-badge" *ngIf="plan.recommended">Recommandé</span>
           </div>
           <div class="pricing-heading">
             <h3>{{ plan.name }}</h3>
@@ -126,42 +144,221 @@
           <div class="pricing-price-block">
             <p class="pricing-amount" *ngIf="!plan.customPricing">{{ plan.monthlyPrice }}EUR</p>
             <p class="pricing-amount" *ngIf="plan.customPricing">Sur devis</p>
-            <span class="pricing-cycle" *ngIf="!plan.customPricing">Changement de plan immediat depuis la facturation</span>
+            <span class="pricing-cycle" *ngIf="!plan.customPricing">Sans engagement</span>
           </div>
         </div>
 
         <button class="checkout-button"
-                *ngIf="!plan.customPricing"
+                *ngIf="!plan.customPricing && !previewModeActive()"
                 (click)="startCheckout(plan.code)"
                 [disabled]="checkoutLoading() === plan.code">
-          {{ checkoutLoading() === plan.code ? 'Redirection...' : 'Passer sur ce plan' }}
+          {{ checkoutLoading() === plan.code ? 'Redirection...' : 'Passer à ce plan' }}
         </button>
 
         <button class="checkout-button outline"
-                *ngIf="!plan.customPricing && data.subscription.planCode !== plan.code"
+                *ngIf="!plan.customPricing && data.subscription.planCode !== plan.code && !previewModeActive()"
                 (click)="upgradeTo(plan.code)"
                 [disabled]="actionLoading() === 'upgrade-' + plan.code">
-          {{ actionLoading() === 'upgrade-' + plan.code ? 'Upgrade...' : 'Mise à jour' }}
+          {{ actionLoading() === 'upgrade-' + plan.code ? 'Mise à jour...' : 'Mettre à jour' }}
         </button>
 
         <button class="checkout-button outline"
-                *ngIf="!plan.customPricing && data.subscription.planCode !== plan.code"
+                *ngIf="!plan.customPricing && data.subscription.planCode !== plan.code && !previewModeActive()"
                 (click)="downgradeTo(plan.code)"
                 [disabled]="actionLoading() === 'downgrade-' + plan.code">
-          {{ actionLoading() === 'downgrade-' + plan.code ? 'Downgrade...' : 'Retrograder le plan' }}
+          {{ actionLoading() === 'downgrade-' + plan.code ? 'Rétrogradation...' : 'Rétrograder le plan' }}
         </button>
 
-        <button class="checkout-button outline" *ngIf="plan.customPricing">
-          Contacter l'equipe commerciale
+        <button class="checkout-button outline" *ngIf="plan.customPricing && !previewModeActive()">
+          Contacter l'équipe commerciale
         </button>
+
+        <div class="meta" *ngIf="previewModeActive() && showDemoHints">
+          Mode démo actif : aucun paiement ni changement de plan réel n'est lancé depuis cet écran.
+        </div>
       </article>
     </div>
   </section>
+
+  <section class="grid-layout">
+    <section class="panel">
+      <div class="section-head">
+        <div>
+          <p class="section-tag">Support</p>
+          <h2>Centre d'assistance</h2>
+        </div>
+        <p class="hint">Les boutons ci-dessous sont affichés uniquement si les fonctionnalités correspondantes sont actives.</p>
+      </div>
+
+      <div class="workspace-form-grid">
+        <article class="workspace-form-card">
+          <div class="workspace-inline-fields">
+            <label class="workspace-field">
+              <span>Nom</span>
+              <input [(ngModel)]="supportDraft.requesterName" name="supportRequesterName" />
+            </label>
+            <label class="workspace-field">
+              <span>Email</span>
+              <input [(ngModel)]="supportDraft.requesterEmail" name="supportRequesterEmail" />
+            </label>
+          </div>
+
+          <div class="workspace-inline-fields">
+            <label class="workspace-field">
+              <span>Téléphone</span>
+              <input [(ngModel)]="supportDraft.phoneNumber" name="supportPhone" />
+            </label>
+            <label class="workspace-field">
+              <span>Sujet</span>
+              <input [(ngModel)]="supportDraft.subject" name="supportSubject" />
+            </label>
+          </div>
+
+          <label class="workspace-field">
+            <span>Message</span>
+            <textarea [(ngModel)]="supportDraft.message" name="supportMessage"></textarea>
+          </label>
+
+          <div class="action-row">
+            <button class="checkout-button small"
+                    *ngIf="hasEntitlement('EMAIL_SUPPORT')"
+                    (click)="submitSupport('standard')"
+                    [disabled]="supportLoading()">
+              {{ supportLoading() ? 'Envoi...' : 'Ticket email' }}
+            </button>
+            <button class="checkout-button small"
+                    *ngIf="hasEntitlement('PRIORITY_SUPPORT')"
+                    (click)="submitSupport('priority')"
+                    [disabled]="supportLoading()">
+              Ticket prioritaire
+            </button>
+            <button class="checkout-button outline small"
+                    *ngIf="hasEntitlement('ONBOARDING_SUPPORT')"
+                    (click)="submitSupport('onboarding')"
+                    [disabled]="supportLoading()">
+              Ticket onboarding
+            </button>
+          </div>
+        </article>
+
+        <article class="legal-note-card" *ngIf="hasEntitlement('SSO') || hasEntitlement('HARDENED_SECURITY') || hasEntitlement('DEDICATED_HOSTING') || hasEntitlement('CUSTOM_DEVELOPMENT') || hasEntitlement('PUBLIC_API')">
+          <h3>Demandes entreprise</h3>
+          <p>Les options Enterprise sont maintenant pilotables comme demandes traçables depuis l'application.</p>
+          <div class="action-row">
+            <button class="checkout-button outline small" *ngIf="hasEntitlement('SSO')" (click)="submitSupport('sso')" [disabled]="supportLoading()">Demander SSO</button>
+            <button class="checkout-button outline small" *ngIf="hasEntitlement('HARDENED_SECURITY')" (click)="submitSupport('security')" [disabled]="supportLoading()">Revue sécurité</button>
+            <button class="checkout-button outline small" *ngIf="hasEntitlement('DEDICATED_HOSTING')" (click)="submitSupport('hosting')" [disabled]="supportLoading()">Hébergement dédié</button>
+            <button class="checkout-button outline small" *ngIf="hasEntitlement('CUSTOM_DEVELOPMENT')" (click)="submitSupport('custom-development')" [disabled]="supportLoading()">Dév. sur mesure</button>
+            <button class="checkout-button outline small" *ngIf="hasEntitlement('PUBLIC_API')" (click)="submitSupport('integration')" [disabled]="supportLoading()">Intégration API</button>
+          </div>
+        </article>
+      </div>
+
+      <div class="timeline-list" *ngIf="supportTickets().length; else noTickets">
+        <article class="timeline-card" *ngFor="let ticket of supportTickets()">
+          <div>
+            <strong>{{ ticket.subject }}</strong>
+            <p>{{ ticket.category }} - {{ ticket.priority }}</p>
+          </div>
+          <div class="timeline-meta">
+            <span class="badge" [class.badge-alert]="ticket.slaBreached">{{ ticket.status }}</span>
+            <small>{{ ticket.createdAt }}</small>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-head">
+        <div>
+          <p class="section-tag">Automatisation</p>
+          <h2>SMS, SLA et logs</h2>
+        </div>
+        <p class="hint">Le module expose les options Premium et Enterprise sans repasser par des appels backend manuels.</p>
+      </div>
+
+      <article class="workspace-form-card" *ngIf="hasEntitlement('SMS_NOTIFICATIONS')">
+        <h3>Envoyer un SMS</h3>
+        <div class="workspace-inline-fields">
+          <label class="workspace-field">
+            <span>ID employé</span>
+            <input type="number" [(ngModel)]="smsDraft.employeeId" name="smsEmployeeId" />
+          </label>
+          <label class="workspace-field">
+            <span>Numéro</span>
+            <input [(ngModel)]="smsDraft.phoneNumber" name="smsPhone" />
+          </label>
+        </div>
+        <label class="workspace-field">
+          <span>Message</span>
+          <textarea [(ngModel)]="smsDraft.message" name="smsMessage"></textarea>
+        </label>
+        <button class="checkout-button small" (click)="sendSms()" [disabled]="smsLoading()">
+          {{ smsLoading() ? 'Envoi SMS...' : 'Envoyer le SMS' }}
+        </button>
+      </article>
+
+      <article class="workspace-form-card" *ngIf="hasEntitlement('ACCOUNTING_EXPORT')">
+        <h3>Export comptable</h3>
+        <p class="workspace-helper">Télécharge l'export CSV facture/comptabilité exposé par le subscription-service.</p>
+        <button class="checkout-button outline small" (click)="downloadAccountingExport()" [disabled]="exportLoading()">
+          {{ exportLoading() ? 'Génération...' : "Télécharger l'export comptable" }}
+        </button>
+      </article>
+
+      <article class="workspace-form-card" *ngIf="hasEntitlement('SLA_SUPPORT')">
+        <h3>Tickets sous SLA</h3>
+        <div class="timeline-list" *ngIf="slaTickets().length; else noSlaTickets">
+          <article class="timeline-card" *ngFor="let ticket of slaTickets()">
+            <div>
+              <strong>{{ ticket.subject }}</strong>
+              <p>{{ ticket.priority }} - {{ ticket.remainingMinutes }} min restantes</p>
+            </div>
+            <div class="timeline-meta">
+              <span class="badge" [class.badge-alert]="ticket.breached">{{ ticket.status }}</span>
+              <small>{{ ticket.slaDueAt }}</small>
+            </div>
+          </article>
+        </div>
+      </article>
+
+      <article class="workspace-form-card" *ngIf="hasEntitlement('EMAIL_NOTIFICATIONS')">
+        <h3>Journal des notifications</h3>
+        <div class="timeline-list" *ngIf="notifications().length; else noNotifications">
+          <article class="timeline-card" *ngFor="let notification of notifications().slice(0, 8)">
+            <div>
+              <strong>{{ notification.subject }}</strong>
+              <p>{{ notification.payload }}</p>
+            </div>
+            <div class="timeline-meta">
+              <span class="badge" [class.badge-alert]="notification.channel.includes('FAILED') || notification.channel.includes('SKIPPED')">
+                {{ notification.channel }}
+              </span>
+              <small>{{ notification.sentAt }}</small>
+            </div>
+          </article>
+        </div>
+      </article>
+    </section>
+  </section>
 </ng-container>
+</ng-template>
+
+<ng-template #noTickets>
+  <p class="hint">Aucun ticket de support enregistré pour le moment.</p>
+</ng-template>
+
+<ng-template #noSlaTickets>
+  <p class="hint">Aucun ticket SLA ouvert actuellement.</p>
+</ng-template>
+
+<ng-template #noNotifications>
+  <p class="hint">Aucune notification automatisée journalisée.</p>
+</ng-template>
 
 <ng-template #loadingState>
   <section class="panel loading-panel">
-    <h2>Chargement du billing</h2>
-    <p>Recuperation des statuts d'abonnement, de l'essai et des informations Stripe.</p>
+    <h2>Chargement de la facturation</h2>
+    <p>Récupération des statuts d'abonnement, de l'essai et des informations Stripe.</p>
   </section>
 </ng-template>

@@ -1,6 +1,7 @@
 package com.workrh.leave.service;
 
 import com.workrh.common.events.LeaveStatusChangedEvent;
+import com.workrh.common.security.SecurityUtils;
 import com.workrh.common.tenant.TenantContext;
 import com.workrh.common.web.BadRequestException;
 import com.workrh.common.web.NotFoundException;
@@ -12,11 +13,16 @@ import com.workrh.leave.domain.LeaveStatus;
 import com.workrh.leave.repository.LeaveRepository;
 import java.time.Instant;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 @Service
 public class LeaveService {
+
+    private static final Logger log = LoggerFactory.getLogger(LeaveService.class);
 
     private final LeaveRepository leaveRepository;
     private final KafkaTemplate<String, Object> kafkaTemplate;
@@ -27,6 +33,7 @@ public class LeaveService {
     }
 
     public LeaveResponseDto create(LeaveRequestDto request) {
+        assertCanAccessEmployee(request.employeeId());
         validatePeriod(request.startDate(), request.endDate());
         LeaveRequestEntity entity = new LeaveRequestEntity();
         entity.setTenantId(TenantContext.getTenantId());
@@ -42,7 +49,7 @@ public class LeaveService {
     }
 
     public LeaveResponseDto findById(Long leaveId) {
-        return toDto(getLeave(leaveId));
+        return toDto(getAccessibleLeave(leaveId));
     }
 
     public LeaveResponseDto approve(Long leaveId, LeaveDecisionRequestDto request) {
@@ -62,13 +69,18 @@ public class LeaveService {
     }
 
     public List<LeaveResponseDto> listByEmployee(Long employeeId) {
+        assertCanAccessEmployee(employeeId);
         return leaveRepository.findAllByTenantIdAndEmployeeId(TenantContext.getTenantId(), employeeId).stream()
                 .map(this::toDto)
                 .toList();
     }
 
+    public List<LeaveResponseDto> listCurrentEmployee() {
+        return listByEmployee(requireCurrentEmployeeId());
+    }
+
     private LeaveResponseDto transitionLeave(Long leaveId, LeaveStatus status, String comment) {
-        LeaveRequestEntity entity = getLeave(leaveId);
+        LeaveRequestEntity entity = getAccessibleLeave(leaveId);
         if (entity.getStatus() != LeaveStatus.REQUESTED && status != LeaveStatus.CANCELLED) {
             throw new BadRequestException("Only requested leave can be approved or rejected");
         }
@@ -76,21 +88,38 @@ public class LeaveService {
         entity.setComment(comment);
         entity.setUpdatedAt(Instant.now());
         LeaveRequestEntity saved = leaveRepository.save(entity);
-        kafkaTemplate.send("leave-events", new LeaveStatusChangedEvent(
-                saved.getTenantId(),
-                saved.getEmployeeId(),
-                saved.getId(),
-                saved.getStatus().name(),
-                saved.getStartDate(),
-                saved.getEndDate(),
-                Instant.now()
-        ));
+        publishLeaveStatusChanged(saved);
         return toDto(saved);
     }
 
     private LeaveRequestEntity getLeave(Long leaveId) {
         return leaveRepository.findByIdAndTenantId(leaveId, TenantContext.getTenantId())
                 .orElseThrow(() -> new NotFoundException("Leave request not found"));
+    }
+
+    private LeaveRequestEntity getAccessibleLeave(Long leaveId) {
+        LeaveRequestEntity entity = getLeave(leaveId);
+        assertCanAccessEmployee(entity.getEmployeeId());
+        return entity;
+    }
+
+    private void assertCanAccessEmployee(Long employeeId) {
+        if (!SecurityUtils.hasAuthority("EMPLOYEE")) {
+            return;
+        }
+
+        Long currentEmployeeId = requireCurrentEmployeeId();
+        if (!currentEmployeeId.equals(employeeId)) {
+            throw new AccessDeniedException("Employees can only access their own leave requests");
+        }
+    }
+
+    private Long requireCurrentEmployeeId() {
+        Long employeeId = SecurityUtils.currentEmployeeId();
+        if (employeeId == null) {
+            throw new AccessDeniedException("Missing employee context");
+        }
+        return employeeId;
     }
 
     private void validatePeriod(java.time.LocalDate startDate, java.time.LocalDate endDate) {
@@ -111,5 +140,39 @@ public class LeaveService {
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
         );
+    }
+
+    private void publishLeaveStatusChanged(LeaveRequestEntity entity) {
+        LeaveStatusChangedEvent event = new LeaveStatusChangedEvent(
+                entity.getTenantId(),
+                entity.getEmployeeId(),
+                entity.getId(),
+                entity.getStatus().name(),
+                entity.getStartDate(),
+                entity.getEndDate(),
+                Instant.now()
+        );
+        try {
+            kafkaTemplate.send("leave-events", event)
+                    .whenComplete((result, exception) -> {
+                        if (exception != null) {
+                            log.warn(
+                                    "Failed to publish leave event for tenant {} employee {} leave {}",
+                                    entity.getTenantId(),
+                                    entity.getEmployeeId(),
+                                    entity.getId(),
+                                    exception
+                            );
+                        }
+                    });
+        } catch (RuntimeException exception) {
+            log.warn(
+                    "Failed to publish leave event for tenant {} employee {} leave {}",
+                    entity.getTenantId(),
+                    entity.getEmployeeId(),
+                    entity.getId(),
+                    exception
+            );
+        }
     }
 }

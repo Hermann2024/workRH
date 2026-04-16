@@ -18,7 +18,7 @@ public class SubscriptionFeatureClient {
 
     private final RestTemplate restTemplate;
 
-    @Value("${subscription.service.base-url:http://localhost:8087}")
+    @Value("${subscription.service.base-url:http://localhost:9087}")
     private String subscriptionServiceBaseUrl;
 
     public SubscriptionFeatureClient(RestTemplate restTemplate) {

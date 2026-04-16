@@ -1,0 +1,178 @@
+C:\Users\phare\OneDrive\Documents\workRH\
+│
+├─ 🚀 LANCER L'APPLICATION (À FAIRE EN PREMIER)
+│  ├─ workrh-menu.bat ..................... Menu interactif (★ RECOMMANDÉ)
+│  ├─ launch-workrh.bat .................. Lancer directement
+│  └─ launch-workrh.ps1 .................. Version PowerShell
+│
+├─ ✅ AVANT DE LANCER
+│  ├─ check-requirements.bat ............. Vérifier les prérequis
+│  ├─ check-requirements.ps1 ............. Version PowerShell
+│  └─ README-SCRIPTS.txt ................. Vue d'ensemble (lisez-moi!)
+│
+├─ 🛑 ARRÊT PROPRE
+│  ├─ stop-workrh.bat .................... Arrêter tout proprement
+│  └─ stop-workrh.ps1 .................... Version PowerShell
+│
+├─ 📖 DOCUMENTATION IMPORTANTE
+│  ├─ LAUNCH_GUIDE.md .................... ⭐ Guide de démarrage
+│  ├─ LAUNCH_CONFIG.md ................... Configuration détaillée
+│  ├─ TROUBLESHOOTING.md ................. Guide de dépannage
+│  └─ LAUNCH_SUITE.md .................... Vue d'ensemble des scripts
+│
+├─ 📁 CODE SOURCE
+│  ├─ frontend/
+│  │  └─ angular-app/ .................... App Angular (port 4200)
+│  │     └─ src/app/
+│  │        ├─ pages/pricing-page.component.ts [CORRIGÉ]
+│  │        └─ components/checkout-loading.component.ts [CORRIGÉ]
+│  │
+│  ├─ platform/ .......................... Services de plateforme
+│  │  ├─ api-gateway/ (port 8080)
+│  │  ├─ config-server/ (port 8888)
+│  │  └─ discovery-service/ (port 8761)
+│  │
+│  ├─ services/ .......................... Microservices
+│  │  ├─ user-service/ (port 8081)
+│  │  ├─ leave-service/ (port 8082)
+│  │  ├─ sickness-service/ (port 8083)
+│  │  ├─ telework-service/ (port 8084)
+│  │  ├─ reporting-service/ (port 8085)
+│  │  ├─ notification-service/ (port 8086)
+│  │  └─ subscription-service/ (port 8087)
+│  │
+│  └─ infra/
+│     ├─ docker/
+│     │  └─ docker-compose.yml ........... Infrastructure (BD, Kafka, etc.)
+│     └─ config-repo/ .................... Configuration centralisée
+│
+├─ 📊 FICHIERS DE CONFIG
+│  ├─ pom.xml ............................ Config Maven
+│  ├─ run-all.ps1 ........................ Script PowerShell original
+│  └─ deploy.sh .......................... Script de déploiement
+│
+└─ 📚 DOCUMENTATION GLOBALE
+   ├─ README.md .......................... Documentation principale
+   ├─ GITHUB_DEPLOYMENT_GUIDE.md ......... Guide GitHub Actions
+   ├─ SUBSCRIPTION_FLOW_SUMMARY.md ....... Flux d'abonnement
+   ├─ SUBSCRIPTION_PURCHASE_PROCESS.md .. Processus d'achat
+   ├─ LATENCY_ANALYSIS.md ................ Analyse de latence
+   ├─ UX_IMPROVEMENTS.md ................. Améliorations UX
+   └─ docs/ ............................. Documentation technique
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 DÉMARRAGE RAPIDE EN 3 SECONDES:
+
+  1. Double-clic: workrh-menu.bat
+  2. Appuyer sur "1" pour lancer
+  3. Ouvrir: http://localhost:4200
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 FICHIERS CRÉÉS/MODIFIÉS:
+
+NOUVEAUX FICHIERS:
+  ✓ launch-workrh.bat
+  ✓ launch-workrh.ps1
+  ✓ stop-workrh.bat
+  ✓ stop-workrh.ps1
+  ✓ check-requirements.bat
+  ✓ check-requirements.ps1
+  ✓ workrh-menu.bat
+  ✓ LAUNCH_GUIDE.md
+  ✓ LAUNCH_CONFIG.md
+  ✓ TROUBLESHOOTING.md
+  ✓ LAUNCH_SUITE.md
+  ✓ README-SCRIPTS.txt
+  ✓ INDEX.txt (ce fichier)
+
+FICHIERS MODIFIÉS:
+  ✓ frontend/angular-app/src/app/pages/pricing-page.component.ts
+    → Correction erreur TS2367
+  ✓ frontend/angular-app/src/app/components/checkout-loading.component.ts
+    → Correction @Output() EventEmitter
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🌐 SERVICES ET PORTS:
+
+Frontend:
+  • http://localhost:4200 .............. Application WorkRH
+
+Backend/Admin:
+  • http://localhost:8080 .............. API Gateway
+  • http://localhost:8761 .............. Eureka Dashboard
+  • http://localhost:8888 .............. Config Server
+
+Microservices (internes):
+  • localhost:8081 ..................... User Service
+  • localhost:8082 ..................... Leave Service
+  • localhost:8083 ..................... Sickness Service
+  • localhost:8084 ..................... Telework Service
+  • localhost:8085 ..................... Reporting Service
+  • localhost:8086 ..................... Notification Service
+  • localhost:8087 ..................... Subscription Service
+
+Infrastructure (internes):
+  • localhost:5432 ..................... PostgreSQL
+  • localhost:9092 ..................... Kafka
+  • localhost:2181 ..................... Zookeeper
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔐 CONNEXION PAR DÉFAUT:
+
+Email:    rh@company.com
+Password: secret
+Tenant:   demo-lu
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✨ FONCTIONNALITÉS DISPONIBLES:
+
+✓ Authentification JWT
+✓ Multi-tenancy (isolation données)
+✓ Gestion des congés
+✓ Suivi des absences maladie
+✓ Conformité telework Luxembourg (34j)
+✓ Paiements Stripe (abonnements)
+✓ Rapports et analytiques
+✓ Support multi-langue (FR/EN)
+✓ Design responsive
+✓ Microservices
+✓ Scalable avec Kubernetes
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 PRÉREQUIS VÉRIFIÉS:
+
+✓ Docker Desktop 24+
+✓ Java 17+
+✓ Maven 3.6+
+✓ Node.js 18+
+✓ npm 9+
+
+Vérifier: check-requirements.bat
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📖 OÙ COMMENCER ?
+
+1. Lisez: README-SCRIPTS.txt (ce fichier)
+2. Lancez: workrh-menu.bat
+3. Accédez: http://localhost:4200
+
+En cas de problème:
+  → Consultez: TROUBLESHOOTING.md
+
+Pour plus de détails:
+  → Lisez: LAUNCH_GUIDE.md
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Date: 28 mars 2026
+Version: WorkRH 1.0.0
+État: ✅ Prêt à l'emploi
+
+Créé par: GitHub Copilot

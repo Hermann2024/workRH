@@ -2,15 +2,19 @@ package com.workrh.subscription.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.workrh.common.events.InvoiceIssuedEvent;
+import com.workrh.common.events.InvoiceLineItemEvent;
 import com.workrh.common.tenant.TenantContext;
 import com.workrh.common.web.BadRequestException;
 import com.workrh.common.web.NotFoundException;
 import com.workrh.subscription.api.dto.StripeCheckoutRequest;
 import com.workrh.subscription.api.dto.StripeCheckoutResponse;
 import com.workrh.subscription.domain.PlanCode;
+import com.workrh.subscription.domain.SubscriptionInvoice;
 import com.workrh.subscription.domain.SubscriptionPlan;
 import com.workrh.subscription.domain.SubscriptionStatus;
 import com.workrh.subscription.domain.TenantSubscription;
+import com.workrh.subscription.repository.SubscriptionInvoiceRepository;
 import com.workrh.subscription.repository.SubscriptionPlanRepository;
 import com.workrh.subscription.repository.TenantSubscriptionRepository;
 import java.math.BigDecimal;
@@ -19,17 +23,21 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
-import org.springframework.http.HttpMethod;
+import java.util.Locale;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @Service
 public class StripeCheckoutService {
@@ -38,12 +46,15 @@ public class StripeCheckoutService {
     private static final BigDecimal SMS_OPTION_PRICE = new BigDecimal("10.00");
     private static final BigDecimal AUDIT_OPTION_PRICE = new BigDecimal("19.00");
     private static final BigDecimal EXPORT_OPTION_PRICE = new BigDecimal("15.00");
+    private static final String APPLICATION_NAME = "WorkRH";
 
     private final SubscriptionPlanRepository subscriptionPlanRepository;
     private final TenantSubscriptionRepository tenantSubscriptionRepository;
+    private final SubscriptionInvoiceRepository subscriptionInvoiceRepository;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     private final StripeWebhookVerifier stripeWebhookVerifier;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     @Value("${stripe.secret-key:}")
     private String stripeSecretKey;
@@ -63,14 +74,18 @@ public class StripeCheckoutService {
     public StripeCheckoutService(
             SubscriptionPlanRepository subscriptionPlanRepository,
             TenantSubscriptionRepository tenantSubscriptionRepository,
+            SubscriptionInvoiceRepository subscriptionInvoiceRepository,
             RestTemplate restTemplate,
             ObjectMapper objectMapper,
-            StripeWebhookVerifier stripeWebhookVerifier) {
+            StripeWebhookVerifier stripeWebhookVerifier,
+            KafkaTemplate<String, Object> kafkaTemplate) {
         this.subscriptionPlanRepository = subscriptionPlanRepository;
         this.tenantSubscriptionRepository = tenantSubscriptionRepository;
+        this.subscriptionInvoiceRepository = subscriptionInvoiceRepository;
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
         this.stripeWebhookVerifier = stripeWebhookVerifier;
+        this.kafkaTemplate = kafkaTemplate;
     }
 
     public StripeCheckoutResponse createCheckoutSession(StripeCheckoutRequest request) {
@@ -103,7 +118,7 @@ public class StripeCheckoutService {
         form.add("metadata[advancedExportOptionEnabled]", Boolean.toString(request.advancedExportOptionEnabled()));
         addPaymentMethods(form, request.paymentMethodTypes());
 
-        addRecurringLineItem(form, 0, "%s plan".formatted(plan.getName()), plan.getMonthlyPrice(), plan.getStripePriceId());
+        addRecurringLineItem(form, 0, "%s plan".formatted(plan.getName()), plan.getMonthlyPrice(), null);
         int lineIndex = 1;
         if (request.smsOptionEnabled()) {
             addRecurringLineItem(form, lineIndex++, "SMS notifications option", SMS_OPTION_PRICE, smsOptionStripePriceId);
@@ -132,6 +147,24 @@ public class StripeCheckoutService {
         } catch (Exception exception) {
             throw new IllegalStateException("Unable to parse Stripe Checkout response", exception);
         }
+    }
+
+    public void confirmCheckoutSession(String sessionId) {
+        if (sessionId == null || sessionId.isBlank()) {
+            throw new BadRequestException("Stripe checkout session identifier is required");
+        }
+        if (!stripeConfigured()) {
+            throw new BadRequestException("Stripe secret key is not configured");
+        }
+
+        JsonNode checkoutSession = fetchCheckoutSession(sessionId);
+        ensureCheckoutSessionBelongsToCurrentTenant(checkoutSession);
+
+        if (!"complete".equalsIgnoreCase(checkoutSession.path("status").asText())) {
+            throw new BadRequestException("Stripe checkout session is not completed");
+        }
+
+        upsertSubscriptionFromCheckout(checkoutSession);
     }
 
     public void handleWebhook(String payload, String stripeSignatureHeader) {
@@ -231,6 +264,9 @@ public class StripeCheckoutService {
         TenantSubscription subscription = tenantSubscriptionRepository.findByTenantId(tenantId)
                 .orElseGet(TenantSubscription::new);
         SubscriptionPlan plan = getPlan(planCode);
+        String stripeSubscriptionId = object.path("subscription").isObject()
+                ? object.path("subscription").path("id").asText(null)
+                : object.path("subscription").asText(null);
         subscription.setTenantId(tenantId);
         subscription.setPlanId(plan.getId());
         subscription.setPlanCode(planCode);
@@ -240,15 +276,19 @@ public class StripeCheckoutService {
         subscription.setSmsOptionEnabled(object.path("metadata").path("smsOptionEnabled").asBoolean(false));
         subscription.setAdvancedAuditOptionEnabled(object.path("metadata").path("advancedAuditOptionEnabled").asBoolean(false));
         subscription.setAdvancedExportOptionEnabled(object.path("metadata").path("advancedExportOptionEnabled").asBoolean(false));
-        subscription.setStripeCustomerEmail(object.path("customer_details").path("email").asText(null));
+        subscription.setStripeCustomerEmail(firstNonBlank(
+                object.path("customer_details").path("email").asText(null),
+                object.path("customer_email").asText(null)
+        ));
         subscription.setStripeCheckoutSessionId(object.path("id").asText(null));
-        subscription.setStripeSubscriptionId(object.path("subscription").asText(null));
+        subscription.setStripeSubscriptionId(stripeSubscriptionId);
         subscription.setCancelAtPeriodEnd(false);
         subscription.setCancellationReason(null);
         subscription.setStartsAt(LocalDate.now());
         subscription.setRenewsAt(LocalDate.now().plusDays(FREE_TRIAL_DAYS));
         subscription.setUpdatedAt(Instant.now());
-        tenantSubscriptionRepository.save(subscription);
+        TenantSubscription saved = tenantSubscriptionRepository.save(subscription);
+        syncSubscriptionState(saved, object.path("subscription"));
     }
 
     private void syncUpdatedSubscription(JsonNode object) {
@@ -256,6 +296,7 @@ public class StripeCheckoutService {
         tenantSubscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId)
                 .ifPresent(subscription -> {
                     subscription.setStatus(mapStripeSubscriptionStatus(object.path("status").asText()));
+                    subscription.setStartsAt(readStripeDate(object, "current_period_start", subscription.getStartsAt()));
                     subscription.setCancelAtPeriodEnd(object.path("cancel_at_period_end").asBoolean(false));
                     subscription.setRenewsAt(readStripeDate(object, "current_period_end", subscription.getRenewsAt()));
                     subscription.setCancelledAt(readStripeDate(object, "canceled_at", subscription.getCancelledAt()));
@@ -299,7 +340,56 @@ public class StripeCheckoutService {
                     }
                     subscription.setUpdatedAt(Instant.now());
                     tenantSubscriptionRepository.save(subscription);
+                    publishInvoiceIssuedEvent(subscription, object);
                 });
+    }
+
+    private void publishInvoiceIssuedEvent(TenantSubscription subscription, JsonNode object) {
+        String stripeInvoiceId = object.path("id").asText();
+        if (stripeInvoiceId == null || stripeInvoiceId.isBlank() || subscriptionInvoiceRepository.existsByStripeInvoiceId(stripeInvoiceId)) {
+            return;
+        }
+
+        List<InvoiceLineItemEvent> lineItems = extractLineItems(object.path("lines").path("data"));
+        LocalDate billingPeriodStart = resolveBillingPeriodStart(object.path("lines").path("data"));
+        LocalDate billingPeriodEnd = resolveBillingPeriodEnd(object.path("lines").path("data"));
+        BigDecimal totalAmount = fromStripeAmount(object.path("amount_paid").asLong(object.path("amount_due").asLong(0)));
+        String customerEmail = firstNonBlank(object.path("customer_email").asText(null), subscription.getStripeCustomerEmail());
+        String customerName = object.path("customer_name").asText(customerEmail);
+        String invoiceNumber = resolveInvoiceNumber(object, stripeInvoiceId);
+        String currency = object.path("currency").asText("eur").toUpperCase(Locale.ROOT);
+
+        SubscriptionInvoice invoice = new SubscriptionInvoice();
+        invoice.setTenantId(subscription.getTenantId());
+        invoice.setSubscriptionId(subscription.getId());
+        invoice.setStripeInvoiceId(stripeInvoiceId);
+        invoice.setInvoiceNumber(invoiceNumber);
+        invoice.setApplicationName(APPLICATION_NAME);
+        invoice.setCustomerEmail(customerEmail);
+        invoice.setCustomerName(customerName);
+        invoice.setPlanCode(subscription.getPlanCode());
+        invoice.setTotalAmount(totalAmount);
+        invoice.setCurrency(currency);
+        invoice.setBillingPeriodStart(billingPeriodStart);
+        invoice.setBillingPeriodEnd(billingPeriodEnd);
+        invoice.setIssuedAt(Instant.now());
+        subscriptionInvoiceRepository.save(invoice);
+
+        kafkaTemplate.send("billing-events", new InvoiceIssuedEvent(
+                subscription.getTenantId(),
+                invoiceNumber,
+                stripeInvoiceId,
+                APPLICATION_NAME,
+                customerEmail,
+                customerName,
+                subscription.getPlanCode().name(),
+                totalAmount,
+                currency,
+                billingPeriodStart,
+                billingPeriodEnd,
+                lineItems,
+                Instant.now()
+        ));
     }
 
     private int addOptionalRecurringLineItems(
@@ -320,6 +410,24 @@ public class StripeCheckoutService {
         return formIndex;
     }
 
+    private JsonNode fetchCheckoutSession(String sessionId) {
+        String url = UriComponentsBuilder
+                .fromHttpUrl(stripeBaseUrl + "/v1/checkout/sessions/" + sessionId)
+                .queryParam("expand[]", "subscription")
+                .toUriString();
+        String response = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                new HttpEntity<>(stripeHeaders()),
+                String.class
+        ).getBody();
+        try {
+            return objectMapper.readTree(response);
+        } catch (Exception exception) {
+            throw new IllegalStateException("Unable to parse Stripe checkout session response", exception);
+        }
+    }
+
     private JsonNode fetchStripeSubscription(String stripeSubscriptionId) {
         String response = restTemplate.exchange(
                 stripeBaseUrl + "/v1/subscriptions/" + stripeSubscriptionId,
@@ -332,6 +440,30 @@ public class StripeCheckoutService {
         } catch (Exception exception) {
             throw new IllegalStateException("Unable to parse Stripe subscription response", exception);
         }
+    }
+
+    private void ensureCheckoutSessionBelongsToCurrentTenant(JsonNode checkoutSession) {
+        String sessionTenantId = firstNonBlank(
+                checkoutSession.path("metadata").path("tenantId").asText(null),
+                checkoutSession.path("client_reference_id").asText(null)
+        );
+        if (sessionTenantId == null || sessionTenantId.isBlank()) {
+            throw new BadRequestException("Stripe checkout session tenant is missing");
+        }
+        if (!sessionTenantId.equals(TenantContext.getTenantId())) {
+            throw new NotFoundException("Stripe checkout session not found for current tenant");
+        }
+    }
+
+    private void syncSubscriptionState(TenantSubscription subscription, JsonNode expandedSubscriptionNode) {
+        if (expandedSubscriptionNode != null && expandedSubscriptionNode.isObject()) {
+            syncUpdatedSubscription(expandedSubscriptionNode);
+            return;
+        }
+        if (!stripeConfigured() || subscription.getStripeSubscriptionId() == null || subscription.getStripeSubscriptionId().isBlank()) {
+            return;
+        }
+        syncUpdatedSubscription(fetchStripeSubscription(subscription.getStripeSubscriptionId()));
     }
 
     private HttpHeaders stripeHeaders() {
@@ -408,6 +540,75 @@ public class StripeCheckoutService {
             }
         }
         return "Stripe checkout error: " + exception.getStatusCode();
+    }
+
+    private List<InvoiceLineItemEvent> extractLineItems(JsonNode linesNode) {
+        List<InvoiceLineItemEvent> lineItems = new ArrayList<>();
+        if (!linesNode.isArray()) {
+            return lineItems;
+        }
+
+        for (JsonNode line : linesNode) {
+            int quantity = line.path("quantity").asInt(1);
+            BigDecimal totalAmount = fromStripeAmount(line.path("amount").asLong(0));
+            BigDecimal unitAmount = quantity > 0
+                    ? totalAmount.divide(BigDecimal.valueOf(quantity), 2, RoundingMode.HALF_UP)
+                    : totalAmount;
+            lineItems.add(new InvoiceLineItemEvent(
+                    line.path("description").asText("Abonnement WorkRH"),
+                    quantity,
+                    unitAmount,
+                    totalAmount
+            ));
+        }
+        return lineItems;
+    }
+
+    private LocalDate resolveBillingPeriodStart(JsonNode linesNode) {
+        if (!linesNode.isArray()) {
+            return LocalDate.now();
+        }
+        return toLocalDate(linesNode.findValues("period").stream()
+                .map(period -> period.path("start").asLong(0))
+                .filter(value -> value > 0)
+                .min(Comparator.naturalOrder())
+                .orElse(Instant.now().getEpochSecond()));
+    }
+
+    private LocalDate resolveBillingPeriodEnd(JsonNode linesNode) {
+        if (!linesNode.isArray()) {
+            return LocalDate.now();
+        }
+        return toLocalDate(linesNode.findValues("period").stream()
+                .map(period -> period.path("end").asLong(0))
+                .filter(value -> value > 0)
+                .max(Comparator.naturalOrder())
+                .orElse(Instant.now().getEpochSecond()));
+    }
+
+    private LocalDate toLocalDate(long epochSeconds) {
+        return Instant.ofEpochSecond(epochSeconds).atZone(ZoneOffset.UTC).toLocalDate();
+    }
+
+    private BigDecimal fromStripeAmount(long amountInMinorUnits) {
+        return BigDecimal.valueOf(amountInMinorUnits)
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+    }
+
+    private String resolveInvoiceNumber(JsonNode object, String stripeInvoiceId) {
+        String stripeNumber = object.path("number").asText(null);
+        if (stripeNumber != null && !stripeNumber.isBlank()) {
+            return stripeNumber;
+        }
+        String suffix = stripeInvoiceId.length() > 8 ? stripeInvoiceId.substring(stripeInvoiceId.length() - 8) : stripeInvoiceId;
+        return "WRH-" + LocalDate.now() + "-" + suffix.toUpperCase(Locale.ROOT);
+    }
+
+    private String firstNonBlank(String primary, String fallback) {
+        if (primary != null && !primary.isBlank()) {
+            return primary;
+        }
+        return fallback;
     }
 
     private SubscriptionPlan getPlan(PlanCode planCode) {

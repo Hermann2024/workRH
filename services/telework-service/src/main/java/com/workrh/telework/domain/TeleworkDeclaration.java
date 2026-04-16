@@ -26,6 +26,12 @@ public class TeleworkDeclaration {
     private String countryCode;
     @Enumerated(EnumType.STRING)
     private TeleworkStatus status;
+    private int totalWorkMinutes = 480;
+    private int residenceTeleworkMinutes = 480;
+    private int residenceNonTeleworkMinutes;
+    private int otherForeignWorkMinutes;
+    private String otherForeignCountryCode;
+    private boolean connectedToEmployerInfrastructure = true;
     private int monthUsedDays;
     private int annualUsedDays;
     private int annualRemainingDays;

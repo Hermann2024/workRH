@@ -8,7 +8,6 @@ import java.security.Key;
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -22,14 +21,22 @@ public class JwtService {
     private long expirationInSeconds;
 
     public String generateToken(String username, String tenantId, List<String> roles) {
+        return generateToken(username, tenantId, roles, null);
+    }
+
+    public String generateToken(String username, String tenantId, List<String> roles, Long employeeId) {
         Instant now = Instant.now();
-        return Jwts.builder()
+        var builder = Jwts.builder()
                 .subject(username)
-                .claims(Map.of("tenantId", tenantId, "roles", roles))
+                .claim("tenantId", tenantId)
+                .claim("roles", roles)
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plusSeconds(expirationInSeconds)))
-                .signWith(signingKey())
-                .compact();
+                .signWith(signingKey());
+        if (employeeId != null) {
+            builder.claim("employeeId", employeeId);
+        }
+        return builder.compact();
     }
 
     public Claims extractAllClaims(String token) {

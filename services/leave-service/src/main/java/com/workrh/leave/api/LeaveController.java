@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/leaves")
 @RequiresFeature(FeatureCode.LEAVE_MANAGEMENT)
-public class LeaveController {
+public class  LeaveController {
 
     private final LeaveService leaveService;
 
@@ -36,31 +36,37 @@ public class LeaveController {
 
     @GetMapping("/{leaveId}")
     @PreAuthorize("hasAnyAuthority('ADMIN','HR','EMPLOYEE')")
-    public LeaveResponseDto findById(@PathVariable Long leaveId) {
+    public LeaveResponseDto findById(@PathVariable("leaveId") Long leaveId) {
         return leaveService.findById(leaveId);
     }
 
     @PostMapping("/{leaveId}/approve")
     @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
-    public LeaveResponseDto approve(@PathVariable Long leaveId, @Valid @RequestBody LeaveDecisionRequestDto request) {
+    public LeaveResponseDto approve(@PathVariable("leaveId") Long leaveId, @Valid @RequestBody LeaveDecisionRequestDto request) {
         return leaveService.approve(leaveId, request);
     }
 
     @PostMapping("/{leaveId}/reject")
     @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
-    public LeaveResponseDto reject(@PathVariable Long leaveId, @Valid @RequestBody LeaveDecisionRequestDto request) {
+    public LeaveResponseDto reject(@PathVariable("leaveId") Long leaveId, @Valid @RequestBody LeaveDecisionRequestDto request) {
         return leaveService.reject(leaveId, request);
     }
 
     @PostMapping("/{leaveId}/cancel")
     @PreAuthorize("hasAnyAuthority('ADMIN','HR','EMPLOYEE')")
-    public LeaveResponseDto cancel(@PathVariable Long leaveId, @Valid @RequestBody LeaveDecisionRequestDto request) {
+    public LeaveResponseDto cancel(@PathVariable("leaveId") Long leaveId, @Valid @RequestBody LeaveDecisionRequestDto request) {
         return leaveService.cancel(leaveId, request);
     }
 
     @GetMapping
     @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
-    public List<LeaveResponseDto> list(@RequestParam(required = false) Long employeeId) {
+    public List<LeaveResponseDto> list(@RequestParam(name = "employeeId", required = false) Long employeeId) {
         return employeeId == null ? leaveService.list() : leaveService.listByEmployee(employeeId);
+    }
+
+    @GetMapping("/me")
+    @PreAuthorize("hasAnyAuthority('ADMIN','HR','EMPLOYEE')")
+    public List<LeaveResponseDto> listCurrentEmployee() {
+        return leaveService.listCurrentEmployee();
     }
 }

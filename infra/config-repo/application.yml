@@ -8,21 +8,30 @@ spring:
       hibernate:
         format_sql: true
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: localhost:19092
     consumer:
       auto-offset-reset: earliest
 
 security:
   jwt:
-    secret: c29tZS1yZWFsbHktbG9uZy1iYXNlNjQtc2VjcmV0LWZvci13b3JrcmgtZGVtby1vbmx5
+    secret: ${WORKRH_JWT_SECRET:c29tZS1yZWFsbHktbG9uZy1iYXNlNjQtc2VjcmV0LWZvci13b3JrcmgtZGVtby1vbmx5}
     expiration: 86400
 
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka
+      defaultZone: http://localhost:9761/eureka
 
 management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
   endpoints:
     web:
       exposure:
@@ -30,7 +39,7 @@ management:
 
 subscription:
   service:
-    base-url: http://localhost:8087
+    base-url: http://localhost:9087
 
 stripe:
   base-url: https://api.stripe.com

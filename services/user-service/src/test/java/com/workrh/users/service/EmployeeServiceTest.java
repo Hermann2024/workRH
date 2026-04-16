@@ -3,6 +3,7 @@ package com.workrh.users.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.workrh.common.security.JwtService;
@@ -10,6 +11,7 @@ import com.workrh.common.tenant.TenantContext;
 import com.workrh.common.web.BadRequestException;
 import com.workrh.users.api.dto.EmployeeCreateRequest;
 import com.workrh.users.api.dto.EmployeeUpdateRequest;
+import com.workrh.users.api.dto.SignupRequest;
 import com.workrh.users.domain.Employee;
 import com.workrh.users.domain.Role;
 import com.workrh.users.repository.EmployeeRepository;
@@ -27,7 +29,14 @@ class EmployeeServiceTest {
     private final EmployeeRepository employeeRepository = Mockito.mock(EmployeeRepository.class);
     private final PasswordEncoder passwordEncoder = Mockito.mock(PasswordEncoder.class);
     private final JwtService jwtService = Mockito.mock(JwtService.class);
-    private final EmployeeService employeeService = new EmployeeService(employeeRepository, passwordEncoder, jwtService);
+    private final SubscriptionBootstrapClient subscriptionBootstrapClient =
+            Mockito.mock(SubscriptionBootstrapClient.class);
+    private final EmployeeService employeeService = new EmployeeService(
+            employeeRepository,
+            passwordEncoder,
+            jwtService,
+            subscriptionBootstrapClient
+    );
 
     @AfterEach
     void cleanup() {
@@ -90,5 +99,56 @@ class EmployeeServiceTest {
 
         assertThat(response.email()).isEqualTo("jane.doe@corp.com");
         assertThat(response.roles()).contains(Role.ADMIN);
+    }
+
+    @Test
+    void shouldBootstrapRequestedTrialPlanDuringSignup() {
+        TenantContext.setTenantId("tenant-pro");
+        when(passwordEncoder.encode("secret123")).thenReturn("hashed");
+        when(employeeRepository.existsByTenantId("tenant-pro")).thenReturn(false);
+        when(employeeRepository.existsByEmailAndTenantId("owner@corp.com", "tenant-pro")).thenReturn(false);
+        when(employeeRepository.save(any(Employee.class))).thenAnswer(invocation -> {
+            Employee employee = invocation.getArgument(0);
+            employee.setId(7L);
+            return employee;
+        });
+        when(jwtService.generateToken(any(), any(), any(), any())).thenReturn("token");
+
+        var response = employeeService.signup(new SignupRequest(
+                "Owner",
+                "Admin",
+                "owner@corp.com",
+                "secret123",
+                12,
+                "PRO"
+        ));
+
+        assertThat(response.tenantId()).isEqualTo("tenant-pro");
+        verify(subscriptionBootstrapClient).initializeTrial("tenant-pro", "owner@corp.com", 12, "PRO");
+    }
+
+    @Test
+    void shouldFallbackToStarterTrialForEnterpriseSignup() {
+        TenantContext.setTenantId("tenant-enterprise");
+        when(passwordEncoder.encode("secret123")).thenReturn("hashed");
+        when(employeeRepository.existsByTenantId("tenant-enterprise")).thenReturn(false);
+        when(employeeRepository.existsByEmailAndTenantId("owner@corp.com", "tenant-enterprise")).thenReturn(false);
+        when(employeeRepository.save(any(Employee.class))).thenAnswer(invocation -> {
+            Employee employee = invocation.getArgument(0);
+            employee.setId(8L);
+            return employee;
+        });
+        when(jwtService.generateToken(any(), any(), any(), any())).thenReturn("token");
+
+        employeeService.signup(new SignupRequest(
+                "Owner",
+                "Admin",
+                "owner@corp.com",
+                "secret123",
+                5,
+                "ENTERPRISE"
+        ));
+
+        verify(subscriptionBootstrapClient).initializeTrial("tenant-enterprise", "owner@corp.com", 5, "STARTER");
     }
 }

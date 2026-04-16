@@ -36,7 +36,7 @@ public class TeleworkPolicyController {
 
     @GetMapping("/effective")
     @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
-    public TeleworkPolicyResponse effective(@RequestParam(required = false) String countryCode) {
+    public TeleworkPolicyResponse effective(@RequestParam(name = "countryCode", required = false) String countryCode) {
         return teleworkPolicyService.effective(countryCode);
     }
 
@@ -48,7 +48,7 @@ public class TeleworkPolicyController {
 
     @PutMapping("/{policyId}")
     @PreAuthorize("hasAuthority('ADMIN')")
-    public TeleworkPolicyResponse update(@PathVariable Long policyId, @Valid @RequestBody TeleworkPolicyRequest request) {
+    public TeleworkPolicyResponse update(@PathVariable("policyId") Long policyId, @Valid @RequestBody TeleworkPolicyRequest request) {
         return teleworkPolicyService.update(policyId, request);
     }
 }
