@@ -60,6 +60,13 @@ public class TeleworkController {
         return teleworkService.currentEmployeeHistory();
     }
 
+    @GetMapping("/recent")
+    @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
+    @RequiresFeature(FeatureCode.TELEWORK_BASIC)
+    public List<TeleworkDeclarationResponse> recentDeclarations() {
+        return teleworkService.recentDeclarations();
+    }
+
     @GetMapping("/company-summary")
     @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
     @RequiresFeature(FeatureCode.DASHBOARD_ADVANCED)

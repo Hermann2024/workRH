@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -38,7 +39,7 @@ public class EmployeeController {
 
     @GetMapping("/{employeeId}")
     @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
-    public EmployeeResponse findById(@PathVariable Long employeeId) {
+    public EmployeeResponse findById(@PathVariable("employeeId") Long employeeId) {
         return employeeService.findById(employeeId);
     }
 
@@ -56,25 +57,31 @@ public class EmployeeController {
 
     @PutMapping("/{employeeId}")
     @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
-    public EmployeeResponse update(@PathVariable Long employeeId, @Valid @RequestBody EmployeeUpdateRequest request) {
+    public EmployeeResponse update(@PathVariable("employeeId") Long employeeId, @Valid @RequestBody EmployeeUpdateRequest request) {
         return employeeService.update(employeeId, request);
     }
 
     @PatchMapping("/{employeeId}/password")
     @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
-    public EmployeeResponse updatePassword(@PathVariable Long employeeId, @Valid @RequestBody PasswordUpdateRequest request) {
+    public EmployeeResponse updatePassword(@PathVariable("employeeId") Long employeeId, @Valid @RequestBody PasswordUpdateRequest request) {
         return employeeService.updatePassword(employeeId, request);
     }
 
     @PatchMapping("/{employeeId}/activate")
     @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
-    public EmployeeResponse activate(@PathVariable Long employeeId) {
+    public EmployeeResponse activate(@PathVariable("employeeId") Long employeeId) {
         return employeeService.setActive(employeeId, true);
     }
 
     @PatchMapping("/{employeeId}/deactivate")
     @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
-    public EmployeeResponse deactivate(@PathVariable Long employeeId) {
+    public EmployeeResponse deactivate(@PathVariable("employeeId") Long employeeId) {
         return employeeService.setActive(employeeId, false);
+    }
+
+    @DeleteMapping("/{employeeId}")
+    @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
+    public void delete(@PathVariable("employeeId") Long employeeId) {
+        employeeService.delete(employeeId);
     }
 }

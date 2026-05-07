@@ -1,11 +1,18 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { catchError, forkJoin, map, Observable, of } from 'rxjs';
 import { AuthService } from '../auth.service';
 import { SHOW_DEMO_HINTS } from '../config';
 import { toCommercialFeatureLabel } from '../plan-feature-labels';
 import { ToastService } from '../services/toast.service';
-import { PlanResponse, WorkRhApiService, WorkRhVm } from '../workrh-api.service';
+import { CatalogReadinessResponse, PlanResponse, SubscriptionResponse, WorkRhApiService } from '../workrh-api.service';
+
+interface PricingVm {
+  plans: PlanResponse[];
+  subscription: SubscriptionResponse | null;
+  readiness: CatalogReadinessResponse | null;
+}
 
 @Component({
   selector: 'app-pricing-page',
@@ -23,22 +30,40 @@ export class PricingPageComponent {
   readonly showDemoHints = SHOW_DEMO_HINTS;
   readonly loading = signal(true);
   readonly loadError = signal<string | null>(null);
-  readonly vm = signal<WorkRhVm | null>(null);
+  readonly vm = signal<PricingVm | null>(null);
   readonly visiblePlans = computed(() => this.vm()?.plans ?? []);
-  readonly previewModeActive = computed(() => this.vm()?.subscription.previewAllFeaturesActive ?? false);
+  readonly previewModeActive = computed(() => this.vm()?.subscription?.previewAllFeaturesActive ?? false);
+  readonly readinessWarnings = computed(() => this.vm()?.readiness?.warnings ?? []);
+  readonly stripeCheckoutAvailable = computed(() => this.vm()?.readiness?.stripeCheckoutAvailable ?? false);
   readonly canManageSubscriptions = computed(
     () => this.authService.hasRole('ADMIN') || this.authService.hasRole('HR')
   );
 
   constructor() {
-    this.api.loadViewModel().subscribe({
-      next: (viewModel: WorkRhVm) => {
+    const request$: Observable<PricingVm> = this.authService.isAuthenticated()
+      ? forkJoin({
+          plans: this.api.getPlans(),
+          subscription: this.api.getCurrentSubscription().pipe(catchError(() => of(null))),
+          readiness: this.api.getCatalogReadiness().pipe(catchError(() => of(null)))
+        })
+      : forkJoin({
+          plans: this.api.getPlans(),
+          readiness: this.api.getCatalogReadiness().pipe(catchError(() => of(null)))
+        }).pipe(
+          map((result) => ({
+            ...result,
+            subscription: null
+          }))
+        );
+
+    request$.subscribe({
+      next: (viewModel) => {
         this.vm.set(viewModel);
         this.loadError.set(null);
         this.loading.set(false);
       },
       error: (error) => {
-        this.loadError.set(this.readBackendMessage(error, 'Impossible de charger les offres sans donnees reelles.'));
+        this.loadError.set(this.readBackendMessage(error, 'Impossible de charger les offres sans données réelles.'));
         this.loading.set(false);
       }
     });
@@ -50,18 +75,22 @@ export class PricingPageComponent {
 
   planActionLabel(plan: PlanResponse): string {
     if (this.previewModeActive()) {
-      return this.showDemoHints ? 'Ouvrir l’espace' : 'Accéder à l’espace';
+      return this.showDemoHints ? "Ouvrir l'espace" : "Accéder à l'espace";
     }
 
     if (!this.authService.isAuthenticated()) {
       return plan.customPricing ? 'Créer un compte pour contacter' : 'Créer un compte pour choisir';
     }
 
+    if (!this.stripeCheckoutAvailable() && !plan.customPricing) {
+      return 'Paiement bientôt disponible';
+    }
+
     if (!this.canManageSubscriptions()) {
       return plan.customPricing ? 'Contacter les RH' : 'Accès RH requis';
     }
 
-    return plan.customPricing ? 'Contacter l’équipe commerciale' : 'Accéder à la facturation';
+    return plan.customPricing ? "Contacter l'équipe commerciale" : 'Accéder à la facturation';
   }
 
   openPlan(plan: PlanResponse): void {
@@ -81,6 +110,11 @@ export class PricingPageComponent {
 
     if (!this.canManageSubscriptions()) {
       this.toastService.warning('Seuls les utilisateurs RH ou administrateurs peuvent gérer un abonnement.');
+      return;
+    }
+
+    if (!this.stripeCheckoutAvailable() && !plan.customPricing) {
+      this.toastService.warning("Le paiement Stripe n'est pas encore actif sur cet environnement.");
       return;
     }
 

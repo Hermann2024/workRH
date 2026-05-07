@@ -116,7 +116,7 @@ export class PoliciesPageComponent {
         this.loading.set(false);
       },
       error: (error) => {
-        this.loadError.set(this.readBackendMessage(error, 'Impossible de charger les regles sans donnees reelles.'));
+        this.loadError.set(this.readBackendMessage(error, 'Impossible de charger les règles sans données réelles.'));
         this.loading.set(false);
       }
     });

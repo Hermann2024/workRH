@@ -168,6 +168,31 @@ public class TeleworkService {
         return history(requireCurrentEmployeeId());
     }
 
+    public List<TeleworkDeclarationResponse> recentDeclarations() {
+        String tenantId = TenantContext.getTenantId();
+        return declarationRepository.findTop50ByTenantIdOrderByWorkDateDesc(tenantId).stream()
+                .map(declaration -> {
+                    TeleworkPolicy policy = teleworkPolicyService.resolvePolicy(declaration.getCountryCode());
+                    List<TeleworkDeclaration> annualDeclarations = annualDeclarations(
+                            tenantId,
+                            declaration.getEmployeeId(),
+                            declaration.getWorkDate().getYear(),
+                            policy.getCountryCode()
+                    );
+                    List<ExclusionPeriod> exclusions = exclusionPeriodRepository.findAllByTenantIdAndEmployeeId(tenantId, declaration.getEmployeeId());
+                    TeleworkComplianceCalculator.TeleworkComplianceResult result = complianceCalculator.compute(
+                            policy,
+                            declaration.getWorkDate().getYear(),
+                            declaration.getWorkDate().getMonthValue(),
+                            declaration.getWorkDate(),
+                            annualDeclarations,
+                            exclusions
+                    );
+                    return toResponse(declaration, policy, result);
+                })
+                .toList();
+    }
+
     public TeleworkCompanySummaryResponse companySummary(int year, int month, String countryCode) {
         String tenantId = TenantContext.getTenantId();
         LocalDate start = LocalDate.of(year, month, 1);

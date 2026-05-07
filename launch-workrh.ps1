@@ -106,7 +106,7 @@ if ($LASTEXITCODE -eq 0) {
 
 Write-Host ""
 Write-Status "Building backend and installing reactor artifacts locally..."
-mvn clean install -Dmaven.test.skip=true -T1C
+mvn clean install "-Dmaven.test.skip=true" -T1C
 
 if ($LASTEXITCODE -eq 0) {
     Write-Status "Backend build completed" "OK"
@@ -136,7 +136,7 @@ $services = @(
 
 $windowsOpened = 0
 
-function Wait-ForPort([string]$serviceName, [int]$port, [int]$timeoutSeconds = 120) {
+function Wait-ForPort([string]$serviceName, [int]$port, [int]$timeoutSeconds = 300) {
     $deadline = (Get-Date).AddSeconds($timeoutSeconds)
     while ((Get-Date) -lt $deadline) {
         $listener = Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue

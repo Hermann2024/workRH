@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/support")
-@PreAuthorize("hasAnyAuthority('ADMIN','HR')")
+@PreAuthorize("hasAnyAuthority('ADMIN','HR','EMPLOYEE')")
 public class SupportController {
 
     private final SupportService supportService;
@@ -26,6 +26,7 @@ public class SupportController {
     }
 
     @GetMapping("/tickets")
+    @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
     @RequiresFeature(FeatureCode.EMAIL_SUPPORT)
     public List<SupportTicketResponse> listTickets() {
         return supportService.listTickets();
@@ -80,6 +81,7 @@ public class SupportController {
     }
 
     @GetMapping("/tickets/sla")
+    @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
     @RequiresFeature(FeatureCode.SLA_SUPPORT)
     public List<SlaTicketResponse> listSlaTickets() {
         return supportService.listSlaTickets();

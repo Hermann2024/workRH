@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface TeleworkDeclarationRepository extends JpaRepository<TeleworkDeclaration, Long> {
     List<TeleworkDeclaration> findAllByTenantIdAndEmployeeId(String tenantId, Long employeeId);
+    List<TeleworkDeclaration> findTop50ByTenantIdOrderByWorkDateDesc(String tenantId);
     List<TeleworkDeclaration> findAllByTenantIdAndEmployeeIdAndWorkDateBetween(
             String tenantId, Long employeeId, LocalDate startDate, LocalDate endDate);
     List<TeleworkDeclaration> findAllByTenantIdAndWorkDateBetween(String tenantId, LocalDate startDate, LocalDate endDate);

@@ -1,0 +1,74 @@
+<ng-container *ngIf="loadError() as errorMessage; else servicesState">
+  <section class="panel loading-panel">
+    <h2>Services indisponibles</h2>
+    <p>{{ errorMessage }}</p>
+  </section>
+</ng-container>
+
+<ng-template #servicesState>
+  <ng-container *ngIf="!loading(); else loadingState">
+    <section class="hero">
+      <div>
+        <p class="section-tag">Services WorkRH</p>
+        <h2>Un plan, des flux RH utilisables</h2>
+        <p class="lede">
+          Chaque service correspond a un droit backend du plan actif et a un ecran front pour la RH.
+          Les données restent filtrées par société via le tenant connecté.
+        </p>
+        <div class="action-row">
+          <a class="checkout-button small" routerLink="/dashboard">Tableau RH</a>
+          <a class="checkout-button outline small" routerLink="/employees">Salariés</a>
+          <a class="checkout-button outline small" routerLink="/billing">Support</a>
+        </div>
+      </div>
+
+      <div class="subscription-card" *ngIf="currentPlan() as plan">
+        <span class="pill">Plan actif</span>
+        <h3>{{ plan.name }}</h3>
+        <p class="meta">{{ activeModules().length }} services actifs</p>
+        <p class="meta">{{ inactiveModules().length }} service(s) bloques par le plan</p>
+        <p class="meta" *ngIf="vm() as data">Tenant: {{ data.subscription.tenantId }}</p>
+      </div>
+    </section>
+
+    <section class="stats-grid">
+      <article class="metric-card"><span>Actifs</span><strong>{{ activeModules().length }}</strong></article>
+      <article class="metric-card"><span>Total</span><strong>{{ modules().length }}</strong></article>
+      <article class="metric-card"><span>Plan</span><strong>{{ currentPlan()?.code }}</strong></article>
+      <article class="metric-card alert-card"><span>A activer</span><strong>{{ inactiveModules().length }}</strong></article>
+    </section>
+
+    <section class="panel services-panel" *ngFor="let category of categories()">
+      <div class="section-head">
+        <div>
+          <p class="section-tag">Module</p>
+          <h2>{{ category.name }}</h2>
+        </div>
+      </div>
+
+      <div class="service-grid">
+        <article class="service-card" *ngFor="let module of category.items" [class.service-disabled]="!module.enabled">
+          <div class="service-card-head">
+            <div>
+              <span class="badge" [class.badge-alert]="!module.enabled">{{ module.enabled ? 'Actif' : 'Plan requis' }}</span>
+              <h3>{{ module.name }}</h3>
+            </div>
+            <span class="plan-code">{{ module.feature }}</span>
+          </div>
+
+          <p>{{ module.description }}</p>
+          <p class="small-copy">{{ module.backendScope }}</p>
+
+          <a
+            class="checkout-button small"
+            [class.outline]="!module.enabled"
+            [routerLink]="module.enabled ? module.actionRoute : '/pricing'">
+            {{ module.enabled ? module.actionLabel : 'Voir les offres' }}
+          </a>
+        </article>
+      </div>
+    </section>
+  </ng-container>
+</ng-template>
+
+<ng-template #loadingState><app-loading-skeleton></app-loading-skeleton></ng-template>

@@ -45,7 +45,9 @@ public class LeaveService {
         entity.setComment(request.comment());
         entity.setCreatedAt(Instant.now());
         entity.setUpdatedAt(Instant.now());
-        return toDto(leaveRepository.save(entity));
+        LeaveRequestEntity saved = leaveRepository.save(entity);
+        publishLeaveStatusChanged(saved);
+        return toDto(saved);
     }
 
     public LeaveResponseDto findById(Long leaveId) {

@@ -1,0 +1,116 @@
+<section class="hero">
+  <div>
+    <p class="section-tag">Support</p>
+    <h2>Signaler un bug ou une panne</h2>
+    <p class="lede">Ouvrez un ticket suivi avec contexte technique et accusé de réception.</p>
+  </div>
+  <article class="subscription-card">
+    <p class="section-tag">Délai</p>
+    <h3>{{ prioritySupportAvailable() ? 'Prioritaire' : 'Standard' }}</h3>
+    <p class="hint">{{ responseTimeLabel() }}</p>
+  </article>
+</section>
+
+<div class="checkout-banner success" *ngIf="successTicket() as ticket">
+  Ticket #{{ ticket.id }} créé. Référence : {{ ticket.category }} - {{ ticket.status }}.
+</div>
+<div class="checkout-banner cancelled" *ngIf="loadError() as errorMessage">
+  {{ errorMessage }}
+</div>
+
+<section class="grid-layout">
+  <section class="panel">
+    <div class="section-head">
+      <div>
+        <p class="section-tag">Ticket</p>
+        <h2>Votre demande</h2>
+      </div>
+    </div>
+
+    <form class="workspace-form-card" (ngSubmit)="submitSupport()">
+      <div class="workspace-inline-fields">
+        <label class="workspace-field">
+          <span>Nom</span>
+          <input [(ngModel)]="supportDraft.requesterName" name="requesterName" autocomplete="name">
+        </label>
+        <label class="workspace-field">
+          <span>Email</span>
+          <input type="email" [(ngModel)]="supportDraft.requesterEmail" name="requesterEmail" autocomplete="email" required>
+        </label>
+      </div>
+
+      <div class="workspace-inline-fields">
+        <label class="workspace-field">
+          <span>Type</span>
+          <select [(ngModel)]="supportDraft.impact" name="impact">
+            <option *ngFor="let option of impactOptions" [value]="option.value">{{ option.label }}</option>
+          </select>
+        </label>
+        <label class="workspace-field">
+          <span>Priorité</span>
+          <select [(ngModel)]="supportDraft.priority" name="priority">
+            <option *ngFor="let option of priorityOptions" [value]="option.value">{{ option.label }}</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="workspace-inline-fields">
+        <label class="workspace-field">
+          <span>Téléphone</span>
+          <input [(ngModel)]="supportDraft.phoneNumber" name="phoneNumber" autocomplete="tel">
+        </label>
+        <label class="workspace-field">
+          <span>Sujet</span>
+          <input [(ngModel)]="supportDraft.subject" name="subject" required>
+        </label>
+      </div>
+
+      <label class="workspace-field">
+        <span>Description</span>
+        <textarea [(ngModel)]="supportDraft.message" name="message" rows="6" required></textarea>
+      </label>
+
+      <p class="workspace-helper">
+        Le ticket inclut automatiquement la page courante, le tenant, l'utilisateur et le navigateur pour accélérer le diagnostic.
+      </p>
+
+      <button class="checkout-button" type="submit" [disabled]="loading()">
+        {{ loading() ? 'Transmission...' : 'Envoyer au support' }}
+      </button>
+    </form>
+  </section>
+
+  <section class="panel">
+    <div class="section-head">
+      <div>
+        <p class="section-tag">Suivi</p>
+        <h2>Références récentes</h2>
+      </div>
+    </div>
+
+    <div class="timeline-list" *ngIf="ticketHistory().length; else emptyTickets">
+      <article class="timeline-card" *ngFor="let ticket of ticketHistory()">
+        <div>
+          <strong>#{{ ticket.id }} - {{ ticket.subject }}</strong>
+          <p>{{ ticket.category }} - {{ ticket.priority }}</p>
+        </div>
+        <div class="timeline-meta">
+          <span class="badge" [class.badge-alert]="ticket.slaBreached">{{ ticket.status }}</span>
+          <small>{{ ticket.createdAt }}</small>
+        </div>
+      </article>
+    </div>
+
+    <ng-template #emptyTickets>
+      <article class="legal-note-card">
+        <h3>Aucun ticket récent</h3>
+        <p>Après envoi, la référence du ticket s'affichera ici.</p>
+      </article>
+    </ng-template>
+
+    <article class="legal-note-card">
+      <h3>En cas de panne générale</h3>
+      <p>Choisissez le type panne ou indisponibilité et la priorité critique. Les détails techniques seront joints automatiquement au ticket.</p>
+    </article>
+  </section>
+</section>

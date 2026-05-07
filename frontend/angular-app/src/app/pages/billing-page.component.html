@@ -34,6 +34,9 @@
     <div class="checkout-banner success" *ngIf="previewModeActive()">
       {{ previewBannerMessage() }}
     </div>
+    <div class="checkout-banner cancelled" *ngIf="readinessWarnings().length">
+      {{ readinessWarnings().join(' ') }}
+    </div>
 
     <div class="billing-grid">
       <article class="subscription-card billing-hero-card" *ngIf="currentPlan() as plan">
@@ -151,7 +154,7 @@
         <button class="checkout-button"
                 *ngIf="!plan.customPricing && !previewModeActive()"
                 (click)="startCheckout(plan.code)"
-                [disabled]="checkoutLoading() === plan.code">
+                [disabled]="checkoutLoading() === plan.code || !stripeCheckoutAvailable()">
           {{ checkoutLoading() === plan.code ? 'Redirection...' : 'Passer à ce plan' }}
         </button>
 
@@ -274,7 +277,7 @@
           <p class="section-tag">Automatisation</p>
           <h2>SMS, SLA et logs</h2>
         </div>
-        <p class="hint">Le module expose les options Premium et Enterprise sans repasser par des appels backend manuels.</p>
+        <p class="hint">Les options affichees ici dependent du deploiement reel et des integrations configurees.</p>
       </div>
 
       <article class="workspace-form-card" *ngIf="hasEntitlement('SMS_NOTIFICATIONS')">

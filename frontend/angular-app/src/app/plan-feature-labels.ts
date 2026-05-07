@@ -10,23 +10,23 @@ export const PLAN_FEATURE_LABELS: Record<string, string> = {
   THRESHOLD_ALERTS: 'Alertes de depassement de seuil',
   DASHBOARD_ADVANCED: 'Tableau de bord avance',
   MONTHLY_STATS: 'Statistiques mensuelles',
-  EXPORTS: 'Exports de donnees',
+  EXPORTS: 'Exports de données',
   EMAIL_NOTIFICATIONS: 'Notifications email automatiques',
   PRIORITY_SUPPORT: 'Support prioritaire',
-  ADVANCED_RBAC: 'Gestion avancee des roles et acces',
+  ADVANCED_RBAC: 'Gestion avancée des rôles et accès',
   FULL_REPORTING: 'Reporting complet',
   DECLARATION_AUDIT: 'Audit des declarations',
-  PUBLIC_API: "Cadrage d'integration API",
+  PUBLIC_API: "Demande d'integration API",
   SMS_NOTIFICATIONS: 'Notifications SMS',
   COMPANY_BRANDING: 'Personnalisation a votre marque',
   ACCOUNTING_EXPORT: 'Exports comptables',
   SLA_SUPPORT: 'Support avec SLA',
   ONBOARDING_SUPPORT: 'Accompagnement onboarding',
   MULTI_TENANT_ADVANCED: 'Multi-tenant avance',
-  DEDICATED_HOSTING: 'Cadrage hebergement dedie',
-  HARDENED_SECURITY: 'Cadrage securite renforcee',
-  SSO: 'Projet SSO sur cadrage',
-  CUSTOM_DEVELOPMENT: 'Projet de developpement sur mesure'
+  DEDICATED_HOSTING: 'Demande hebergement dedie',
+  HARDENED_SECURITY: 'Demande revue securite renforcee',
+  SSO: 'Demande projet SSO',
+  CUSTOM_DEVELOPMENT: 'Demande de developpement sur mesure'
 };
 
 export function toCommercialFeatureLabel(feature: string): string {

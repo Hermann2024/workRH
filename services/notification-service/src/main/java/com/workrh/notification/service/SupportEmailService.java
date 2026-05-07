@@ -18,6 +18,9 @@ public class SupportEmailService {
     @Value("${notification.support.from-email:support@workrh.app}")
     private String fromEmail;
 
+    @Value("${notification.support.admin-email:}")
+    private String adminEmail;
+
     public SupportEmailService(JavaMailSender mailSender) {
         this.mailSender = mailSender;
     }
@@ -37,7 +40,26 @@ public class SupportEmailService {
             mailSender.send(mimeMessage);
             return true;
         } catch (Exception exception) {
-            throw new IllegalStateException("Unable to send support acknowledgement", exception);
+            return false;
+        }
+    }
+
+    public boolean sendAdminNotification(SupportTicket ticket) {
+        if (mailHost == null || mailHost.isBlank() || adminEmail == null || adminEmail.isBlank()) {
+            return false;
+        }
+
+        try {
+            var mimeMessage = mailSender.createMimeMessage();
+            var helper = new MimeMessageHelper(mimeMessage, StandardCharsets.UTF_8.name());
+            helper.setFrom(fromEmail);
+            helper.setTo(adminEmail);
+            helper.setSubject(buildAdminSubject(ticket));
+            helper.setText(buildAdminBody(ticket), true);
+            mailSender.send(mimeMessage);
+            return true;
+        } catch (Exception exception) {
+            return false;
         }
     }
 
@@ -54,6 +76,35 @@ public class SupportEmailService {
                 ticket.getId(),
                 ticket.getSubject(),
                 ticket.getPriority().name()
+        );
+    }
+
+    private String buildAdminSubject(SupportTicket ticket) {
+        String prefix = "PRIORITY".equals(ticket.getPriority().name()) ? "[URGENT] " : "";
+        return prefix + "WorkRH - nouveau ticket support #" + ticket.getId();
+    }
+
+    private String buildAdminBody(SupportTicket ticket) {
+        return """
+                <p>Nouveau ticket support WorkRH.</p>
+                <p><strong>Reference :</strong> #%d</p>
+                <p><strong>Tenant :</strong> %s</p>
+                <p><strong>Priorite :</strong> %s</p>
+                <p><strong>Categorie :</strong> %s</p>
+                <p><strong>Demandeur :</strong> %s &lt;%s&gt;</p>
+                <p><strong>Telephone :</strong> %s</p>
+                <p><strong>Sujet :</strong> %s</p>
+                <pre style="white-space: pre-wrap; font-family: Arial, sans-serif;">%s</pre>
+                """.formatted(
+                ticket.getId(),
+                ticket.getTenantId(),
+                ticket.getPriority().name(),
+                ticket.getCategory().name(),
+                defaultValue(ticket.getRequesterName(), "non renseigne"),
+                defaultValue(ticket.getRequesterEmail(), "non renseigne"),
+                defaultValue(ticket.getPhoneNumber(), "non renseigne"),
+                ticket.getSubject(),
+                ticket.getMessage()
         );
     }
 

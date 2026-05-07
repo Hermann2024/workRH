@@ -1,12 +1,16 @@
 import { Routes } from '@angular/router';
-import { authGuard, featureGuard, hrGuard, landingGuard } from './feature.guard';
+import { authGuard, featureGuard, hrGuard, landingGuard, platformGuard } from './feature.guard';
 import { DashboardPageComponent } from './pages/dashboard-page.component';
 import { BillingPageComponent } from './pages/billing-page.component';
 import { EmployeePortalPageComponent } from './pages/employee-portal-page.component';
+import { EmployeeManagementPageComponent } from './pages/employee-management-page.component';
 import { LoginPageComponent } from './pages/login-page.component';
 import { PoliciesPageComponent } from './pages/policies-page.component';
 import { PricingPageComponent } from './pages/pricing-page.component';
+import { ServicesPageComponent } from './pages/services-page.component';
 import { SignupPageComponent } from './pages/signup-page.component';
+import { SupportPageComponent } from './pages/support-page.component';
+import { PlatformAdminPageComponent } from './pages/platform-admin-page.component';
 
 export const appRoutes: Routes = [
   { path: '', pathMatch: 'full', component: PricingPageComponent, canActivate: [landingGuard] },
@@ -14,8 +18,13 @@ export const appRoutes: Routes = [
   { path: 'login', component: LoginPageComponent },
   { path: 'signup', component: SignupPageComponent, canActivate: [landingGuard] },
   { path: 'dashboard', component: DashboardPageComponent, canActivate: [authGuard, hrGuard] },
+  { path: 'services', component: ServicesPageComponent, canActivate: [authGuard, hrGuard] },
+  { path: 'employees', component: EmployeeManagementPageComponent, canActivate: [authGuard, hrGuard, featureGuard('EMPLOYEE_MANAGEMENT')] },
+  { path: 'employee/:employeeId', component: EmployeePortalPageComponent, canActivate: [authGuard, hrGuard, featureGuard('EMPLOYEE_MANAGEMENT')] },
   { path: 'employee', component: EmployeePortalPageComponent, canActivate: [authGuard] },
   { path: 'pricing', component: PricingPageComponent },
+  { path: 'support', component: SupportPageComponent, canActivate: [authGuard] },
+  { path: 'platform', component: PlatformAdminPageComponent, canActivate: [authGuard, platformGuard] },
   { path: 'billing', component: BillingPageComponent, canActivate: [authGuard, hrGuard] },
   {
     path: 'policies',

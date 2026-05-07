@@ -16,6 +16,10 @@ export const landingGuard: CanActivateFn = () => {
     && !authService.hasRole('HR')
     && !authService.hasRole('ADMIN');
 
+  if (authService.hasRole('PLATFORM_ADMIN')) {
+    return router.parseUrl('/platform');
+  }
+
   return router.parseUrl(employeeOnly ? '/employee' : '/dashboard');
 };
 
@@ -37,10 +41,23 @@ export const hrGuard: CanActivateFn = () => {
   const authService = inject(AuthService);
   const router = inject(Router);
 
+  if (authService.hasRole('PLATFORM_ADMIN')) {
+    return router.parseUrl('/platform');
+  }
   if (authService.hasRole('HR') || authService.hasRole('ADMIN')) {
     return true;
   }
   return router.parseUrl(authService.hasRole('EMPLOYEE') ? '/employee' : '/pricing');
+};
+
+export const platformGuard: CanActivateFn = () => {
+  const authService = inject(AuthService);
+  const router = inject(Router);
+
+  if (authService.hasRole('PLATFORM_ADMIN')) {
+    return true;
+  }
+  return router.parseUrl(authService.hasRole('EMPLOYEE') ? '/employee' : '/dashboard');
 };
 
 export const featureGuard = (feature: string): CanActivateFn => {

@@ -9,7 +9,7 @@
 <ng-container *ngIf="workspace() as data; else loadingState">
   <section class="hero employee-hero">
     <div>
-      <p class="section-tag">Mon espace</p>
+      <p class="section-tag">{{ isManagedEmployeeWorkspace() ? 'Dossier salarie' : 'Mon espace' }}</p>
       <h2>{{ data.profile.firstName }} {{ data.profile.lastName }}</h2>
 
       <div class="employee-meta-grid">
@@ -33,9 +33,18 @@
       <h3>Statut personnel</h3>
       <p class="meta">Télétravail résidence ce mois : {{ currentMonthTeleworkCount() }} jour(s)</p>
       <p class="meta">Jours fiscaux hors Luxembourg cette année : {{ currentYearTeleworkCount() }} jour(s)</p>
-      <p class="meta">Demandes de congé en attente : {{ requestedLeavesCount() }}</p>
+      <p class="meta">Demandes d'absence en attente : {{ requestedLeavesCount() }}</p>
       <p class="meta">Compte actif : {{ data.profile.active ? 'Oui' : 'Non' }}</p>
     </div>
+  </section>
+
+  <section
+    *ngIf="!isManagedEmployeeWorkspace() && latestLeaveDecision() as leaveDecision"
+    class="checkout-banner leave-decision-banner"
+    [class.success]="leaveDecision.status === 'APPROVED'"
+    [class.cancelled]="leaveDecision.status === 'REJECTED'">
+    <strong>{{ leaveStatusLabel(leaveDecision.status) }}</strong>
+    <span>{{ leaveDecisionMessage(leaveDecision) }}</span>
   </section>
 
   <section class="stats-grid">
@@ -44,7 +53,7 @@
       <strong>{{ currentMonthTeleworkCount() }}</strong>
     </article>
     <article class="metric-card">
-      <span>Demandes de congé</span>
+      <span>Demandes d'absence</span>
       <strong>{{ data.leaves.length }}</strong>
     </article>
     <article class="metric-card alert-card">
@@ -57,7 +66,16 @@
     </article>
   </section>
 
-  <section class="grid-layout employee-grid">
+  <section class="panel">
+    <div class="tabs">
+      <button class="tab-button" type="button" [class.active]="activeTab() === 'telework'" (click)="activeTab.set('telework')">Teletravail</button>
+      <button class="tab-button" type="button" [class.active]="activeTab() === 'leave'" (click)="activeTab.set('leave')">Absences</button>
+      <button class="tab-button" type="button" [class.active]="activeTab() === 'sickness'" (click)="activeTab.set('sickness')">Maladie</button>
+      <button class="tab-button" type="button" [class.active]="activeTab() === 'history'" (click)="activeTab.set('history')">Historique</button>
+    </div>
+  </section>
+
+  <section class="grid-layout employee-grid" *ngIf="activeTab() !== 'history'">
     <section class="panel">
       <div class="section-head">
         <div>
@@ -67,13 +85,20 @@
       </div>
 
       <div class="workspace-form-grid">
-        <form class="workspace-form-card" [formGroup]="teleworkForm" (ngSubmit)="submitTelework()">
+        <form class="workspace-form-card" [formGroup]="teleworkForm" (ngSubmit)="submitTelework()" *ngIf="activeTab() === 'telework'">
           <div class="workspace-form-head">
             <div>
               <h3>Activité hors Luxembourg</h3>
               <p>Enregistrez une journée travaillée hors Luxembourg.</p>
             </div>
             <span class="pill neutral">Fiscal / A1</span>
+          </div>
+
+          <div class="mode-grid">
+            <button class="mode-button" type="button" *ngFor="let option of teleworkModeOptions" (click)="option.apply()">
+              <strong>{{ option.label }}</strong>
+              <span>{{ option.helper }}</span>
+            </button>
           </div>
 
           <label class="workspace-field">
@@ -130,17 +155,17 @@
           </button>
         </form>
 
-        <form class="workspace-form-card" [formGroup]="leaveForm" (ngSubmit)="submitLeave()">
+        <form class="workspace-form-card" [formGroup]="leaveForm" (ngSubmit)="submitLeave()" *ngIf="activeTab() === 'leave'">
           <div class="workspace-form-head">
             <div>
-              <h3>Congé</h3>
+              <h3>Absence</h3>
               <p>Choisissez le type et la période.</p>
             </div>
-            <span class="pill neutral">Congés</span>
+            <span class="pill neutral">Absences</span>
           </div>
 
           <label class="workspace-field">
-            <span>Type de congé</span>
+            <span>Type d'absence</span>
             <select formControlName="type">
               <option *ngFor="let option of leaveTypeOptions" [value]="option.value">{{ option.label }}</option>
             </select>
@@ -166,11 +191,11 @@
           <p class="workspace-helper">{{ selectedLeaveHelper() }}</p>
 
           <button class="checkout-button" type="submit" [disabled]="submittingLeave()">
-            {{ submittingLeave() ? 'Transmission...' : 'Envoyer la demande' }}
+            {{ submittingLeave() ? 'Transmission...' : "Poser l'absence" }}
           </button>
         </form>
 
-        <form class="workspace-form-card" [formGroup]="sicknessForm" (ngSubmit)="submitSickness()">
+        <form class="workspace-form-card" [formGroup]="sicknessForm" (ngSubmit)="submitSickness()" *ngIf="activeTab() === 'sickness'">
           <div class="workspace-form-head">
             <div>
               <h3>Arrêt maladie</h3>
@@ -269,7 +294,7 @@
     </section>
   </section>
 
-  <section class="grid-layout employee-history-grid">
+  <section class="grid-layout employee-history-grid" *ngIf="activeTab() === 'history'">
     <section class="panel">
       <div class="section-head">
         <div>
@@ -306,8 +331,8 @@
     <section class="panel">
       <div class="section-head">
         <div>
-          <p class="section-tag">Congés</p>
-          <h2>Mes demandes</h2>
+          <p class="section-tag">Absences</p>
+          <h2>{{ isManagedEmployeeWorkspace() ? 'Demandes du salarie' : 'Mes demandes' }}</h2>
         </div>
       </div>
 
@@ -318,7 +343,12 @@
             <p class="small-copy">{{ item.startDate | date:'dd/MM/yyyy' }} -> {{ item.endDate | date:'dd/MM/yyyy' }}</p>
           </div>
           <div class="history-actions">
-            <span class="badge" [class.badge-alert]="item.status === 'REJECTED'">{{ item.status }}</span>
+            <span
+              class="badge"
+              [class.badge-success]="item.status === 'APPROVED'"
+              [class.badge-alert]="item.status === 'REJECTED'">
+              {{ leaveStatusLabel(item.status) }}
+            </span>
             <button
               *ngIf="canCancelLeave(item)"
               type="button"
@@ -331,7 +361,7 @@
       </div>
 
       <ng-template #emptyLeaves>
-        <p class="hint">Aucune demande de congé pour le moment.</p>
+        <p class="hint">Aucune demande d'absence pour le moment.</p>
       </ng-template>
     </section>
   </section>

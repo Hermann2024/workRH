@@ -21,6 +21,7 @@
         <p class="meta">{{ data.subscription.seatsPurchased }} utilisateurs</p>
         <p class="meta">Statut: {{ data.subscription.status }}</p>
         <p class="meta">Periode: {{ currentMonth }}/{{ currentYear }}</p>
+        <a class="checkout-button outline small" href="/services">Voir les services du plan</a>
       </div>
     </section>
 
@@ -39,7 +40,7 @@
         <div class="section-head">
           <div>
             <p class="section-tag">Droits</p>
-            <h2>Fonctionnalites actives</h2>
+            <h2>Fonctionnalités actives</h2>
           </div>
         </div>
 
@@ -79,7 +80,11 @@
           <thead><tr><th>Employe</th><th>Mois</th><th>Annuel</th><th>Restant</th><th>Hebdo</th><th>Fiscal</th><th>Politique</th></tr></thead>
           <tbody>
             <tr *ngFor="let employee of data.dashboard.employees">
-              <td>#{{ employee.employeeId }}</td>
+              <td>
+                <button class="employee-name-button" type="button" (click)="openEmployeeAbsences(employee.employeeId)">
+                  {{ employeeName(employee.employeeId) }}
+                </button>
+              </td>
               <td>{{ employee.usedDays }}</td>
               <td>{{ employee.annualUsedDays }}</td>
               <td>{{ employee.remainingDays }}</td>
@@ -99,7 +104,11 @@
           <thead><tr><th>Employe</th><th>Mois</th><th>Annuel</th><th>Restant</th><th>Hebdo</th><th>Fiscal</th><th>Politique</th></tr></thead>
           <tbody>
             <tr *ngFor="let employee of summary.employees">
-              <td>#{{ employee.employeeId }}</td>
+              <td>
+                <button class="employee-name-button" type="button" (click)="openEmployeeAbsences(employee.employeeId)">
+                  {{ employeeName(employee.employeeId) }}
+                </button>
+              </td>
               <td>{{ employee.monthUsedDays }}</td>
               <td>{{ employee.annualUsedDays }}/{{ employee.policy.annualFiscalLimitDays }}</td>
               <td>{{ employee.annualRemainingDays }}</td>
@@ -112,53 +121,15 @@
       </div>
     </section>
 
-    <section class="grid-layout employee-grid" *ngIf="isEntitled('EMPLOYEE_MANAGEMENT')">
-      <section class="panel">
-        <div class="section-head"><div><p class="section-tag">Employes</p><h2>Creation de comptes</h2></div></div>
-        <form class="workspace-form-card" [formGroup]="employeeForm" (ngSubmit)="createEmployee()">
-          <div class="workspace-inline-fields">
-            <label class="workspace-field"><span>Prenom</span><input type="text" formControlName="firstName"></label>
-            <label class="workspace-field"><span>Nom</span><input type="text" formControlName="lastName"></label>
-          </div>
-          <div class="workspace-inline-fields">
-            <label class="workspace-field"><span>Email</span><input type="email" formControlName="email"></label>
-            <label class="workspace-field"><span>Mot de passe</span><input type="password" formControlName="password"></label>
-          </div>
-          <div class="workspace-inline-fields">
-            <label class="workspace-field"><span>Residence</span><input type="text" formControlName="countryOfResidence"></label>
-            <label class="workspace-field"><span>Embauche</span><input type="date" formControlName="hireDate"></label>
-          </div>
-          <div class="workspace-inline-fields">
-            <label class="workspace-field"><span>Departement</span><input type="text" formControlName="department"></label>
-            <label class="workspace-field"><span>Poste</span><input type="text" formControlName="jobTitle"></label>
-          </div>
-          <label class="workspace-field"><span>Telephone</span><input type="text" formControlName="phoneNumber"></label>
-          <button class="checkout-button" type="submit" [disabled]="employeeSaving()">{{ employeeSaving() ? 'Creation...' : 'Creer le salarie' }}</button>
-        </form>
-      </section>
-
-      <section class="panel">
-        <div class="section-head"><div><p class="section-tag">Comptes</p><h2>Employes du tenant</h2></div><p class="hint">{{ employees().length }} compte(s).</p></div>
-        <div class="table-wrap" *ngIf="employees().length; else emptyEmployees">
-          <table>
-            <thead><tr><th>Employe</th><th>Residence</th><th>Fonction</th><th>Statut</th><th>Actions</th></tr></thead>
-            <tbody>
-              <tr *ngFor="let employee of employees()">
-                <td><strong>{{ employee.firstName }} {{ employee.lastName }}</strong><div class="small-copy">{{ employee.email }}</div></td>
-                <td>{{ employee.countryOfResidence || '-' }}</td>
-                <td>{{ employee.jobTitle || employee.department || '-' }}</td>
-                <td><span class="badge" [class.badge-alert]="!employee.active">{{ employee.active ? 'Actif' : 'Inactif' }}</span></td>
-                <td>
-                  <div class="action-row">
-                    <button class="checkout-button outline small" type="button" (click)="toggleEmployeeActive(employee)" [disabled]="employeeToggleId() === employee.id">{{ employeeToggleId() === employee.id ? 'Mise a jour...' : (employee.active ? 'Desactiver' : 'Reactiver') }}</button>
-                    <button class="checkout-button outline small" type="button" *ngIf="isEntitled('DECLARATION_AUDIT')" (click)="selectEmployee(employee.id)">{{ selectedEmployeeId() === employee.id ? 'Audit actif' : 'Voir audit' }}</button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+    <section class="panel" *ngIf="isEntitled('EMPLOYEE_MANAGEMENT')">
+      <div class="section-head">
+        <div>
+          <p class="section-tag">Salariés</p>
+          <h2>Gestion des comptes</h2>
         </div>
-      </section>
+        <a class="checkout-button" href="/employees">Ouvrir le service salariés</a>
+      </div>
+      <p class="hint">La création, la modification et la suppression des salariés sont maintenant dans un onglet dédié.</p>
     </section>
 
     <section class="panel" *ngIf="isEntitled('LEAVE_MANAGEMENT')">
@@ -168,7 +139,11 @@
           <thead><tr><th>Employe</th><th>Type</th><th>Periode</th><th>Statut</th><th>Commentaire</th><th>Actions</th></tr></thead>
           <tbody>
             <tr *ngFor="let leave of leaveRequests()">
-              <td>{{ employeeName(leave.employeeId) }}</td>
+              <td>
+                <button class="employee-name-button" type="button" (click)="openEmployeeAbsences(leave.employeeId)">
+                  {{ employeeName(leave.employeeId) }}
+                </button>
+              </td>
               <td>{{ leaveTypeLabel(leave.type) }}</td>
               <td>{{ leave.startDate }} - {{ leave.endDate }}</td>
               <td><span class="badge" [class.badge-alert]="leave.status === 'REJECTED'">{{ leave.status }}</span></td>
@@ -193,10 +168,44 @@
           <thead><tr><th>Employe</th><th>Debut</th><th>Fin</th><th>Commentaire</th></tr></thead>
           <tbody>
             <tr *ngFor="let record of latestSicknessRecords()">
-              <td>{{ employeeName(record.employeeId) }}</td>
+              <td>
+                <button class="employee-name-button" type="button" (click)="openEmployeeAbsences(record.employeeId)">
+                  {{ employeeName(record.employeeId) }}
+                </button>
+              </td>
               <td>{{ record.startDate }}</td>
               <td>{{ record.endDate }}</td>
               <td>{{ record.comment || '-' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" *ngIf="isEntitled('TELEWORK_BASIC')">
+      <div class="section-head">
+        <div>
+          <p class="section-tag">Teletravail</p>
+          <h2>Declarations recentes</h2>
+        </div>
+        <p class="hint">{{ latestTeleworkDeclarations().length }} declaration(s).</p>
+      </div>
+      <div class="table-wrap" *ngIf="latestTeleworkDeclarations().length; else emptyTeleworkDeclarations">
+        <table>
+          <thead><tr><th>Employe</th><th>Date</th><th>Pays residence</th><th>Teletravail</th><th>Autre residence</th><th>Autre pays</th><th>Statut</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let item of latestTeleworkDeclarations()">
+              <td>
+                <button class="employee-name-button" type="button" (click)="openEmployeeAbsences(item.employeeId)">
+                  {{ employeeName(item.employeeId) }}
+                </button>
+              </td>
+              <td>{{ item.workDate }}</td>
+              <td>{{ item.countryCode }}</td>
+              <td>{{ item.residenceTeleworkMinutes }} min</td>
+              <td>{{ item.residenceNonTeleworkMinutes }} min</td>
+              <td>{{ item.otherForeignWorkMinutes }} min {{ item.otherForeignCountryCode || '' }}</td>
+              <td><span class="badge" [class.badge-alert]="item.annualFiscalLimitExceeded || item.weeklyCompanyLimitExceeded">{{ item.status }}</span></td>
             </tr>
           </tbody>
         </table>
@@ -260,5 +269,6 @@
 <ng-template #emptyEmployees><p class="hint">Aucun compte salarie charge pour le tenant actif.</p></ng-template>
 <ng-template #emptyLeaves><p class="hint">Aucune demande de conge remontee par le backend pour le moment.</p></ng-template>
 <ng-template #emptySickness><p class="hint">Aucun arret maladie remonte pour le moment.</p></ng-template>
+<ng-template #emptyTeleworkDeclarations><p class="hint">Aucune declaration teletravail remontee pour le tenant actif.</p></ng-template>
 <ng-template #emptyAuditHistory><p class="hint">Aucun historique declaratif disponible pour l'employe selectionne.</p></ng-template>
 <ng-template #loadingState><app-loading-skeleton></app-loading-skeleton></ng-template>

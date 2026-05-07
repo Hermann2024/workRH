@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
 import { LoadingSkeletonComponent } from '../components/loading-skeleton.component';
 import {
   EmployeeCreateRequest,
@@ -24,6 +25,7 @@ import {
 export class DashboardPageComponent {
   private readonly api = inject(WorkRhApiService);
   private readonly formBuilder = inject(FormBuilder);
+  private readonly router = inject(Router);
   private readonly referenceDate = new Date();
 
   readonly loading = signal(true);
@@ -36,6 +38,7 @@ export class DashboardPageComponent {
   readonly employees = signal<EmployeeProfileResponse[]>([]);
   readonly leaveRequests = signal<LeaveResponse[]>([]);
   readonly sicknessRecords = signal<SicknessResponse[]>([]);
+  readonly recentTeleworkDeclarations = signal<TeleworkDeclarationResponse[]>([]);
   readonly auditHistory = signal<TeleworkDeclarationResponse[]>([]);
   readonly selectedEmployeeId = signal<number | null>(null);
   readonly employeeSaving = signal(false);
@@ -53,6 +56,7 @@ export class DashboardPageComponent {
     () => this.leaveRequests().filter((leave) => leave.status === 'REQUESTED')
   );
   readonly latestSicknessRecords = computed(() => this.sicknessRecords().slice(0, 8));
+  readonly latestTeleworkDeclarations = computed(() => this.recentTeleworkDeclarations().slice(0, 12));
   readonly latestAuditHistory = computed(() => this.auditHistory().slice(0, 12));
   readonly selectedEmployee = computed(() => {
     const employeeId = this.selectedEmployeeId();
@@ -111,6 +115,12 @@ export class DashboardPageComponent {
     return employee ? this.employeeLabel(employee) : `#${employeeId}`;
   }
 
+  openEmployeeAbsences(employeeId: number): void {
+    void this.router.navigate(['/employee', employeeId], {
+      queryParams: { tab: 'leave' }
+    });
+  }
+
   leaveTypeLabel(type: LeaveResponse['type']): string {
     const labels: Record<LeaveResponse['type'], string> = {
       PAID: 'Conge paye',
@@ -119,7 +129,12 @@ export class DashboardPageComponent {
       MOVING: 'Demenagement',
       MARRIAGE: 'Mariage / PACS',
       BIRTH_OR_ADOPTION: 'Naissance / adoption',
-      FAMILY_CARE: 'Assistance familiale'
+      FAMILY_CARE: 'Assistance familiale',
+      BEREAVEMENT: 'Deces / deuil',
+      MEDICAL_APPOINTMENT: 'Rendez-vous medical',
+      TRAINING: 'Formation',
+      ADMINISTRATIVE: 'Demarche administrative',
+      OTHER: 'Autre absence'
     };
     return labels[type] ?? type;
   }
@@ -290,6 +305,12 @@ export class DashboardPageComponent {
       this.sicknessRecords.set([]);
     }
 
+    if (viewModel.subscription.entitlements.includes('TELEWORK_BASIC')) {
+      this.refreshRecentTeleworkDeclarations();
+    } else {
+      this.recentTeleworkDeclarations.set([]);
+    }
+
     if (!viewModel.subscription.entitlements.includes('DECLARATION_AUDIT')) {
       this.auditHistory.set([]);
     }
@@ -330,6 +351,15 @@ export class DashboardPageComponent {
       next: (records) => this.sicknessRecords.set(records),
       error: (error) => {
         this.opsError.set(this.readBackendMessage(error, 'Suivi des arrêts maladie indisponible.'));
+      }
+    });
+  }
+
+  private refreshRecentTeleworkDeclarations(): void {
+    this.api.getRecentTeleworkDeclarations().subscribe({
+      next: (records) => this.recentTeleworkDeclarations.set(records),
+      error: (error) => {
+        this.opsError.set(this.readBackendMessage(error, 'Declarations teletravail indisponibles.'));
       }
     });
   }

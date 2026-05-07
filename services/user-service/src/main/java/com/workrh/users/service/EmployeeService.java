@@ -114,6 +114,15 @@ public class EmployeeService {
         return toResponse(employeeRepository.save(employee));
     }
 
+    public void delete(Long employeeId) {
+        Employee employee = getEmployee(employeeId);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && employee.getEmail().equalsIgnoreCase(authentication.getName())) {
+            throw new BadRequestException("You cannot delete your own employee account");
+        }
+        employeeRepository.delete(employee);
+    }
+
     public EmployeeResponse currentProfile() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || authentication.getName() == null) {

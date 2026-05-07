@@ -33,17 +33,27 @@ export class AppComponent {
       statusLabel: 'Non connecté'
     };
   });
+
   readonly navItems = computed(() => {
     const items = [
       { label: 'Offres', route: '/pricing' }
     ];
 
     if (this.isAuthenticated()) {
+      const isPlatformAdmin = this.authService.hasRole('PLATFORM_ADMIN');
+      if (isPlatformAdmin) {
+        items.unshift({ label: 'Console', route: '/platform' });
+        return items;
+      }
+
+      items.push({ label: 'Support', route: '/support' });
       if (this.authService.hasRole('EMPLOYEE')) {
         items.unshift({ label: 'Mon espace', route: '/employee' });
       }
       if (this.authService.hasRole('HR') || this.authService.hasRole('ADMIN')) {
         items.unshift({ label: 'Tableau de bord', route: '/dashboard' });
+        items.push({ label: 'Services', route: '/services' });
+        items.push({ label: 'Salariés', route: '/employees' });
         items.push({ label: 'Facturation', route: '/billing' });
         items.push({ label: 'Règles', route: '/policies' });
       }
