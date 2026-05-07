@@ -1,5 +1,7 @@
 package com.workrh.common.security;
 
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -39,12 +41,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
             return;
         }
-        if (!jwtService.isTokenValid(token)) {
-            filterChain.doFilter(request, response);
+        Claims claims;
+        try {
+            claims = jwtService.extractAllClaims(token);
+            if (!jwtService.isTokenValid(claims)) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+        } catch (JwtException | IllegalArgumentException exception) {
+            SecurityContextHolder.clearContext();
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid or expired authentication token");
             return;
         }
 
-        var claims = jwtService.extractAllClaims(token);
         List<String> roles = claims.get("roles", List.class);
         String username = claims.getSubject();
         UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(

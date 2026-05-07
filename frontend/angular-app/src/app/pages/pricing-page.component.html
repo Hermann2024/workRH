@@ -13,11 +13,14 @@
           <p class="section-tag">Tarifs</p>
           <h2>Abonnements WorkRH</h2>
         </div>
-        <p class="hint">Choisissez une offre puis connectez-vous pour la gerer.</p>
+        <p class="hint">Choisissez une offre puis connectez-vous pour la gérer.</p>
       </div>
 
       <div class="checkout-banner success" *ngIf="previewModeActive() && showDemoHints">
-        Mode demo actif sur ce compte. Toutes les fonctionnalites sont accessibles sans passer par Stripe.
+        Mode démo actif sur ce compte. Toutes les fonctionnalités sont accessibles sans passer par Stripe.
+      </div>
+      <div class="checkout-banner cancelled" *ngIf="readinessWarnings().length">
+        {{ readinessWarnings().join(' ') }}
       </div>
 
       <div class="pricing-grid pricing-grid-page">
@@ -27,15 +30,15 @@
           <div class="pricing-top pricing-top-page">
             <div class="pricing-chip-row">
               <span class="plan-code">{{ plan.code }}</span>
-              <span class="recommend-badge" *ngIf="plan.recommended">Recommande</span>
+              <span class="recommend-badge" *ngIf="plan.recommended">Recommandé</span>
             </div>
 
             <div class="pricing-heading">
               <h3>{{ plan.name }}</h3>
               <p class="small-copy pricing-seat-copy">
                 <span *ngIf="plan.minEmployees">{{ plan.minEmployees }}+</span>
-                <span *ngIf="plan.maxEmployees"> a {{ plan.maxEmployees }}</span>
-                employes
+                <span *ngIf="plan.maxEmployees"> à {{ plan.maxEmployees }}</span>
+                employés
               </p>
             </div>
 
@@ -47,7 +50,7 @@
           </div>
 
           <div class="plan-detail-block">
-            <h4>Fonctionnalites incluses</h4>
+            <h4>Fonctionnalités incluses</h4>
             <ul class="feature-list compact">
               <li *ngFor="let feature of plan.features">
                 {{ featureLabel(feature) }}
@@ -62,6 +65,21 @@
           </button>
         </article>
       </div>
+
+      <section class="grid-layout">
+        <article class="legal-note-card">
+          <h3>Politique de vente</h3>
+          <p>Vendre d'abord aux PME luxembourgeoises qui ont des salariés frontaliers et un risque réel sur le suivi du télétravail.</p>
+        </article>
+        <article class="legal-note-card">
+          <h3>Essai encadré</h3>
+          <p>Proposer 14 jours d'essai avec données de démonstration, puis un rendez-vous de cadrage pour valider le nombre d'employés et le plan adapté.</p>
+        </article>
+        <article class="legal-note-card">
+          <h3>Argument commercial</h3>
+          <p>Présenter WorkRH comme une réduction du risque fiscal et du travail manuel RH, pas seulement comme un logiciel de gestion interne.</p>
+        </article>
+      </section>
     </section>
   </ng-container>
 </ng-template>
@@ -69,6 +87,6 @@
 <ng-template #loadingState>
   <section class="panel loading-panel">
     <h2>Chargement des offres</h2>
-    <p>Recuperation des offres.</p>
+    <p>Récupération des offres.</p>
   </section>
 </ng-template>

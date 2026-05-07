@@ -66,6 +66,20 @@ public class NotificationService {
 
     @KafkaListener(topics = "leave-events", groupId = "notification-service")
     public void onLeaveValidated(LeaveStatusChangedEvent event) {
+        if ("REQUESTED".equals(event.status())) {
+            save(
+                    event.tenantId(),
+                    event.employeeId(),
+                    "IN_APP",
+                    "Leave requested",
+                    "Employee %d requested leave from %s to %s".formatted(
+                            event.employeeId(),
+                            event.startDate(),
+                            event.endDate()
+                    )
+            );
+            return;
+        }
         if ("APPROVED".equals(event.status())) {
             boolean sent = notificationEmailService.sendLeaveApproved(event);
             save(
@@ -74,6 +88,16 @@ public class NotificationService {
                     sent ? "EMAIL" : "EMAIL_SKIPPED",
                     "Leave approved",
                     "Leave approved from %s to %s".formatted(event.startDate(), event.endDate())
+            );
+            return;
+        }
+        if ("REJECTED".equals(event.status())) {
+            save(
+                    event.tenantId(),
+                    event.employeeId(),
+                    "IN_APP",
+                    "Leave rejected",
+                    "Leave rejected from %s to %s".formatted(event.startDate(), event.endDate())
             );
         }
     }

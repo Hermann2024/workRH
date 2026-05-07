@@ -44,6 +44,9 @@ eureka:
       defaultZone: http://localhost:9761/eureka
 
 management:
+  health:
+    mail:
+      enabled: false
   endpoints:
     web:
       exposure:
@@ -62,6 +65,7 @@ notification:
     from-email: ${WORKRH_BILLING_FROM_EMAIL:no-reply@workrh.app}
   support:
     from-email: ${WORKRH_SUPPORT_FROM_EMAIL:support@workrh.app}
+    admin-email: ${WORKRH_SUPPORT_ADMIN_EMAIL:}
     sla-hours-priority: ${WORKRH_SUPPORT_SLA_HOURS_PRIORITY:4}
     sla-hours-onboarding: ${WORKRH_SUPPORT_SLA_HOURS_ONBOARDING:24}
   sms:

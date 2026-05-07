@@ -28,21 +28,21 @@ public class ReportingController {
     @GetMapping("/dashboard")
     @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
     @RequiresFeature(FeatureCode.DASHBOARD_BASIC)
-    public DashboardResponse dashboard(@RequestParam int year, @RequestParam int month) {
+    public DashboardResponse dashboard(@RequestParam("year") int year, @RequestParam("month") int month) {
         return reportingService.dashboard(year, month);
     }
 
     @GetMapping("/monthly-stats")
     @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
     @RequiresFeature(FeatureCode.MONTHLY_STATS)
-    public MonthlyStatsResponse monthlyStats(@RequestParam int year) {
+    public MonthlyStatsResponse monthlyStats(@RequestParam("year") int year) {
         return reportingService.monthlyStats(year);
     }
 
     @GetMapping(value = "/dashboard/export/csv", produces = "text/csv")
     @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
     @RequiresFeature(FeatureCode.EXPORTS)
-    public ResponseEntity<byte[]> exportCsv(@RequestParam int year, @RequestParam int month) {
+    public ResponseEntity<byte[]> exportCsv(@RequestParam("year") int year, @RequestParam("month") int month) {
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename("dashboard.csv").build().toString())
                 .contentType(MediaType.parseMediaType("text/csv"))
@@ -52,7 +52,7 @@ public class ReportingController {
     @GetMapping(value = "/dashboard/export/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
     @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
     @RequiresFeature(FeatureCode.EXPORTS)
-    public ResponseEntity<byte[]> exportPdf(@RequestParam int year, @RequestParam int month) {
+    public ResponseEntity<byte[]> exportPdf(@RequestParam("year") int year, @RequestParam("month") int month) {
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename("dashboard.pdf").build().toString())
                 .contentType(MediaType.APPLICATION_PDF)
@@ -62,7 +62,7 @@ public class ReportingController {
     @GetMapping(value = "/dashboard/export/pdf-placeholder", produces = MediaType.TEXT_PLAIN_VALUE)
     @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
     @RequiresFeature(FeatureCode.EXPORTS)
-    public ResponseEntity<byte[]> exportPdfPlaceholder(@RequestParam int year, @RequestParam int month) {
+    public ResponseEntity<byte[]> exportPdfPlaceholder(@RequestParam("year") int year, @RequestParam("month") int month) {
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename("dashboard-placeholder.txt").build().toString())
                 .contentType(MediaType.TEXT_PLAIN)

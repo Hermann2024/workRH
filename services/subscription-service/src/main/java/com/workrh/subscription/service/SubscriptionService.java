@@ -5,8 +5,10 @@ import com.workrh.common.tenant.TenantContext;
 import com.workrh.common.web.BadRequestException;
 import com.workrh.common.web.NotFoundException;
 import com.workrh.common.web.UnauthorizedException;
+import com.workrh.subscription.api.dto.CatalogReadinessResponse;
 import com.workrh.subscription.api.dto.FeatureCheckResponse;
 import com.workrh.subscription.api.dto.PlanResponse;
+import com.workrh.subscription.api.dto.ServiceModuleResponse;
 import com.workrh.subscription.api.dto.SubscriptionBootstrapRequest;
 import com.workrh.subscription.api.dto.SubscriptionCancelRequest;
 import com.workrh.subscription.api.dto.SubscriptionChangeRequest;
@@ -21,6 +23,7 @@ import com.workrh.subscription.repository.SubscriptionPlanRepository;
 import com.workrh.subscription.repository.TenantSubscriptionRepository;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -47,6 +50,24 @@ public class SubscriptionService {
     @Value("${subscription.bootstrap.key:workrh-signup-bootstrap}")
     private String subscriptionBootstrapKey;
 
+    @Value("${stripe.secret-key:}")
+    private String stripeSecretKey;
+
+    @Value("${stripe.webhook.secret:}")
+    private String stripeWebhookSecret;
+
+    @Value("${notification.support.smtp-host:}")
+    private String supportSmtpHost;
+
+    @Value("${notification.sms.enabled:true}")
+    private boolean smsEnabled;
+
+    @Value("${notification.sms.webhook-url:}")
+    private String smsWebhookUrl;
+
+    @Value("${subscription.enterprise.enabled:false}")
+    private boolean enterprisePlanEnabled;
+
     public SubscriptionService(
             SubscriptionPlanRepository subscriptionPlanRepository,
             TenantSubscriptionRepository tenantSubscriptionRepository,
@@ -60,8 +81,75 @@ public class SubscriptionService {
         return subscriptionPlanRepository.findAllByActiveTrue().stream().map(this::toPlanResponse).toList();
     }
 
+    public CatalogReadinessResponse catalogReadiness() {
+        List<String> warnings = new ArrayList<>();
+        if (!isStripeCheckoutAvailable()) {
+            warnings.add("Le paiement Stripe n'est pas configuré pour cet environnement.");
+        }
+        return new CatalogReadinessResponse(
+                isStripeCheckoutAvailable(),
+                isSupportAcknowledgementEmailAvailable(),
+                isSmsDeliveryAvailable(),
+                enterprisePlanEnabled,
+                warnings
+        );
+    }
+
     public SubscriptionResponse currentSubscription() {
         return toSubscriptionResponse(getTenantSubscription(), getPlan(getTenantSubscription().getPlanCode()));
+    }
+
+    public List<ServiceModuleResponse> serviceModules() {
+        TenantSubscription subscription = getTenantSubscription();
+        SubscriptionPlan plan = getPlan(subscription.getPlanCode());
+        Set<String> entitlements = hasPreviewAllFeaturesAccess()
+                ? Arrays.stream(FeatureCode.values()).map(Enum::name).collect(Collectors.toSet())
+                : buildEntitlements(subscription, plan);
+
+        return List.of(
+                module(FeatureCode.DASHBOARD_BASIC, "Tableau de bord RH de base", "Pilotage RH",
+                        "Vue consolidée des salariés suivis, jours utilisés, jours restants et alertes principales.",
+                        "reporting-service: /api/reports/dashboard", "Ouvrir le dashboard", "/dashboard", entitlements),
+                module(FeatureCode.DASHBOARD_ADVANCED, "Tableau de bord avance", "Pilotage RH",
+                        "Synthèse entreprise avec détail annuel, hebdomadaire, fiscal et politique par salarié.",
+                        "telework-service: /api/telework/company-summary", "Voir la vue avancee", "/dashboard", entitlements),
+                module(FeatureCode.MONTHLY_STATS, "Statistiques mensuelles", "Reporting",
+                        "Lecture annuelle mois par mois des jours de télétravail, des salariés suivis et des alertes.",
+                        "reporting-service: /api/reports/monthly-stats", "Consulter les statistiques", "/dashboard", entitlements),
+                module(FeatureCode.EXPORTS, "Exports de données", "Reporting",
+                        "Exports CSV, PDF et synthèse texte des données RH et télétravail du mois.",
+                        "reporting-service: /api/reports/dashboard/export/{format}", "Exporter les données", "/dashboard", entitlements),
+                module(FeatureCode.TELEWORK_BASIC, "Suivi simple du teletravail", "Teletravail",
+                        "Déclaration salarié et lecture RH des derniers jours de télétravail du même tenant.",
+                        "telework-service: /api/telework, /api/telework/recent", "Voir les declarations", "/dashboard", entitlements),
+                module(FeatureCode.TELEWORK_COMPLIANCE_34, "Conformite teletravail frontalier Luxembourg 34 jours", "Teletravail",
+                        "Calcul du seuil fiscal frontalier, jours restants, dépassements et règles applicables par pays.",
+                        "telework-service: /api/telework/summary/{employeeId}, /api/telework/policies", "Gérer les règles", "/policies", entitlements),
+                module(FeatureCode.AUTO_EXCLUSION, "Exclusions automatiques des jours non comptables", "Teletravail",
+                        "Les congés et arrêts maladie alimentent les périodes exclues afin d'éviter de compter des jours non travaillables.",
+                        "telework-service: exclusions internes + evenements leave/sickness", "Controler les exclusions", "/dashboard", entitlements),
+                module(FeatureCode.THRESHOLD_ALERTS, "Alertes de depassement de seuil", "Alertes",
+                        "Détection des dépassements fiscaux ou hebdomadaires, avec journalisation pour la RH.",
+                        "telework-service + notification-service", "Voir les alertes", "/dashboard", entitlements),
+                module(FeatureCode.EMPLOYEE_MANAGEMENT, "Gestion des employés", "Administration",
+                        "Création, modification, activation, désactivation et suppression des comptes salariés.",
+                        "user-service: /api/users", "Gérer les salariés", "/employees", entitlements),
+                module(FeatureCode.LEAVE_MANAGEMENT, "Gestion des congés", "Absences",
+                        "Dépôt salarié, validation RH, refus RH et exclusion automatique des périodes validées.",
+                        "leave-service: /api/leaves", "Traiter les congés", "/dashboard", entitlements),
+                module(FeatureCode.SICKNESS_MANAGEMENT, "Gestion des arrêts maladie", "Absences",
+                        "Déclaration salarié et vue RH des arrêts maladie de la même société.",
+                        "sickness-service: /api/sickness", "Voir les arrêts maladie", "/dashboard", entitlements),
+                module(FeatureCode.EMAIL_NOTIFICATIONS, "Notifications email automatiques", "Alertes",
+                        "Journal des notifications automatiques émises ou journalisées pour les alertes RH.",
+                        "notification-service: /api/notifications", "Voir le journal", "/dashboard", entitlements),
+                module(FeatureCode.EMAIL_SUPPORT, "Support email", "Support",
+                        "Création de tickets support standard rattachés au tenant.",
+                        "notification-service: /api/support/tickets", "Contacter le support", "/billing", entitlements),
+                module(FeatureCode.PRIORITY_SUPPORT, "Support prioritaire", "Support",
+                        "Tickets support priorisés avec suivi SLA quand le plan le permet.",
+                        "notification-service: /api/support/tickets/priority", "Ouvrir un ticket prioritaire", "/billing", entitlements)
+        );
     }
 
     public SubscriptionResponse upsertSubscription(SubscriptionRequest request) {
@@ -274,6 +362,27 @@ public class SubscriptionService {
         );
     }
 
+    private ServiceModuleResponse module(
+            FeatureCode featureCode,
+            String name,
+            String category,
+            String description,
+            String backendScope,
+            String actionLabel,
+            String actionRoute,
+            Set<String> entitlements) {
+        return new ServiceModuleResponse(
+                featureCode.name(),
+                name,
+                category,
+                description,
+                backendScope,
+                actionLabel,
+                actionRoute,
+                entitlements.contains(featureCode.name())
+        );
+    }
+
     private SubscriptionResponse toSubscriptionResponse(TenantSubscription subscription, SubscriptionPlan plan) {
         boolean previewAllFeaturesActive = hasPreviewAllFeaturesAccess();
         Set<String> entitlements = previewAllFeaturesActive
@@ -336,5 +445,20 @@ public class SubscriptionService {
         if (bootstrapKey == null || bootstrapKey.isBlank() || !bootstrapKey.equals(subscriptionBootstrapKey)) {
             throw new UnauthorizedException("Invalid bootstrap key");
         }
+    }
+
+    private boolean isStripeCheckoutAvailable() {
+        return stripeSecretKey != null
+                && !stripeSecretKey.isBlank()
+                && stripeWebhookSecret != null
+                && !stripeWebhookSecret.isBlank();
+    }
+
+    private boolean isSupportAcknowledgementEmailAvailable() {
+        return supportSmtpHost != null && !supportSmtpHost.isBlank();
+    }
+
+    private boolean isSmsDeliveryAvailable() {
+        return smsEnabled && smsWebhookUrl != null && !smsWebhookUrl.isBlank();
     }
 }

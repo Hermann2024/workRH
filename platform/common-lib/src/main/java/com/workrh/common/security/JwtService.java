@@ -51,6 +51,10 @@ public class JwtService {
 
     public boolean isTokenValid(String token) {
         Claims claims = extractAllClaims(token);
+        return isTokenValid(claims);
+    }
+
+    public boolean isTokenValid(Claims claims) {
         return claims.getExpiration().after(new Date());
     }
 

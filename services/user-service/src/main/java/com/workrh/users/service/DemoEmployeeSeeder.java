@@ -36,7 +36,7 @@ public class DemoEmployeeSeeder implements CommandLineRunner {
                 false,
                 "Direction",
                 "Administrateur plateforme",
-                Set.of(Role.ADMIN, Role.HR)
+                Set.of(Role.PLATFORM_ADMIN)
         );
         upsert(
                 "rh@company.com",

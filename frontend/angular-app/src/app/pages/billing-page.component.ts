@@ -3,11 +3,11 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { catchError, switchMap } from 'rxjs';
+import { catchError, forkJoin, of, switchMap } from 'rxjs';
 import { AuthService } from '../auth.service';
 import { SubscriptionCheckoutService } from '../subscription-checkout.service';
 import { SubscriptionLifecycleService } from '../subscription-lifecycle.service';
-import { NotificationResponse, SlaTicketResponse, SupportTicketResponse, WorkRhApiService, WorkRhVm } from '../workrh-api.service';
+import { CatalogReadinessResponse, NotificationResponse, SlaTicketResponse, SupportTicketResponse, WorkRhApiService, WorkRhVm } from '../workrh-api.service';
 import { FRONTEND_BASE_URL, SHOW_DEMO_HINTS } from '../config';
 
 @Component({
@@ -38,6 +38,7 @@ export class BillingPageComponent {
   readonly smsLoading = signal(false);
   readonly exportLoading = signal(false);
   readonly vm = signal<WorkRhVm | null>(null);
+  readonly readiness = signal<CatalogReadinessResponse | null>(null);
   readonly notifications = signal<NotificationResponse[]>([]);
   readonly supportTickets = signal<SupportTicketResponse[]>([]);
   readonly slaTickets = signal<SlaTicketResponse[]>([]);
@@ -56,6 +57,8 @@ export class BillingPageComponent {
     return viewModel?.plans.find((plan) => plan.code === viewModel.subscription.planCode) ?? null;
   });
   readonly previewModeActive = computed(() => this.vm()?.subscription.previewAllFeaturesActive ?? false);
+  readonly stripeCheckoutAvailable = computed(() => this.readiness()?.stripeCheckoutAvailable ?? false);
+  readonly readinessWarnings = computed(() => this.readiness()?.warnings ?? []);
   readonly canManageSubscriptions = computed(
     () => this.authService.hasRole('ADMIN') || this.authService.hasRole('HR')
   );
@@ -92,9 +95,13 @@ export class BillingPageComponent {
       )
       : this.api.loadViewModel();
 
-    viewModel$.subscribe({
-      next: (viewModel: WorkRhVm) => {
+    forkJoin({
+      viewModel: viewModel$,
+      readiness: this.api.getCatalogReadiness().pipe(catchError(() => of(null)))
+    }).subscribe({
+      next: ({ viewModel, readiness }) => {
         this.vm.set(viewModel);
+        this.readiness.set(readiness);
         this.loadError.set(null);
         this.seedDrafts();
         this.loadOperationsData(viewModel);
@@ -102,7 +109,7 @@ export class BillingPageComponent {
         this.tryAutoStartCheckout();
       },
       error: (error: HttpErrorResponse) => {
-        this.loadError.set(this.readBackendMessage(error, 'Impossible de charger la facturation sans donnees reelles.'));
+        this.loadError.set(this.readBackendMessage(error, 'Impossible de charger la facturation sans données réelles.'));
         this.loading.set(false);
       }
     });
@@ -115,6 +122,10 @@ export class BillingPageComponent {
   startCheckout(planCode: 'STARTER' | 'PRO' | 'PREMIUM' | 'ENTERPRISE'): void {
     if (this.previewModeActive()) {
       this.blockPreviewAction('checkout');
+      return;
+    }
+    if (!this.stripeCheckoutAvailable()) {
+      this.checkoutError.set("Le checkout Stripe n'est pas configure pour cet environnement.");
       return;
     }
 

@@ -33,6 +33,7 @@ public class BaseSecurityConfig {
                                 new AntPathRequestMatcher("/v3/api-docs/**"),
                                 new AntPathRequestMatcher("/api/auth/**"),
                                 new AntPathRequestMatcher("/api/subscriptions/plans", "GET"),
+                                new AntPathRequestMatcher("/api/subscriptions/catalog/readiness", "GET"),
                                 new AntPathRequestMatcher("/api/subscriptions/bootstrap", "POST"),
                                 new AntPathRequestMatcher("/api/subscriptions/webhooks/stripe", "POST")
                         ).permitAll()

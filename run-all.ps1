@@ -54,7 +54,7 @@ if ($dockerComposeCommand) {
 }
 
 Write-Host "Building project and installing reactor artifacts locally (tests fully skipped)"
-mvn -T1C -Dmaven.test.skip=true clean install
+mvn -T1C "-Dmaven.test.skip=true" clean install
 if ($LASTEXITCODE -ne 0) {
     throw "Maven build failed."
 }

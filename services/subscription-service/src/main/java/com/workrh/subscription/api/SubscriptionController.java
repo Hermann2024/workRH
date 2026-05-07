@@ -1,7 +1,9 @@
 package com.workrh.subscription.api;
 
 import com.workrh.subscription.api.dto.FeatureCheckResponse;
+import com.workrh.subscription.api.dto.CatalogReadinessResponse;
 import com.workrh.subscription.api.dto.PlanResponse;
+import com.workrh.subscription.api.dto.ServiceModuleResponse;
 import com.workrh.subscription.api.dto.SubscriptionBootstrapRequest;
 import com.workrh.subscription.api.dto.StripeCheckoutRequest;
 import com.workrh.subscription.api.dto.StripeCheckoutResponse;
@@ -51,10 +53,21 @@ public class SubscriptionController {
         return subscriptionService.listPlans();
     }
 
+    @GetMapping("/catalog/readiness")
+    public CatalogReadinessResponse catalogReadiness() {
+        return subscriptionService.catalogReadiness();
+    }
+
     @GetMapping("/current")
     @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
     public SubscriptionResponse current() {
         return subscriptionService.currentSubscription();
+    }
+
+    @GetMapping("/services")
+    @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
+    public List<ServiceModuleResponse> services() {
+        return subscriptionService.serviceModules();
     }
 
     @PostMapping("/bootstrap")

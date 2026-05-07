@@ -1,6 +1,7 @@
 import { CommonModule, DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import {
   EmployeeWorkspaceVm,
   LeaveResponse,
@@ -20,6 +21,8 @@ export class EmployeePortalPageComponent {
   private readonly api = inject(WorkRhApiService);
   private readonly formBuilder = inject(FormBuilder);
   private readonly toastService = inject(ToastService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly managedEmployeeId = signal<number | null>(null);
 
   readonly loading = signal(true);
   readonly loadError = signal<string | null>(null);
@@ -27,6 +30,7 @@ export class EmployeePortalPageComponent {
   readonly submittingLeave = signal(false);
   readonly submittingSickness = signal(false);
   readonly workspace = signal<EmployeeWorkspaceVm | null>(null);
+  readonly activeTab = signal<'telework' | 'leave' | 'sickness' | 'history'>('telework');
 
   readonly leaveTypeOptions: Array<{ value: LeaveType; label: string; helper: string }> = [
     { value: 'PAID', label: 'Conge paye', helper: 'Demande standard de conge annuel.' },
@@ -35,7 +39,12 @@ export class EmployeePortalPageComponent {
     { value: 'MOVING', label: 'Demenagement', helper: 'Conge extraordinaire lie a un changement de domicile.' },
     { value: 'MARRIAGE', label: 'Mariage / PACS', helper: 'Conge extraordinaire evenement familial.' },
     { value: 'BIRTH_OR_ADOPTION', label: 'Naissance / adoption', helper: "Demande exceptionnelle liee a l'arrivee d'un enfant." },
-    { value: 'FAMILY_CARE', label: 'Assistance familiale', helper: 'Absence liee a une situation familiale specifique.' }
+    { value: 'FAMILY_CARE', label: 'Assistance familiale', helper: 'Absence liee a une situation familiale specifique.' },
+    { value: 'BEREAVEMENT', label: 'Deces / deuil', helper: 'Absence exceptionnelle pour evenement familial.' },
+    { value: 'MEDICAL_APPOINTMENT', label: 'Rendez-vous medical', helper: 'Absence ponctuelle liee a un rendez-vous medical.' },
+    { value: 'TRAINING', label: 'Formation', helper: 'Absence planifiee pour formation ou parcours professionnel.' },
+    { value: 'ADMINISTRATIVE', label: 'Demarche administrative', helper: 'Absence pour convocation ou demarche administrative.' },
+    { value: 'OTHER', label: 'Autre absence', helper: 'Precisez le motif dans le commentaire pour traitement RH.' }
   ];
 
   readonly teleworkForm = this.formBuilder.nonNullable.group({
@@ -62,6 +71,29 @@ export class EmployeePortalPageComponent {
     comment: ['']
   });
 
+  readonly teleworkModeOptions = [
+    {
+      label: 'Teletravail residence',
+      helper: 'Jour travaille depuis le pays de residence.',
+      apply: () => this.applyTeleworkMode(480, 480, 0, 0, '')
+    },
+    {
+      label: 'Activite residence hors teletravail',
+      helper: 'Travail dans le pays de residence sans connexion teletravail classique.',
+      apply: () => this.applyTeleworkMode(480, 0, 480, 0, '')
+    },
+    {
+      label: 'Autre pays hors Luxembourg',
+      helper: 'Activite realisee dans un pays different de la residence.',
+      apply: () => this.applyTeleworkMode(480, 0, 0, 480, 'BE')
+    },
+    {
+      label: 'Jour mixte',
+      helper: 'Repartition manuelle entre teletravail, autre activite residence et autre pays.',
+      apply: () => this.applyTeleworkMode(480, 240, 120, 120, 'BE')
+    }
+  ];
+
   readonly currentMonthTeleworkCount = computed(() => {
     const currentMonthPrefix = this.toDateInput(new Date()).slice(0, 7);
     return (this.workspace()?.teleworkHistory ?? [])
@@ -83,9 +115,18 @@ export class EmployeePortalPageComponent {
   readonly latestTeleworkEntries = computed(() => this.sortByDateDesc(this.workspace()?.teleworkHistory ?? [], (item) => item.workDate).slice(0, 8));
   readonly latestLeaveEntries = computed(() => this.sortByDateDesc(this.workspace()?.leaves ?? [], (item) => item.startDate).slice(0, 8));
   readonly latestSicknessEntries = computed(() => this.sortByDateDesc(this.workspace()?.sickness ?? [], (item) => item.startDate).slice(0, 8));
+  readonly latestLeaveDecision = computed(() => this.sortByDateDesc(
+    (this.workspace()?.leaves ?? []).filter((leave) => leave.status === 'APPROVED' || leave.status === 'REJECTED'),
+    (leave) => leave.updatedAt || leave.createdAt
+  )[0] ?? null);
 
   constructor() {
-    this.loadWorkspace();
+    this.route.paramMap.subscribe((params) => {
+      const employeeId = this.readManagedEmployeeId(params.get('employeeId'));
+      this.managedEmployeeId.set(employeeId);
+      this.activeTab.set(this.readRequestedTab() ?? (employeeId == null ? 'telework' : 'leave'));
+      this.loadWorkspace();
+    });
   }
 
   submitTelework(): void {
@@ -137,6 +178,7 @@ export class EmployeePortalPageComponent {
           connectedToEmployerInfrastructure: true
         });
         this.loadWorkspace();
+        this.activeTab.set('history');
       },
       error: (error) => {
         this.submittingTelework.set(false);
@@ -163,13 +205,14 @@ export class EmployeePortalPageComponent {
     }).subscribe({
       next: () => {
         this.submittingLeave.set(false);
-        this.toastService.success('Demande de conge transmise.');
+        this.toastService.success('Demande d’absence transmise.');
         this.leaveForm.patchValue({
           startDate: this.toDateInput(new Date()),
           endDate: this.toDateInput(new Date()),
           comment: ''
         });
         this.loadWorkspace();
+        this.activeTab.set('history');
       },
       error: (error) => {
         this.submittingLeave.set(false);
@@ -202,6 +245,7 @@ export class EmployeePortalPageComponent {
           comment: ''
         });
         this.loadWorkspace();
+        this.activeTab.set('history');
       },
       error: (error) => {
         this.submittingSickness.set(false);
@@ -226,6 +270,31 @@ export class EmployeePortalPageComponent {
     return this.leaveTypeOptions.find((option) => option.value === type)?.label ?? type;
   }
 
+  leaveStatusLabel(status: string): string {
+    const labels: Record<string, string> = {
+      REQUESTED: 'En attente',
+      APPROVED: 'Approuvee',
+      REJECTED: 'Rejetee',
+      CANCELLED: 'Annulee'
+    };
+    return labels[status] ?? status;
+  }
+
+  leaveDecisionMessage(leave: LeaveResponse): string {
+    const period = `${this.formatDisplayDate(leave.startDate)} - ${this.formatDisplayDate(leave.endDate)}`;
+    if (leave.status === 'APPROVED') {
+      return `Votre demande ${this.leaveTypeLabel(leave.type)} du ${period} a ete approuvee.`;
+    }
+    if (leave.status === 'REJECTED') {
+      return `Votre demande ${this.leaveTypeLabel(leave.type)} du ${period} a ete rejetee.`;
+    }
+    return `Votre demande ${this.leaveTypeLabel(leave.type)} du ${period} a ete mise a jour.`;
+  }
+
+  isManagedEmployeeWorkspace(): boolean {
+    return this.managedEmployeeId() != null;
+  }
+
   selectedLeaveHelper(): string {
     const selectedType = this.leaveForm.controls.type.value;
     return this.leaveTypeOptions.find((option) => option.value === selectedType)?.helper
@@ -239,7 +308,7 @@ export class EmployeePortalPageComponent {
   private loadWorkspace(): void {
     const hadWorkspace = this.workspace() !== null;
     this.loading.set(true);
-    this.api.loadEmployeeWorkspace().subscribe({
+    this.api.loadEmployeeWorkspace(new Date(), this.managedEmployeeId()).subscribe({
       next: (workspace) => {
         this.workspace.set(workspace);
         this.loadError.set(null);
@@ -261,6 +330,22 @@ export class EmployeePortalPageComponent {
     });
   }
 
+  private applyTeleworkMode(
+    totalWorkMinutes: number,
+    residenceTeleworkMinutes: number,
+    residenceNonTeleworkMinutes: number,
+    otherForeignWorkMinutes: number,
+    otherForeignCountryCode: string
+  ): void {
+    this.teleworkForm.patchValue({
+      totalWorkMinutes,
+      residenceTeleworkMinutes,
+      residenceNonTeleworkMinutes,
+      otherForeignWorkMinutes,
+      otherForeignCountryCode
+    });
+  }
+
   private readBackendMessage(error: unknown, fallback: string): string {
     const backendMessage = (error as { error?: { message?: string } })?.error?.message;
     return typeof backendMessage === 'string' && backendMessage.trim()
@@ -274,5 +359,26 @@ export class EmployeePortalPageComponent {
 
   private toDateInput(date: Date): string {
     return date.toISOString().slice(0, 10);
+  }
+
+  private formatDisplayDate(value: string): string {
+    const [year, month, day] = value.split('-');
+    return day && month && year ? `${day}/${month}/${year}` : value;
+  }
+
+  private readManagedEmployeeId(rawId: string | null): number | null {
+    if (rawId == null) {
+      return null;
+    }
+
+    const employeeId = Number(rawId);
+    return Number.isInteger(employeeId) && employeeId > 0 ? employeeId : null;
+  }
+
+  private readRequestedTab(): 'telework' | 'leave' | 'sickness' | 'history' | null {
+    const rawTab = this.route.snapshot.queryParamMap.get('tab');
+    return rawTab === 'telework' || rawTab === 'leave' || rawTab === 'sickness' || rawTab === 'history'
+      ? rawTab
+      : null;
   }
 }

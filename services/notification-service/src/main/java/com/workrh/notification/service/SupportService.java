@@ -116,6 +116,7 @@ public class SupportService {
 
         SupportTicket saved = supportTicketRepository.save(ticket);
         boolean acknowledgementSent = supportEmailService.sendAcknowledgement(saved);
+        boolean adminNotificationSent = supportEmailService.sendAdminNotification(saved);
 
         saveLog(
                 saved.getTenantId(),
@@ -128,6 +129,12 @@ public class SupportService {
                 acknowledgementSent ? "EMAIL" : "EMAIL_SKIPPED",
                 "Support acknowledgement #" + saved.getId(),
                 "Acknowledgement for support ticket #%d to %s".formatted(saved.getId(), defaultValue(saved.getRequesterEmail(), "no-email"))
+        );
+        saveLog(
+                saved.getTenantId(),
+                adminNotificationSent ? "EMAIL_ADMIN" : "EMAIL_ADMIN_SKIPPED",
+                "Support admin notification #" + saved.getId(),
+                "Admin notification for support ticket #%d".formatted(saved.getId())
         );
         return saved;
     }

@@ -1,0 +1,29 @@
+<section class="hero">
+  <div>
+    <p class="section-tag">Administration plateforme</p>
+    <h2>Console de confidentialité</h2>
+    <p class="lede">Votre compte admin pilote l'exploitation de WorkRH sans accès direct aux dossiers RH des tenants.</p>
+  </div>
+  <article class="subscription-card">
+    <p class="section-tag">Session</p>
+    <h3>{{ session()?.email }}</h3>
+    <p class="hint">Rôle : administrateur plateforme</p>
+  </article>
+</section>
+
+<section class="grid-layout">
+  <article class="legal-note-card">
+    <h3>Données tenant protégées</h3>
+    <p>Les salariés, documents, règles RH et informations personnelles restent accessibles uniquement aux rôles RH du tenant concerné.</p>
+  </article>
+
+  <article class="legal-note-card">
+    <h3>Support encadré</h3>
+    <p>En cas d'incident, l'accès aux données client doit être temporaire, justifié par un ticket et tracé dans l'audit.</p>
+  </article>
+
+  <article class="legal-note-card">
+    <h3>Administration limitée</h3>
+    <p>Ce compte sert à superviser l'application, la configuration et les incidents sans consulter silencieusement les informations RH.</p>
+  </article>
+</section>

@@ -44,6 +44,20 @@ export interface EmployeeCreateRequest {
   roles: string[];
 }
 
+export interface EmployeeUpdateRequest {
+  email: string;
+  firstName: string;
+  lastName: string;
+  countryOfResidence?: string | null;
+  phoneNumber?: string | null;
+  department?: string | null;
+  jobTitle?: string | null;
+  crossBorderWorker: boolean;
+  hireDate?: string | null;
+  roles: string[];
+  active: boolean;
+}
+
 export interface DashboardResponse {
   totalEmployeesTracked: number;
   totalUsedDays: number;
@@ -96,6 +110,14 @@ export interface FeatureCheckResponse {
   allowed: boolean;
   reason: string;
   planCode: string;
+}
+
+export interface CatalogReadinessResponse {
+  stripeCheckoutAvailable: boolean;
+  supportAcknowledgementEmailAvailable: boolean;
+  smsDeliveryAvailable: boolean;
+  enterprisePlanAvailable: boolean;
+  warnings: string[];
 }
 
 export interface NotificationResponse {
@@ -154,6 +176,17 @@ export interface SmsNotificationResponse {
   status: string;
   sentAt: string;
   phoneNumber: string;
+}
+
+export interface ServiceModuleResponse {
+  feature: string;
+  name: string;
+  category: string;
+  description: string;
+  backendScope: string;
+  actionLabel: string;
+  actionRoute: string;
+  enabled: boolean;
 }
 
 export interface TeleworkPolicySnapshotResponse {
@@ -308,7 +341,12 @@ export type LeaveType =
   | 'MOVING'
   | 'MARRIAGE'
   | 'BIRTH_OR_ADOPTION'
-  | 'FAMILY_CARE';
+  | 'FAMILY_CARE'
+  | 'BEREAVEMENT'
+  | 'MEDICAL_APPOINTMENT'
+  | 'TRAINING'
+  | 'ADMINISTRATIVE'
+  | 'OTHER';
 
 export interface LeaveResponse {
   id: number;
@@ -361,18 +399,32 @@ export interface WorkRhVm {
 export class WorkRhApiService {
   private readonly http = inject(HttpClient);
 
+  getPlans(): Observable<PlanResponse[]> {
+    return this.http.get<PlanResponse[]>(`${API_BASE_URL}/api/subscriptions/plans`).pipe(
+      map((plans) => this.normalizePlans(plans))
+    );
+  }
+
+  getCurrentSubscription(): Observable<SubscriptionResponse> {
+    return this.http.get<SubscriptionResponse>(`${API_BASE_URL}/api/subscriptions/current`);
+  }
+
+  getCatalogReadiness(): Observable<CatalogReadinessResponse> {
+    return this.http.get<CatalogReadinessResponse>(`${API_BASE_URL}/api/subscriptions/catalog/readiness`);
+  }
+
+  getServiceModules(): Observable<ServiceModuleResponse[]> {
+    return this.http.get<ServiceModuleResponse[]>(`${API_BASE_URL}/api/subscriptions/services`);
+  }
+
   loadViewModel(referenceDate = new Date()): Observable<WorkRhVm> {
     const year = referenceDate.getFullYear();
     const month = referenceDate.getMonth() + 1;
 
     return forkJoin({
-      plans: this.http.get<PlanResponse[]>(`${API_BASE_URL}/api/subscriptions/plans`),
-      subscription: this.http.get<SubscriptionResponse>(`${API_BASE_URL}/api/subscriptions/current`),
+      plans: this.getPlans(),
+      subscription: this.getCurrentSubscription(),
     }).pipe(
-      map((viewModel) => ({
-        ...viewModel,
-        plans: this.normalizePlans(viewModel.plans)
-      })),
       switchMap((viewModel) =>
         forkJoin({
           dashboard: this.getDashboard(year, month),
@@ -389,16 +441,16 @@ export class WorkRhApiService {
     );
   }
 
-  loadEmployeeWorkspace(referenceDate = new Date()): Observable<EmployeeWorkspaceVm> {
+  loadEmployeeWorkspace(referenceDate = new Date(), employeeId?: number | null): Observable<EmployeeWorkspaceVm> {
     const year = referenceDate.getFullYear();
     const month = referenceDate.getMonth() + 1;
 
-    return this.getCurrentProfile().pipe(
+    return this.getEmployeeProfile(employeeId).pipe(
       switchMap((profile) =>
         forkJoin({
-          teleworkHistory: this.getCurrentEmployeeTeleworkHistory(),
-          leaves: this.getCurrentEmployeeLeaves(),
-          sickness: this.getCurrentEmployeeSickness(),
+          teleworkHistory: employeeId != null ? this.getTeleworkHistory(employeeId) : this.getCurrentEmployeeTeleworkHistory(),
+          leaves: employeeId != null ? this.getLeaves(employeeId) : this.getCurrentEmployeeLeaves(),
+          sickness: employeeId != null ? this.getSickness(employeeId) : this.getCurrentEmployeeSickness(),
           compliance: this.checkFeature('TELEWORK_COMPLIANCE_34')
         }).pipe(
           switchMap((base) => {
@@ -426,12 +478,24 @@ export class WorkRhApiService {
     return this.http.get<EmployeeProfileResponse>(`${API_BASE_URL}/api/users/me`);
   }
 
+  getEmployee(employeeId: number): Observable<EmployeeProfileResponse> {
+    return this.http.get<EmployeeProfileResponse>(`${API_BASE_URL}/api/users/${employeeId}`);
+  }
+
   getEmployees(): Observable<EmployeeProfileResponse[]> {
     return this.http.get<EmployeeProfileResponse[]>(`${API_BASE_URL}/api/users`);
   }
 
   createEmployee(request: EmployeeCreateRequest): Observable<EmployeeProfileResponse> {
     return this.http.post<EmployeeProfileResponse>(`${API_BASE_URL}/api/users`, request);
+  }
+
+  updateEmployee(employeeId: number, request: EmployeeUpdateRequest): Observable<EmployeeProfileResponse> {
+    return this.http.put<EmployeeProfileResponse>(`${API_BASE_URL}/api/users/${employeeId}`, request);
+  }
+
+  deleteEmployee(employeeId: number): Observable<void> {
+    return this.http.delete<void>(`${API_BASE_URL}/api/users/${employeeId}`);
   }
 
   activateEmployee(employeeId: number): Observable<EmployeeProfileResponse> {
@@ -478,6 +542,10 @@ export class WorkRhApiService {
 
   getCurrentEmployeeTeleworkHistory(): Observable<TeleworkDeclarationResponse[]> {
     return this.http.get<TeleworkDeclarationResponse[]>(`${API_BASE_URL}/api/telework/me/history`);
+  }
+
+  getRecentTeleworkDeclarations(): Observable<TeleworkDeclarationResponse[]> {
+    return this.http.get<TeleworkDeclarationResponse[]>(`${API_BASE_URL}/api/telework/recent`);
   }
 
   getTeleworkHistory(employeeId: number): Observable<TeleworkDeclarationResponse[]> {
@@ -623,6 +691,10 @@ export class WorkRhApiService {
     };
 
     return [...plans].sort((left, right) => planOrder[left.code] - planOrder[right.code]);
+  }
+
+  private getEmployeeProfile(employeeId?: number | null): Observable<EmployeeProfileResponse> {
+    return employeeId != null ? this.getEmployee(employeeId) : this.getCurrentProfile();
   }
 }
 

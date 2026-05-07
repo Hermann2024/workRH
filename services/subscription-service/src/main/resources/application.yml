@@ -58,3 +58,12 @@ subscription:
     user-emails: ${WORKRH_PREVIEW_ALL_FEATURES_USER_EMAILS:}
   bootstrap:
     key: ${WORKRH_SUBSCRIPTION_BOOTSTRAP_KEY:workrh-signup-bootstrap}
+  enterprise:
+    enabled: ${WORKRH_ENTERPRISE_ENABLED:false}
+
+notification:
+  support:
+    smtp-host: ${SMTP_HOST:}
+  sms:
+    enabled: ${WORKRH_SMS_ENABLED:true}
+    webhook-url: ${WORKRH_SMS_WEBHOOK_URL:}

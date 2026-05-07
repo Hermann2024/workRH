@@ -1,0 +1,128 @@
+<ng-container *ngIf="loadError() as errorMessage; else employeeState">
+  <section class="panel loading-panel">
+    <h2>Gestion des salariés indisponible</h2>
+    <p>{{ errorMessage }}</p>
+  </section>
+</ng-container>
+
+<ng-template #employeeState>
+  <section class="hero">
+    <div>
+      <p class="section-tag">Salariés</p>
+      <h2>Creation et gestion des comptes</h2>
+      <p class="lede">Ajoutez les collaborateurs du tenant actif, puis utilisez leurs comptes dans l'espace employe.</p>
+    </div>
+    <article class="subscription-card">
+      <p class="section-tag">Comptes</p>
+      <h3>{{ employees().length }}</h3>
+      <p class="hint">Salarie(s) rattache(s) au tenant courant.</p>
+    </article>
+  </section>
+
+  <section class="panel">
+    <div class="tabs">
+      <button class="tab-button" type="button" [class.active]="activeTab() === 'create'" (click)="activeTab.set('create')">Creer</button>
+      <button class="tab-button" type="button" [class.active]="activeTab() === 'list'" (click)="activeTab.set('list')">Comptes</button>
+    </div>
+  </section>
+
+  <section class="panel" *ngIf="activeTab() === 'create'">
+      <div class="section-head">
+        <div>
+          <p class="section-tag">Nouveau compte</p>
+          <h2>Creer un salarie</h2>
+        </div>
+      </div>
+
+      <form class="workspace-form-card" [formGroup]="employeeForm" (ngSubmit)="createEmployee()">
+        <div class="workspace-inline-fields">
+          <label class="workspace-field"><span>Prenom</span><input type="text" formControlName="firstName" autocomplete="given-name"></label>
+          <label class="workspace-field"><span>Nom</span><input type="text" formControlName="lastName" autocomplete="family-name"></label>
+        </div>
+        <div class="workspace-inline-fields">
+          <label class="workspace-field"><span>Email</span><input type="email" formControlName="email" autocomplete="email"></label>
+          <label class="workspace-field"><span>Mot de passe initial</span><input type="password" formControlName="password" autocomplete="new-password"></label>
+        </div>
+        <div class="workspace-inline-fields">
+          <label class="workspace-field"><span>Pays de residence</span><input type="text" formControlName="countryOfResidence" maxlength="7"></label>
+          <label class="workspace-field"><span>Date d'embauche</span><input type="date" formControlName="hireDate"></label>
+        </div>
+        <div class="workspace-inline-fields">
+          <label class="workspace-field"><span>Departement</span><input type="text" formControlName="department"></label>
+          <label class="workspace-field"><span>Poste</span><input type="text" formControlName="jobTitle"></label>
+        </div>
+        <label class="workspace-field"><span>Telephone</span><input type="text" formControlName="phoneNumber" autocomplete="tel"></label>
+        <button class="checkout-button" type="submit" [disabled]="saving()">{{ saving() ? 'Creation...' : 'Creer le salarie' }}</button>
+      </form>
+  </section>
+
+  <section class="panel" *ngIf="activeTab() === 'list'">
+      <div class="section-head">
+        <div>
+          <p class="section-tag">Tenant</p>
+          <h2>Comptes salariés</h2>
+        </div>
+        <p class="hint" *ngIf="loading()">Chargement...</p>
+      </div>
+
+      <div class="table-wrap" *ngIf="employees().length; else emptyEmployees">
+        <table>
+          <thead><tr><th>Salarie</th><th>Residence</th><th>Fonction</th><th>Statut</th><th>Actions</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let employee of employees()" [formGroup]="editForm">
+              <ng-container *ngIf="editingId() === employee.id; else readEmployeeRow">
+                <td>
+                  <div class="workspace-inline-fields compact-fields">
+                    <label class="workspace-field"><span>Prenom</span><input type="text" formControlName="firstName"></label>
+                    <label class="workspace-field"><span>Nom</span><input type="text" formControlName="lastName"></label>
+                  </div>
+                  <label class="workspace-field compact-field"><span>Email</span><input type="email" formControlName="email"></label>
+                </td>
+                <td><label class="workspace-field compact-field"><span>Pays</span><input type="text" formControlName="countryOfResidence" maxlength="7"></label></td>
+                <td>
+                  <label class="workspace-field compact-field"><span>Poste</span><input type="text" formControlName="jobTitle"></label>
+                  <label class="workspace-field compact-field"><span>Departement</span><input type="text" formControlName="department"></label>
+                  <label class="workspace-field compact-field"><span>Telephone</span><input type="text" formControlName="phoneNumber"></label>
+                  <label class="workspace-field compact-field"><span>Embauche</span><input type="date" formControlName="hireDate"></label>
+                </td>
+                <td>
+                  <label class="checkbox-line"><input type="checkbox" formControlName="active"> Actif</label>
+                </td>
+              </ng-container>
+              <ng-template #readEmployeeRow>
+                <td>
+                  <a class="employee-name-link" [routerLink]="['/employee', employee.id]" [queryParams]="{ tab: 'leave' }">
+                    {{ employee.firstName }} {{ employee.lastName }}
+                  </a>
+                  <div class="small-copy">{{ employee.email }}</div>
+                </td>
+                <td>{{ employee.countryOfResidence || '-' }}</td>
+                <td>{{ employee.jobTitle || employee.department || '-' }}</td>
+                <td><span class="badge" [class.badge-alert]="!employee.active">{{ employee.active ? 'Actif' : 'Inactif' }}</span></td>
+              </ng-template>
+              <td>
+                <div class="action-row" *ngIf="editingId() === employee.id; else rowActions">
+                  <button class="checkout-button small" type="button" (click)="updateEmployee()" [disabled]="updating()">Sauvegarder</button>
+                  <button class="checkout-button outline small" type="button" (click)="cancelEdit()" [disabled]="updating()">Annuler</button>
+                </div>
+                <ng-template #rowActions>
+                  <div class="action-row">
+                    <button class="checkout-button small" type="button" (click)="openEmployeeAbsences(employee)">Absences</button>
+                    <button class="checkout-button outline small" type="button" (click)="startEdit(employee)">Modifier</button>
+                    <button class="checkout-button outline small" type="button" (click)="toggleEmployeeActive(employee)" [disabled]="toggleId() === employee.id">
+                      {{ toggleId() === employee.id ? 'Mise a jour...' : (employee.active ? 'Desactiver' : 'Reactiver') }}
+                    </button>
+                    <button class="checkout-button danger small" type="button" (click)="deleteEmployee(employee)" [disabled]="deletingId() === employee.id">
+                      {{ deletingId() === employee.id ? 'Suppression...' : 'Supprimer' }}
+                    </button>
+                  </div>
+                </ng-template>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+  </section>
+</ng-template>
+
+<ng-template #emptyEmployees><p class="hint">Aucun salarie charge pour le tenant actif.</p></ng-template>
