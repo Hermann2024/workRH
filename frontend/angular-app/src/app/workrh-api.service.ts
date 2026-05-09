@@ -9,6 +9,8 @@ export interface DashboardEmployeeItem {
   annualUsedDays: number;
   remainingDays: number;
   weeklyUsedDays: number;
+  annualAlertLevel: 'OK' | 'WARNING' | 'EXCEEDED';
+  annualAlertLabel: string;
   annualFiscalLimitExceeded: boolean;
   weeklyCompanyLimitExceeded: boolean;
 }
@@ -62,6 +64,7 @@ export interface DashboardResponse {
   totalEmployeesTracked: number;
   totalUsedDays: number;
   totalRemainingDays: number;
+  annualAlerts: number;
   fiscalAlerts: number;
   weeklyAlerts: number;
   employees: DashboardEmployeeItem[];
@@ -334,6 +337,137 @@ export interface TeleworkDeclarationResponse {
   weeklyCompanyLimitExceeded: boolean;
 }
 
+export interface TeleworkComplianceChecklistItem {
+  code: string;
+  label: string;
+  status: string;
+  severity: string;
+  detail: string;
+  sourceUrl: string | null;
+}
+
+export interface TeleworkComplianceEmployeeRisk {
+  employeeId: number;
+  countryCode: string;
+  annualUsedDays: number;
+  annualLimitDays: number;
+  fiscalLimitExceeded: boolean;
+  a1Required: boolean;
+  article13Required: boolean;
+  likelyApplicableLegislationCountryCode: string;
+  riskLevel: string;
+  recommendation: string;
+}
+
+export interface TeleworkComplianceDossierResponse {
+  year: number;
+  month: number;
+  countryCode: string;
+  generatedAt: string;
+  overallStatus: string;
+  employeesReviewed: number;
+  declarationsReviewed: number;
+  fiscalAlerts: number;
+  socialSecurityAlerts: number;
+  a1DeclarationsRequired: number;
+  article13Cases: number;
+  checklist: TeleworkComplianceChecklistItem[];
+  employeeRisks: TeleworkComplianceEmployeeRisk[];
+  officialSources: string[];
+}
+
+export type ComplianceCaseStatus = 'DRAFT' | 'IN_REVIEW' | 'ACTION_REQUIRED' | 'READY_FOR_PAYROLL' | 'CLOSED';
+export type ComplianceStepStatus = 'NOT_STARTED' | 'TO_PREPARE' | 'SUBMITTED' | 'VALIDATED' | 'EXPIRED' | 'NOT_APPLICABLE';
+export type EmploymentSector = 'PRIVATE' | 'PUBLIC';
+export type SituationChangeType = 'RESIDENCE_COUNTRY_CHANGE' | 'ADDRESS_CHANGE' | 'SECONDARY_ACTIVITY' | 'TELEWORK_RATE_CHANGE' | 'EMPLOYMENT_SECTOR_CHANGE' | 'OTHER';
+
+export interface TeleworkComplianceEvidenceResponse {
+  id: number;
+  evidenceType: string;
+  label: string;
+  reference: string | null;
+  fileUrl: string | null;
+  uploadedBy: string;
+  uploadedAt: string;
+}
+
+export interface TeleworkSituationChangeResponse {
+  id: number;
+  employeeId: number;
+  type: SituationChangeType;
+  effectiveDate: string;
+  previousValue: string | null;
+  newValue: string | null;
+  reason: string | null;
+  recordedBy: string;
+  recordedAt: string;
+}
+
+export interface TeleworkComplianceAuditEntryResponse {
+  id: number;
+  complianceCaseId: number;
+  employeeId: number;
+  action: string;
+  actor: string;
+  beforeValue: string | null;
+  afterValue: string | null;
+  createdAt: string;
+}
+
+export interface TeleworkComplianceCaseResponse {
+  id: number;
+  employeeId: number;
+  year: number;
+  month: number;
+  countryCode: string;
+  employmentSector: EmploymentSector;
+  status: ComplianceCaseStatus;
+  ccssA1Status: ComplianceStepStatus;
+  teleworkAgreementStatus: ComplianceStepStatus;
+  equipmentStatus: ComplianceStepStatus;
+  healthSafetyStatus: ComplianceStepStatus;
+  accidentCoverageStatus: ComplianceStepStatus;
+  dataProtectionStatus: ComplianceStepStatus;
+  residenceCountryRulesStatus: ComplianceStepStatus;
+  legalWatchStatus: ComplianceStepStatus;
+  a1SubmittedAt: string | null;
+  a1ValidUntil: string | null;
+  legalSourcesReviewedAt: string | null;
+  nextLegalReviewAt: string | null;
+  legalSourcesVersion: string | null;
+  notes: string | null;
+  validatedBy: string | null;
+  validatedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  evidence: TeleworkComplianceEvidenceResponse[];
+  situationChanges: TeleworkSituationChangeResponse[];
+  auditTrail: TeleworkComplianceAuditEntryResponse[];
+}
+
+export interface TeleworkComplianceCaseRequest {
+  employeeId: number;
+  year: number;
+  month: number;
+  countryCode: string;
+  employmentSector: EmploymentSector;
+  status: ComplianceCaseStatus;
+  ccssA1Status: ComplianceStepStatus;
+  teleworkAgreementStatus: ComplianceStepStatus;
+  equipmentStatus: ComplianceStepStatus;
+  healthSafetyStatus: ComplianceStepStatus;
+  accidentCoverageStatus: ComplianceStepStatus;
+  dataProtectionStatus: ComplianceStepStatus;
+  residenceCountryRulesStatus: ComplianceStepStatus;
+  legalWatchStatus: ComplianceStepStatus;
+  a1SubmittedAt?: string | null;
+  a1ValidUntil?: string | null;
+  legalSourcesReviewedAt?: string | null;
+  nextLegalReviewAt?: string | null;
+  legalSourcesVersion?: string | null;
+  notes?: string | null;
+}
+
 export type LeaveType =
   | 'PAID'
   | 'UNPAID'
@@ -393,6 +527,7 @@ export interface WorkRhVm {
   plans: PlanResponse[];
   subscription: SubscriptionResponse;
   companySummary: CompanySummaryResponse | null;
+  complianceDossier: TeleworkComplianceDossierResponse | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -430,6 +565,9 @@ export class WorkRhApiService {
           dashboard: this.getDashboard(year, month),
           companySummary: viewModel.subscription.entitlements.includes('DASHBOARD_ADVANCED')
             ? this.getCompanySummary(year, month, 'FR')
+            : of(null),
+          complianceDossier: viewModel.subscription.entitlements.includes('DECLARATION_AUDIT')
+            ? this.getTeleworkComplianceDossier(year, month, 'FR')
             : of(null)
         }).pipe(
           map((extra) => ({
@@ -448,20 +586,26 @@ export class WorkRhApiService {
     return this.getEmployeeProfile(employeeId).pipe(
       switchMap((profile) =>
         forkJoin({
-          teleworkHistory: employeeId != null ? this.getTeleworkHistory(employeeId) : this.getCurrentEmployeeTeleworkHistory(),
           leaves: employeeId != null ? this.getLeaves(employeeId) : this.getCurrentEmployeeLeaves(),
           sickness: employeeId != null ? this.getSickness(employeeId) : this.getCurrentEmployeeSickness(),
-          compliance: this.checkFeature('TELEWORK_COMPLIANCE_34')
+          compliance: this.checkFeature('TELEWORK_COMPLIANCE_34'),
+          audit: this.checkFeature('DECLARATION_AUDIT')
         }).pipe(
           switchMap((base) => {
             const summary$: Observable<TeleworkSummaryResponse | null> = base.compliance.allowed
               ? this.getTeleworkSummary(profile.id, year, month, profile.countryOfResidence ?? 'FR')
               : of(null);
+            const teleworkHistory$: Observable<TeleworkDeclarationResponse[]> = employeeId != null
+              ? base.audit.allowed ? this.getTeleworkHistory(employeeId) : of([])
+              : this.getCurrentEmployeeTeleworkHistory();
 
-            return summary$.pipe(
-              map((teleworkSummary) => ({
+            return forkJoin({
+              teleworkSummary: summary$,
+              teleworkHistory: teleworkHistory$
+            }).pipe(
+              map(({ teleworkSummary, teleworkHistory }) => ({
                 profile,
-                teleworkHistory: base.teleworkHistory,
+                teleworkHistory,
                 teleworkSummary,
                 leaves: base.leaves,
                 sickness: base.sickness,
@@ -521,6 +665,51 @@ export class WorkRhApiService {
   getCompanySummary(year: number, month: number, countryCode?: string | null): Observable<CompanySummaryResponse> {
     const suffix = countryCode ? `&countryCode=${countryCode}` : '';
     return this.http.get<CompanySummaryResponse>(`${API_BASE_URL}/api/telework/company-summary?year=${year}&month=${month}${suffix}`);
+  }
+
+  getTeleworkComplianceDossier(year: number, month: number, countryCode?: string | null): Observable<TeleworkComplianceDossierResponse> {
+    const suffix = countryCode ? `&countryCode=${countryCode}` : '';
+    return this.http.get<TeleworkComplianceDossierResponse>(
+      `${API_BASE_URL}/api/telework/compliance-dossier?year=${year}&month=${month}${suffix}`
+    );
+  }
+
+  getTeleworkComplianceCases(year: number, month: number): Observable<TeleworkComplianceCaseResponse[]> {
+    return this.http.get<TeleworkComplianceCaseResponse[]>(`${API_BASE_URL}/api/telework/compliance/cases?year=${year}&month=${month}`);
+  }
+
+  saveTeleworkComplianceCase(request: TeleworkComplianceCaseRequest): Observable<TeleworkComplianceCaseResponse> {
+    return this.http.post<TeleworkComplianceCaseResponse>(`${API_BASE_URL}/api/telework/compliance/cases`, request);
+  }
+
+  addTeleworkComplianceEvidence(caseId: number, request: {
+    evidenceType: string;
+    label: string;
+    reference?: string | null;
+    fileUrl?: string | null;
+  }): Observable<TeleworkComplianceCaseResponse> {
+    return this.http.post<TeleworkComplianceCaseResponse>(`${API_BASE_URL}/api/telework/compliance/cases/${caseId}/evidence`, request);
+  }
+
+  validateTeleworkComplianceCase(caseId: number): Observable<TeleworkComplianceCaseResponse> {
+    return this.http.post<TeleworkComplianceCaseResponse>(`${API_BASE_URL}/api/telework/compliance/cases/${caseId}/validate`, {});
+  }
+
+  recordTeleworkSituationChange(request: {
+    employeeId: number;
+    type: SituationChangeType;
+    effectiveDate: string;
+    previousValue?: string | null;
+    newValue?: string | null;
+    reason?: string | null;
+  }): Observable<TeleworkSituationChangeResponse> {
+    return this.http.post<TeleworkSituationChangeResponse>(`${API_BASE_URL}/api/telework/compliance/situation-changes`, request);
+  }
+
+  downloadTeleworkComplianceCases(year: number, month: number): Observable<Blob> {
+    return this.http.get(`${API_BASE_URL}/api/telework/compliance/cases/export.csv?year=${year}&month=${month}`, {
+      responseType: 'blob'
+    });
   }
 
   getTeleworkPolicies(): Observable<TeleworkPolicyResponse[]> {

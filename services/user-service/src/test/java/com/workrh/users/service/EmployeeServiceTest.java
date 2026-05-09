@@ -3,6 +3,8 @@ package com.workrh.users.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -120,6 +122,7 @@ class EmployeeServiceTest {
                 "owner@corp.com",
                 "secret123",
                 12,
+                "HR",
                 "PRO"
         ));
 
@@ -146,9 +149,37 @@ class EmployeeServiceTest {
                 "owner@corp.com",
                 "secret123",
                 5,
+                "HR",
                 "ENTERPRISE"
         ));
 
         verify(subscriptionBootstrapClient).initializeTrial("tenant-enterprise", "owner@corp.com", 5, "STARTER");
+    }
+
+    @Test
+    void shouldCreateEmployeeAccountWithoutSubscriptionBootstrapDuringSignup() {
+        TenantContext.setTenantId("tenant-a");
+        when(passwordEncoder.encode("secret123")).thenReturn("hashed");
+        when(employeeRepository.existsByTenantId("tenant-a")).thenReturn(true);
+        when(employeeRepository.existsByEmailAndTenantId("employee@corp.com", "tenant-a")).thenReturn(false);
+        when(employeeRepository.save(any(Employee.class))).thenAnswer(invocation -> {
+            Employee employee = invocation.getArgument(0);
+            employee.setId(9L);
+            return employee;
+        });
+        when(jwtService.generateToken(any(), any(), any(), any())).thenReturn("token");
+
+        var response = employeeService.signup(new SignupRequest(
+                "Jane",
+                "Employee",
+                "employee@corp.com",
+                "secret123",
+                null,
+                "EMPLOYEE",
+                null
+        ));
+
+        assertThat(response.roles()).containsExactly("EMPLOYEE");
+        verify(subscriptionBootstrapClient, never()).initializeTrial(any(), any(), anyInt(), any());
     }
 }

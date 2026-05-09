@@ -9,12 +9,12 @@
         <span>Choisissez le nom technique de votre tenant.</span>
       </div>
       <div class="login-point">
-        <strong>2. Compte RH</strong>
-        <span>Le premier compte est cree avec les droits admin et RH.</span>
+        <strong>2. Type de compte</strong>
+        <span>Un compte RH cree l'espace entreprise. Un compte employe rejoint un espace existant.</span>
       </div>
       <div class="login-point">
         <strong>3. Facturation</strong>
-        <span>Vous serez redirige vers la facturation pour finaliser l'abonnement.</span>
+        <span>Uniquement pour les comptes RH responsables de l'espace.</span>
       </div>
     </div>
 
@@ -26,7 +26,7 @@
     <div class="login-panel-head">
       <div>
         <p class="section-tag">Nouveau compte</p>
-        <h2>Creer un compte</h2>
+        <h2>{{ isHrSignup() ? 'Creer un espace RH' : 'Creer mes identifiants employe' }}</h2>
         <p class="hint">Exemple de tenant: `acme-lu`.</p>
       </div>
     </div>
@@ -36,10 +36,29 @@
     </div>
 
     <form [formGroup]="signupForm" (ngSubmit)="submit()" class="login-form" novalidate>
+      <div class="mode-grid" role="group" aria-label="Type de compte">
+        <button
+          class="mode-button"
+          [class.mode-button-active]="isHrSignup()"
+          type="button"
+          (click)="selectAccountType('HR')">
+          <strong>Compte RH</strong>
+          <span>Creation de l'espace entreprise, abonnement et gestion des salaries.</span>
+        </button>
+        <button
+          class="mode-button"
+          [class.mode-button-active]="!isHrSignup()"
+          type="button"
+          (click)="selectAccountType('EMPLOYEE')">
+          <strong>Compte employe</strong>
+          <span>Creation d'identifiants personnels dans un tenant deja ouvert.</span>
+        </button>
+      </div>
+
       <label class="login-field" [class.field-invalid]="hasFieldError('tenantId')">
         <span>Tenant</span>
         <input type="text" formControlName="tenantId" placeholder="acme-lu">
-        <small class="field-help">Doit etre unique. Exemple : `acme-lu`.</small>
+        <small class="field-help">{{ isHrSignup() ? 'Doit etre unique. Exemple : `acme-lu`.' : 'Demandez cet identifiant a votre service RH.' }}</small>
         <small class="field-error" *ngIf="fieldError('tenantId') as error">{{ error }}</small>
       </label>
 
@@ -68,7 +87,7 @@
         <small class="field-error" *ngIf="fieldError('password') as error">{{ error }}</small>
       </label>
 
-      <label class="login-field" [class.field-invalid]="hasFieldError('seatsPurchased')">
+      <label class="login-field" [class.field-invalid]="hasFieldError('seatsPurchased')" *ngIf="isHrSignup()">
         <span>Nombre d'employes</span>
         <input
           type="number"
@@ -80,7 +99,7 @@
       </label>
 
       <button type="submit" [disabled]="submitting()">
-        {{ submitting() ? 'Creation...' : 'Creer mon compte' }}
+        {{ submitting() ? 'Creation...' : (isHrSignup() ? 'Creer mon espace RH' : 'Creer mes identifiants') }}
       </button>
     </form>
 

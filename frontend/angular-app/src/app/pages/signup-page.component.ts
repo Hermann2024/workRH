@@ -7,6 +7,7 @@ import { AuthService } from '../auth.service';
 
 type SignupPlanCode = 'STARTER' | 'PRO' | 'PREMIUM' | 'ENTERPRISE';
 type TrialPlanCode = 'STARTER' | 'PRO' | 'PREMIUM';
+type SignupAccountType = 'HR' | 'EMPLOYEE';
 type SignupFieldName = 'tenantId' | 'firstName' | 'lastName' | 'email' | 'password' | 'seatsPurchased';
 
 const PLAN_SEAT_RULES: Record<TrialPlanCode, { min: number; max: number | null; label: string }> = {
@@ -30,6 +31,8 @@ export class SignupPageComponent {
 
   readonly submitting = signal(false);
   readonly errorMessage = signal<string | null>(null);
+  readonly accountType = signal<SignupAccountType>('HR');
+  readonly isHrSignup = computed(() => this.accountType() === 'HR');
   readonly requestedPlan = computed(() => this.parsePlanCode(this.route.snapshot.queryParamMap.get('plan')));
   readonly trialPlan = computed<TrialPlanCode>(() => this.resolveTrialPlan(this.requestedPlan()));
   readonly seatRules = computed(() => PLAN_SEAT_RULES[this.trialPlan()]);
@@ -46,6 +49,19 @@ export class SignupPageComponent {
     this.applySeatRules();
   }
 
+  selectAccountType(accountType: SignupAccountType): void {
+    this.accountType.set(accountType);
+    this.errorMessage.set(null);
+    if (accountType === 'HR') {
+      this.applySeatRules();
+      return;
+    }
+
+    const seatsControl = this.signupForm.controls.seatsPurchased;
+    seatsControl.clearValidators();
+    seatsControl.updateValueAndValidity({ emitEvent: false });
+  }
+
   submit(): void {
     if (this.submitting()) {
       return;
@@ -59,12 +75,24 @@ export class SignupPageComponent {
 
     this.errorMessage.set(null);
     this.submitting.set(true);
+    const raw = this.signupForm.getRawValue();
     this.authService.signup({
-      ...this.signupForm.getRawValue(),
+      tenantId: raw.tenantId,
+      firstName: raw.firstName,
+      lastName: raw.lastName,
+      email: raw.email,
+      password: raw.password,
+      seatsPurchased: this.isHrSignup() ? raw.seatsPurchased : null,
+      accountType: this.accountType(),
       planCode: this.requestedPlan()
     }).subscribe({
       next: () => {
         this.submitting.set(false);
+        if (!this.isHrSignup()) {
+          this.router.navigateByUrl('/employee');
+          return;
+        }
+
         const requestedPlan = this.requestedPlan();
         if (requestedPlan) {
           this.router.navigate(['/billing'], {
@@ -175,10 +203,14 @@ export class SignupPageComponent {
         return 'Ce tenant existe deja. Choisissez un autre identifiant ou connectez-vous avec le compte existant.';
       case 'This email is already used in the selected workspace':
         return 'Cette adresse email est deja utilisee dans cet espace.';
+      case 'Employee signup requires an existing workspace':
+        return "Le tenant indique n'existe pas encore. Demandez l'identifiant de l'espace a votre RH.";
       case 'Tenant identifier is required':
         return 'Le tenant est obligatoire.';
       case 'Tenant identifier must contain at least 3 characters':
         return 'Le tenant doit contenir au moins 3 caracteres.';
+      case 'Seats purchased is required for HR signup':
+        return "Le nombre d'employes est obligatoire pour creer un espace RH.";
       case 'Seats below minimum plan size':
         return this.formatSeatRangeError('minimum');
       case 'Seats above maximum plan size':

@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, featureGuard, hrGuard, landingGuard, platformGuard } from './feature.guard';
+import { authGuard, employeeRecordGuard, featureGuard, hrGuard, landingGuard, platformGuard } from './feature.guard';
 import { DashboardPageComponent } from './pages/dashboard-page.component';
 import { BillingPageComponent } from './pages/billing-page.component';
 import { EmployeePortalPageComponent } from './pages/employee-portal-page.component';
@@ -20,7 +20,7 @@ export const appRoutes: Routes = [
   { path: 'dashboard', component: DashboardPageComponent, canActivate: [authGuard, hrGuard] },
   { path: 'services', component: ServicesPageComponent, canActivate: [authGuard, hrGuard] },
   { path: 'employees', component: EmployeeManagementPageComponent, canActivate: [authGuard, hrGuard, featureGuard('EMPLOYEE_MANAGEMENT')] },
-  { path: 'employee/:employeeId', component: EmployeePortalPageComponent, canActivate: [authGuard, hrGuard, featureGuard('EMPLOYEE_MANAGEMENT')] },
+  { path: 'employee/:employeeId', component: EmployeePortalPageComponent, canActivate: [authGuard, employeeRecordGuard, featureGuard('EMPLOYEE_MANAGEMENT')] },
   { path: 'employee', component: EmployeePortalPageComponent, canActivate: [authGuard] },
   { path: 'pricing', component: PricingPageComponent },
   { path: 'support', component: SupportPageComponent, canActivate: [authGuard] },

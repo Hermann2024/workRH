@@ -32,13 +32,13 @@ public class EmployeeController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
+    @PreAuthorize("hasAuthority('HR')")
     public List<EmployeeResponse> findAll() {
         return employeeService.findAll();
     }
 
     @GetMapping("/{employeeId}")
-    @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
+    @PreAuthorize("hasAuthority('HR')")
     public EmployeeResponse findById(@PathVariable("employeeId") Long employeeId) {
         return employeeService.findById(employeeId);
     }
@@ -50,37 +50,37 @@ public class EmployeeController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
+    @PreAuthorize("hasAuthority('HR')")
     public EmployeeResponse create(@Valid @RequestBody EmployeeCreateRequest request) {
         return employeeService.create(request);
     }
 
     @PutMapping("/{employeeId}")
-    @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
+    @PreAuthorize("hasAuthority('HR')")
     public EmployeeResponse update(@PathVariable("employeeId") Long employeeId, @Valid @RequestBody EmployeeUpdateRequest request) {
         return employeeService.update(employeeId, request);
     }
 
     @PatchMapping("/{employeeId}/password")
-    @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
+    @PreAuthorize("hasAuthority('HR')")
     public EmployeeResponse updatePassword(@PathVariable("employeeId") Long employeeId, @Valid @RequestBody PasswordUpdateRequest request) {
         return employeeService.updatePassword(employeeId, request);
     }
 
     @PatchMapping("/{employeeId}/activate")
-    @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
+    @PreAuthorize("hasAuthority('HR')")
     public EmployeeResponse activate(@PathVariable("employeeId") Long employeeId) {
         return employeeService.setActive(employeeId, true);
     }
 
     @PatchMapping("/{employeeId}/deactivate")
-    @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
+    @PreAuthorize("hasAuthority('HR')")
     public EmployeeResponse deactivate(@PathVariable("employeeId") Long employeeId) {
         return employeeService.setActive(employeeId, false);
     }
 
     @DeleteMapping("/{employeeId}")
-    @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
+    @PreAuthorize("hasAuthority('HR')")
     public void delete(@PathVariable("employeeId") Long employeeId) {
         employeeService.delete(employeeId);
     }

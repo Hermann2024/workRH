@@ -50,6 +50,19 @@ export const hrGuard: CanActivateFn = () => {
   return router.parseUrl(authService.hasRole('EMPLOYEE') ? '/employee' : '/pricing');
 };
 
+export const employeeRecordGuard: CanActivateFn = () => {
+  const authService = inject(AuthService);
+  const router = inject(Router);
+
+  if (authService.hasRole('PLATFORM_ADMIN')) {
+    return router.parseUrl('/platform');
+  }
+  if (authService.hasRole('HR')) {
+    return true;
+  }
+  return router.parseUrl(authService.hasRole('EMPLOYEE') ? '/employee' : '/dashboard');
+};
+
 export const platformGuard: CanActivateFn = () => {
   const authService = inject(AuthService);
   const router = inject(Router);

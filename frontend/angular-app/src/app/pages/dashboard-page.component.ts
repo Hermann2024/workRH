@@ -6,10 +6,18 @@ import { LoadingSkeletonComponent } from '../components/loading-skeleton.compone
 import {
   EmployeeCreateRequest,
   EmployeeProfileResponse,
+  EmploymentSector,
   LeaveResponse,
   MonthlyStatsResponse,
   NotificationResponse,
   SicknessResponse,
+  ComplianceCaseStatus,
+  ComplianceStepStatus,
+  SituationChangeType,
+  TeleworkComplianceCaseRequest,
+  TeleworkComplianceCaseResponse,
+  TeleworkComplianceChecklistItem,
+  TeleworkComplianceEmployeeRisk,
   TeleworkDeclarationResponse,
   WorkRhApiService,
   WorkRhVm
@@ -39,8 +47,11 @@ export class DashboardPageComponent {
   readonly leaveRequests = signal<LeaveResponse[]>([]);
   readonly sicknessRecords = signal<SicknessResponse[]>([]);
   readonly recentTeleworkDeclarations = signal<TeleworkDeclarationResponse[]>([]);
+  readonly complianceCases = signal<TeleworkComplianceCaseResponse[]>([]);
   readonly auditHistory = signal<TeleworkDeclarationResponse[]>([]);
   readonly selectedEmployeeId = signal<number | null>(null);
+  readonly complianceSaving = signal(false);
+  readonly complianceExportLoading = signal(false);
   readonly employeeSaving = signal(false);
   readonly employeeToggleId = signal<number | null>(null);
   readonly leaveActionId = signal<string | null>(null);
@@ -51,12 +62,17 @@ export class DashboardPageComponent {
     return viewModel?.plans.find((plan) => plan.code === viewModel.subscription.planCode) ?? null;
   });
   readonly companySummary = computed(() => this.vm()?.companySummary ?? null);
+  readonly complianceDossier = computed(() => this.vm()?.complianceDossier ?? null);
   readonly latestNotifications = computed(() => this.notifications().slice(0, 6));
   readonly pendingLeaveRequests = computed(
     () => this.leaveRequests().filter((leave) => leave.status === 'REQUESTED')
   );
   readonly latestSicknessRecords = computed(() => this.sicknessRecords().slice(0, 8));
   readonly latestTeleworkDeclarations = computed(() => this.recentTeleworkDeclarations().slice(0, 12));
+  readonly selectedComplianceCase = computed(() => {
+    const employeeId = this.selectedEmployeeId();
+    return this.complianceCases().find((item) => item.employeeId === employeeId) ?? null;
+  });
   readonly latestAuditHistory = computed(() => this.auditHistory().slice(0, 12));
   readonly selectedEmployee = computed(() => {
     const employeeId = this.selectedEmployeeId();
@@ -77,6 +93,40 @@ export class DashboardPageComponent {
     hireDate: [this.toDateInput(new Date()), [Validators.required]]
   });
 
+  readonly complianceCaseForm = this.formBuilder.nonNullable.group({
+    employmentSector: ['PRIVATE' as EmploymentSector, [Validators.required]],
+    status: ['IN_REVIEW' as ComplianceCaseStatus, [Validators.required]],
+    ccssA1Status: ['TO_PREPARE' as ComplianceStepStatus, [Validators.required]],
+    teleworkAgreementStatus: ['TO_PREPARE' as ComplianceStepStatus, [Validators.required]],
+    equipmentStatus: ['TO_PREPARE' as ComplianceStepStatus, [Validators.required]],
+    healthSafetyStatus: ['TO_PREPARE' as ComplianceStepStatus, [Validators.required]],
+    accidentCoverageStatus: ['TO_PREPARE' as ComplianceStepStatus, [Validators.required]],
+    dataProtectionStatus: ['TO_PREPARE' as ComplianceStepStatus, [Validators.required]],
+    residenceCountryRulesStatus: ['TO_PREPARE' as ComplianceStepStatus, [Validators.required]],
+    legalWatchStatus: ['TO_PREPARE' as ComplianceStepStatus, [Validators.required]],
+    a1SubmittedAt: [''],
+    a1ValidUntil: [''],
+    legalSourcesReviewedAt: [this.toDateInput(new Date())],
+    nextLegalReviewAt: [this.toDateInput(new Date(this.currentYear + 1, this.referenceDate.getMonth(), this.referenceDate.getDate()))],
+    legalSourcesVersion: ['2026-05-08'],
+    notes: ['']
+  });
+
+  readonly evidenceForm = this.formBuilder.nonNullable.group({
+    evidenceType: ['A1_CERTIFICATE', [Validators.required]],
+    label: ['', [Validators.required]],
+    reference: [''],
+    fileUrl: ['']
+  });
+
+  readonly situationChangeForm = this.formBuilder.nonNullable.group({
+    type: ['RESIDENCE_COUNTRY_CHANGE' as SituationChangeType, [Validators.required]],
+    effectiveDate: [this.toDateInput(new Date()), [Validators.required]],
+    previousValue: [''],
+    newValue: [''],
+    reason: ['']
+  });
+
   constructor() {
     this.api.loadViewModel(this.referenceDate).subscribe({
       next: (viewModel: WorkRhVm) => {
@@ -88,7 +138,7 @@ export class DashboardPageComponent {
       error: (error) => {
         this.loadError.set(this.readBackendMessage(
           error,
-          'Impossible de charger le dashboard RH sans données de secours.'
+          'Impossible de charger le dashboard RH sans donnees de secours.'
         ));
         this.loading.set(false);
       }
@@ -105,7 +155,7 @@ export class DashboardPageComponent {
 
   employeeLabel(employee: EmployeeProfileResponse | null): string {
     if (!employee) {
-      return 'Employé non sélectionné';
+      return 'Employe non selectionne';
     }
     return `${employee.firstName} ${employee.lastName}`.trim();
   }
@@ -139,6 +189,172 @@ export class DashboardPageComponent {
     return labels[type] ?? type;
   }
 
+  complianceStatusLabel(status: string): string {
+    const labels: Record<string, string> = {
+      OK: 'OK',
+      READY_FOR_REVIEW: 'Pret pour revue',
+      ACTION_REQUIRED: 'Action requise',
+      MISSING_DATA: 'Donnees manquantes',
+      MANUAL_REVIEW: 'Revue manuelle'
+    };
+    return labels[status] ?? status;
+  }
+
+  checklistBadgeClass(item: TeleworkComplianceChecklistItem): string {
+    return item.status === 'OK' ? 'badge-success' : 'badge-alert';
+  }
+
+  riskBadgeClass(risk: TeleworkComplianceEmployeeRisk): string {
+    return risk.riskLevel === 'LOW' ? 'badge-success' : 'badge-alert';
+  }
+
+  stepStatusLabel(status: string): string {
+    const labels: Record<string, string> = {
+      NOT_STARTED: 'Non demarre',
+      TO_PREPARE: 'A preparer',
+      SUBMITTED: 'Soumis',
+      VALIDATED: 'Valide',
+      EXPIRED: 'Expire',
+      NOT_APPLICABLE: 'Non applicable'
+    };
+    return labels[status] ?? status;
+  }
+
+  saveComplianceCase(): void {
+    const employee = this.selectedEmployee();
+    if (!employee) {
+      this.opsError.set('Selectionnez un salarie avant de creer un dossier conformite.');
+      return;
+    }
+
+    const raw = this.complianceCaseForm.getRawValue();
+    const request: TeleworkComplianceCaseRequest = {
+      employeeId: employee.id,
+      year: this.currentYear,
+      month: this.currentMonth,
+      countryCode: employee.countryOfResidence ?? 'FR',
+      employmentSector: raw.employmentSector,
+      status: raw.status,
+      ccssA1Status: raw.ccssA1Status,
+      teleworkAgreementStatus: raw.teleworkAgreementStatus,
+      equipmentStatus: raw.equipmentStatus,
+      healthSafetyStatus: raw.healthSafetyStatus,
+      accidentCoverageStatus: raw.accidentCoverageStatus,
+      dataProtectionStatus: raw.dataProtectionStatus,
+      residenceCountryRulesStatus: raw.residenceCountryRulesStatus,
+      legalWatchStatus: raw.legalWatchStatus,
+      a1SubmittedAt: raw.a1SubmittedAt || null,
+      a1ValidUntil: raw.a1ValidUntil || null,
+      legalSourcesReviewedAt: raw.legalSourcesReviewedAt || null,
+      nextLegalReviewAt: raw.nextLegalReviewAt || null,
+      legalSourcesVersion: raw.legalSourcesVersion || null,
+      notes: raw.notes || null
+    };
+
+    this.complianceSaving.set(true);
+    this.api.saveTeleworkComplianceCase(request).subscribe({
+      next: () => {
+        this.complianceSaving.set(false);
+        this.opsMessage.set('Dossier conformite mis a jour.');
+        this.refreshComplianceCases();
+      },
+      error: (error) => {
+        this.complianceSaving.set(false);
+        this.opsError.set(this.readBackendMessage(error, 'Impossible de mettre a jour le dossier conformite.'));
+      }
+    });
+  }
+
+  addComplianceEvidence(): void {
+    const complianceCase = this.selectedComplianceCase();
+    if (!complianceCase) {
+      this.opsError.set('Creez le dossier conformite avant d ajouter une preuve.');
+      return;
+    }
+    if (this.evidenceForm.invalid) {
+      this.evidenceForm.markAllAsTouched();
+      return;
+    }
+
+    const raw = this.evidenceForm.getRawValue();
+    this.complianceSaving.set(true);
+    this.api.addTeleworkComplianceEvidence(complianceCase.id, {
+      evidenceType: raw.evidenceType,
+      label: raw.label,
+      reference: raw.reference || null,
+      fileUrl: raw.fileUrl || null
+    }).subscribe({
+      next: () => {
+        this.complianceSaving.set(false);
+        this.opsMessage.set('Preuve ajoutee au dossier.');
+        this.evidenceForm.reset({ evidenceType: 'A1_CERTIFICATE', label: '', reference: '', fileUrl: '' });
+        this.refreshComplianceCases();
+      },
+      error: (error) => {
+        this.complianceSaving.set(false);
+        this.opsError.set(this.readBackendMessage(error, 'Impossible d ajouter la preuve.'));
+      }
+    });
+  }
+
+  recordSituationChange(): void {
+    const employee = this.selectedEmployee();
+    if (!employee) {
+      this.opsError.set('Selectionnez un salarie avant d enregistrer un changement.');
+      return;
+    }
+
+    const raw = this.situationChangeForm.getRawValue();
+    this.complianceSaving.set(true);
+    this.api.recordTeleworkSituationChange({
+      employeeId: employee.id,
+      type: raw.type,
+      effectiveDate: raw.effectiveDate,
+      previousValue: raw.previousValue || null,
+      newValue: raw.newValue || null,
+      reason: raw.reason || null
+    }).subscribe({
+      next: () => {
+        this.complianceSaving.set(false);
+        this.opsMessage.set('Changement de situation journalise.');
+        this.refreshComplianceCases();
+      },
+      error: (error) => {
+        this.complianceSaving.set(false);
+        this.opsError.set(this.readBackendMessage(error, 'Impossible de journaliser le changement.'));
+      }
+    });
+  }
+
+  validateComplianceCase(caseId: number): void {
+    this.complianceSaving.set(true);
+    this.api.validateTeleworkComplianceCase(caseId).subscribe({
+      next: () => {
+        this.complianceSaving.set(false);
+        this.opsMessage.set('Dossier valide pour paie/RH.');
+        this.refreshComplianceCases();
+      },
+      error: (error) => {
+        this.complianceSaving.set(false);
+        this.opsError.set(this.readBackendMessage(error, 'Impossible de valider le dossier.'));
+      }
+    });
+  }
+
+  exportComplianceCases(): void {
+    this.complianceExportLoading.set(true);
+    this.api.downloadTeleworkComplianceCases(this.currentYear, this.currentMonth).subscribe({
+      next: (blob) => {
+        this.saveBlob(blob, `workrh-telework-compliance-${this.currentYear}-${String(this.currentMonth).padStart(2, '0')}.csv`);
+        this.complianceExportLoading.set(false);
+      },
+      error: (error) => {
+        this.complianceExportLoading.set(false);
+        this.opsError.set(this.readBackendMessage(error, 'Impossible d exporter les dossiers conformite.'));
+      }
+    });
+  }
+
   downloadDashboardExport(format: 'csv' | 'pdf' | 'pdf-placeholder'): void {
     this.exportLoading.set(format);
     this.api.downloadDashboardExport(format, this.currentYear, this.currentMonth).subscribe({
@@ -157,7 +373,7 @@ export class DashboardPageComponent {
   createEmployee(): void {
     if (this.employeeForm.invalid) {
       this.employeeForm.markAllAsTouched();
-      this.opsError.set('Complétez les informations obligatoires pour créer le salarié.');
+      this.opsError.set('Completez les informations obligatoires pour creer le salarie.');
       return;
     }
 
@@ -183,7 +399,7 @@ export class DashboardPageComponent {
     this.api.createEmployee(request).subscribe({
       next: () => {
         this.employeeSaving.set(false);
-        this.opsMessage.set('Salarié créé avec succès.');
+        this.opsMessage.set('salarie cree avec succes.');
         this.employeeForm.reset({
           email: '',
           password: '',
@@ -199,7 +415,7 @@ export class DashboardPageComponent {
       },
       error: (error) => {
         this.employeeSaving.set(false);
-        this.opsError.set(this.readBackendMessage(error, 'Impossible de créer le salarié.'));
+        this.opsError.set(this.readBackendMessage(error, 'Impossible de creer le salarie.'));
       }
     });
   }
@@ -216,18 +432,19 @@ export class DashboardPageComponent {
     request$.subscribe({
       next: () => {
         this.employeeToggleId.set(null);
-        this.opsMessage.set(employee.active ? 'Compte salarié désactivé.' : 'Compte salarié réactivé.');
+        this.opsMessage.set(employee.active ? 'Compte salarie desactive.' : 'Compte salarie reactive.');
         this.refreshEmployees(false);
       },
       error: (error) => {
         this.employeeToggleId.set(null);
-        this.opsError.set(this.readBackendMessage(error, 'Impossible de modifier le statut du salarié.'));
+        this.opsError.set(this.readBackendMessage(error, 'Impossible de modifier le statut du salarie.'));
       }
     });
   }
 
   selectEmployee(employeeId: number): void {
     this.selectedEmployeeId.set(employeeId);
+    this.hydrateComplianceForm();
     if (this.isEntitled('DECLARATION_AUDIT')) {
       this.refreshAuditHistory();
     }
@@ -237,10 +454,10 @@ export class DashboardPageComponent {
     this.leaveActionId.set(`approve-${leave.id}`);
     this.opsError.set(null);
     this.opsMessage.set(null);
-    this.api.approveLeave(leave.id, 'Validé depuis le dashboard RH').subscribe({
+    this.api.approveLeave(leave.id, 'Valide depuis le dashboard RH').subscribe({
       next: () => {
         this.leaveActionId.set(null);
-        this.opsMessage.set('Demande de congé approuvée.');
+        this.opsMessage.set('Demande de conge approuvee.');
         this.refreshLeaves();
       },
       error: (error) => {
@@ -254,10 +471,10 @@ export class DashboardPageComponent {
     this.leaveActionId.set(`reject-${leave.id}`);
     this.opsError.set(null);
     this.opsMessage.set(null);
-    this.api.rejectLeave(leave.id, 'Refusé depuis le dashboard RH').subscribe({
+    this.api.rejectLeave(leave.id, 'Refuse depuis le dashboard RH').subscribe({
       next: () => {
         this.leaveActionId.set(null);
-        this.opsMessage.set('Demande de congé rejetée.');
+        this.opsMessage.set('Demande de conge rejetee.');
         this.refreshLeaves();
       },
       error: (error) => {
@@ -313,6 +530,9 @@ export class DashboardPageComponent {
 
     if (!viewModel.subscription.entitlements.includes('DECLARATION_AUDIT')) {
       this.auditHistory.set([]);
+      this.complianceCases.set([]);
+    } else {
+      this.refreshComplianceCases();
     }
   }
 
@@ -332,7 +552,7 @@ export class DashboardPageComponent {
         }
       },
       error: (error) => {
-        this.opsError.set(this.readBackendMessage(error, 'Gestion des salariés indisponible.'));
+        this.opsError.set(this.readBackendMessage(error, 'Gestion des salaries indisponible.'));
       }
     });
   }
@@ -341,7 +561,7 @@ export class DashboardPageComponent {
     this.api.getLeaves().subscribe({
       next: (leaves) => this.leaveRequests.set(leaves),
       error: (error) => {
-        this.opsError.set(this.readBackendMessage(error, 'Gestion des congés indisponible.'));
+        this.opsError.set(this.readBackendMessage(error, 'Gestion des conges indisponible.'));
       }
     });
   }
@@ -350,7 +570,7 @@ export class DashboardPageComponent {
     this.api.getSickness().subscribe({
       next: (records) => this.sicknessRecords.set(records),
       error: (error) => {
-        this.opsError.set(this.readBackendMessage(error, 'Suivi des arrêts maladie indisponible.'));
+        this.opsError.set(this.readBackendMessage(error, 'Suivi des arrets maladie indisponible.'));
       }
     });
   }
@@ -381,6 +601,42 @@ export class DashboardPageComponent {
         this.auditLoading.set(false);
         this.opsError.set(this.readBackendMessage(error, "Historique d'audit indisponible."));
       }
+    });
+  }
+
+  private refreshComplianceCases(): void {
+    this.api.getTeleworkComplianceCases(this.currentYear, this.currentMonth).subscribe({
+      next: (cases) => {
+        this.complianceCases.set(cases);
+        this.hydrateComplianceForm();
+      },
+      error: (error) => this.opsError.set(this.readBackendMessage(error, 'Dossiers conformite indisponibles.'))
+    });
+  }
+
+  private hydrateComplianceForm(): void {
+    const complianceCase = this.selectedComplianceCase();
+    if (!complianceCase) {
+      return;
+    }
+
+    this.complianceCaseForm.patchValue({
+      employmentSector: complianceCase.employmentSector,
+      status: complianceCase.status,
+      ccssA1Status: complianceCase.ccssA1Status,
+      teleworkAgreementStatus: complianceCase.teleworkAgreementStatus,
+      equipmentStatus: complianceCase.equipmentStatus,
+      healthSafetyStatus: complianceCase.healthSafetyStatus,
+      accidentCoverageStatus: complianceCase.accidentCoverageStatus,
+      dataProtectionStatus: complianceCase.dataProtectionStatus,
+      residenceCountryRulesStatus: complianceCase.residenceCountryRulesStatus,
+      legalWatchStatus: complianceCase.legalWatchStatus,
+      a1SubmittedAt: complianceCase.a1SubmittedAt ?? '',
+      a1ValidUntil: complianceCase.a1ValidUntil ?? '',
+      legalSourcesReviewedAt: complianceCase.legalSourcesReviewedAt ?? '',
+      nextLegalReviewAt: complianceCase.nextLegalReviewAt ?? '',
+      legalSourcesVersion: complianceCase.legalSourcesVersion ?? '',
+      notes: complianceCase.notes ?? ''
     });
   }
 

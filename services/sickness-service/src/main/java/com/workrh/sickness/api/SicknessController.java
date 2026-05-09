@@ -28,25 +28,25 @@ public class SicknessController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ADMIN','HR','EMPLOYEE')")
+    @PreAuthorize("hasAnyAuthority('HR','EMPLOYEE')")
     public SicknessResponseDto declare(@Valid @RequestBody SicknessRequestDto request) {
         return sicknessService.declare(request);
     }
 
     @GetMapping("/{sicknessId}")
-    @PreAuthorize("hasAnyAuthority('ADMIN','HR','EMPLOYEE')")
+    @PreAuthorize("hasAnyAuthority('HR','EMPLOYEE')")
     public SicknessResponseDto findById(@PathVariable("sicknessId") Long sicknessId) {
         return sicknessService.findById(sicknessId);
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
+    @PreAuthorize("hasAuthority('HR')")
     public List<SicknessResponseDto> list(@RequestParam(name = "employeeId", required = false) Long employeeId) {
         return employeeId == null ? sicknessService.list() : sicknessService.listByEmployee(employeeId);
     }
 
     @GetMapping("/me")
-    @PreAuthorize("hasAnyAuthority('ADMIN','HR','EMPLOYEE')")
+    @PreAuthorize("hasAnyAuthority('HR','EMPLOYEE')")
     public List<SicknessResponseDto> listCurrentEmployee() {
         return sicknessService.listCurrentEmployee();
     }

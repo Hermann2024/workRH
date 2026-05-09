@@ -6,6 +6,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 public class TenantFilter extends OncePerRequestFilter {
@@ -27,9 +28,14 @@ public class TenantFilter extends OncePerRequestFilter {
         try {
             String tenantId = request.getHeader("X-Tenant-Id");
             if (tenantId == null || tenantId.isBlank()) {
+                String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
+                if (authorization != null && authorization.startsWith("Bearer ")) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
                 throw new BadRequestException("Missing X-Tenant-Id header");
             }
-            TenantContext.setTenantId(tenantId);
+            TenantContext.setTenantId(tenantId.trim());
             filterChain.doFilter(request, response);
         } finally {
             TenantContext.clear();

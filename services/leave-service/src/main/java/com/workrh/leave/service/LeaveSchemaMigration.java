@@ -29,5 +29,8 @@ public class LeaveSchemaMigration implements CommandLineRunner {
         jdbcTemplate.execute(
                 "ALTER TABLE leave_requests ADD CONSTRAINT leave_requests_type_check CHECK (type IN (" + allowedTypes + "))"
         );
+        jdbcTemplate.execute("CREATE INDEX IF NOT EXISTS idx_leave_requests_tenant ON leave_requests (tenant_id)");
+        jdbcTemplate.execute("CREATE INDEX IF NOT EXISTS idx_leave_requests_tenant_employee ON leave_requests (tenant_id, employee_id)");
+        jdbcTemplate.execute("CREATE INDEX IF NOT EXISTS idx_leave_requests_tenant_dates ON leave_requests (tenant_id, start_date, end_date)");
     }
 }

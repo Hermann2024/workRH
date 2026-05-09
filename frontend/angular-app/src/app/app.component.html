@@ -3,7 +3,14 @@
     <aside class="shell-aside">
       <div class="brand-card">
         <p class="eyebrow">{{ shellSummary().badge }}</p>
-        <h1>{{ shellSummary().title }}</h1>
+        <h1 class="brand-title">
+          <span>{{ shellSummary().title }}</span>
+          <span class="lux-flag" *ngIf="shellSummary().title === 'WorkRH'" aria-label="Drapeau luxembourgeois" title="Luxembourg">
+            <span></span>
+            <span></span>
+            <span></span>
+          </span>
+        </h1>
       </div>
 
       <div class="status-card">

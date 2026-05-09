@@ -15,11 +15,13 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.springframework.web.client.RestTemplate;
 
 class ReportingServiceTest {
 
     private final TeleworkMetricRepository teleworkMetricRepository = Mockito.mock(TeleworkMetricRepository.class);
-    private final ReportingService reportingService = new ReportingService(teleworkMetricRepository);
+    private final RestTemplate restTemplate = Mockito.mock(RestTemplate.class);
+    private final ReportingService reportingService = new ReportingService(teleworkMetricRepository, restTemplate);
 
     @AfterEach
     void cleanup() {
