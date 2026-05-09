@@ -11,7 +11,8 @@ public record SignupRequest(
         @NotBlank @Size(min = 2, max = 80) String lastName,
         @Email @NotBlank String email,
         @NotBlank @Size(min = 8, max = 120) String password,
-        @Min(1) @Max(500) int seatsPurchased,
+        @Min(1) @Max(500) Integer seatsPurchased,
+        String accountType,
         String planCode
 ) {
 }

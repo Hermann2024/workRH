@@ -152,8 +152,17 @@ public class EmployeeService {
     public LoginResponse signup(SignupRequest request) {
         String tenantId = normalizeTenantId(TenantContext.getTenantId());
         String email = normalizeEmail(request.email());
-        ensureSignupAvailable(tenantId, email);
-        String trialPlanCode = resolveTrialPlanCode(request.planCode());
+        ensureTenantIdentifierIsValid(tenantId);
+        String accountType = normalizeSignupAccountType(request.accountType());
+        if ("EMPLOYEE".equals(accountType)) {
+            ensureEmployeeSignupAvailable(tenantId, email);
+            return createEmployeeSignupSession(request, tenantId, email);
+        }
+
+        ensureHrSignupAvailable(tenantId, email);
+        if (request.seatsPurchased() == null) {
+            throw new BadRequestException("Seats purchased is required for HR signup");
+        }
 
         Employee employee = new Employee();
         employee.setTenantId(tenantId);
@@ -172,8 +181,36 @@ public class EmployeeService {
         employee.setUpdatedAt(Instant.now());
 
         Employee saved = employeeRepository.save(employee);
-        subscriptionBootstrapClient.initializeTrial(tenantId, saved.getEmail(), request.seatsPurchased(), trialPlanCode);
+        subscriptionBootstrapClient.initializeTrial(
+                tenantId,
+                saved.getEmail(),
+                request.seatsPurchased(),
+                resolveTrialPlanCode(request.planCode())
+        );
 
+        Set<String> roles = saved.getRoles().stream().map(Enum::name).collect(java.util.stream.Collectors.toSet());
+        String token = jwtService.generateToken(saved.getEmail(), tenantId, roles.stream().toList(), saved.getId());
+        return new LoginResponse(token, tenantId, roles);
+    }
+
+    private LoginResponse createEmployeeSignupSession(SignupRequest request, String tenantId, String email) {
+        Employee employee = new Employee();
+        employee.setTenantId(tenantId);
+        employee.setEmail(email);
+        employee.setPassword(passwordEncoder.encode(request.password()));
+        employee.setFirstName(request.firstName().trim());
+        employee.setLastName(request.lastName().trim());
+        employee.setCountryOfResidence("LU");
+        employee.setDepartment("Employes");
+        employee.setJobTitle("Salarie");
+        employee.setCrossBorderWorker(false);
+        employee.setHireDate(LocalDate.now());
+        employee.setActive(true);
+        employee.setRoles(Set.of(Role.EMPLOYEE));
+        employee.setCreatedAt(Instant.now());
+        employee.setUpdatedAt(Instant.now());
+
+        Employee saved = employeeRepository.save(employee);
         Set<String> roles = saved.getRoles().stream().map(Enum::name).collect(java.util.stream.Collectors.toSet());
         String token = jwtService.generateToken(saved.getEmail(), tenantId, roles.stream().toList(), saved.getId());
         return new LoginResponse(token, tenantId, roles);
@@ -184,15 +221,27 @@ public class EmployeeService {
                 .orElseThrow(() -> new NotFoundException("Employee not found"));
     }
 
-    private void ensureSignupAvailable(String tenantId, String email) {
+    private void ensureTenantIdentifierIsValid(String tenantId) {
         if (tenantId == null || tenantId.isBlank()) {
             throw new BadRequestException("Tenant identifier is required");
         }
         if (tenantId.length() < 3) {
             throw new BadRequestException("Tenant identifier must contain at least 3 characters");
         }
+    }
+
+    private void ensureHrSignupAvailable(String tenantId, String email) {
         if (employeeRepository.existsByTenantId(tenantId)) {
             throw new BadRequestException("This workspace already exists");
+        }
+        if (employeeRepository.existsByEmailAndTenantId(email, tenantId)) {
+            throw new BadRequestException("This email is already used in the selected workspace");
+        }
+    }
+
+    private void ensureEmployeeSignupAvailable(String tenantId, String email) {
+        if (!employeeRepository.existsByTenantId(tenantId)) {
+            throw new BadRequestException("Employee signup requires an existing workspace");
         }
         if (employeeRepository.existsByEmailAndTenantId(email, tenantId)) {
             throw new BadRequestException("This email is already used in the selected workspace");
@@ -225,6 +274,15 @@ public class EmployeeService {
             case "STARTER", "PRO", "PREMIUM" -> normalized;
             default -> "STARTER";
         };
+    }
+
+    private String normalizeSignupAccountType(String accountType) {
+        if (accountType == null || accountType.isBlank()) {
+            return "HR";
+        }
+
+        String normalized = accountType.trim().toUpperCase();
+        return "EMPLOYEE".equals(normalized) ? "EMPLOYEE" : "HR";
     }
 
     private EmployeeResponse toResponse(Employee employee) {

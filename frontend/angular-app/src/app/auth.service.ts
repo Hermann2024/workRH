@@ -37,7 +37,8 @@ export class AuthService {
     lastName: string;
     email: string;
     password: string;
-    seatsPurchased: number;
+    seatsPurchased?: number | null;
+    accountType?: 'HR' | 'EMPLOYEE';
     planCode?: 'STARTER' | 'PRO' | 'PREMIUM' | 'ENTERPRISE' | null;
   }): Observable<AuthSession> {
     const normalizedTenant = this.normalizeTenantId(request.tenantId);
@@ -49,7 +50,8 @@ export class AuthService {
         lastName: request.lastName.trim(),
         email: normalizedEmail,
         password: request.password,
-        seatsPurchased: request.seatsPurchased,
+        seatsPurchased: request.seatsPurchased ?? null,
+        accountType: request.accountType ?? 'HR',
         planCode: request.planCode ?? null
       },
       { headers: { 'X-Tenant-Id': normalizedTenant } }

@@ -4,6 +4,7 @@ import com.workrh.common.subscription.FeatureCode;
 import com.workrh.common.subscription.RequiresFeature;
 import com.workrh.telework.api.dto.TeleworkDeclarationRequest;
 import com.workrh.telework.api.dto.TeleworkDeclarationResponse;
+import com.workrh.telework.api.dto.TeleworkComplianceDossierResponse;
 import com.workrh.telework.api.dto.TeleworkCompanySummaryResponse;
 import com.workrh.telework.api.dto.TeleworkSummaryResponse;
 import com.workrh.telework.service.TeleworkService;
@@ -29,14 +30,14 @@ public class TeleworkController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ADMIN','HR','EMPLOYEE')")
+    @PreAuthorize("hasAnyAuthority('HR','EMPLOYEE')")
     @RequiresFeature(FeatureCode.TELEWORK_BASIC)
     public TeleworkDeclarationResponse declare(@Valid @RequestBody TeleworkDeclarationRequest request) {
         return teleworkService.declare(request);
     }
 
     @GetMapping("/summary/{employeeId}")
-    @PreAuthorize("hasAnyAuthority('ADMIN','HR','EMPLOYEE')")
+    @PreAuthorize("hasAnyAuthority('HR','EMPLOYEE')")
     @RequiresFeature(FeatureCode.TELEWORK_COMPLIANCE_34)
     public TeleworkSummaryResponse summary(
             @PathVariable("employeeId") Long employeeId,
@@ -47,33 +48,43 @@ public class TeleworkController {
     }
 
     @GetMapping("/history/{employeeId}")
-    @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
+    @PreAuthorize("hasAuthority('HR')")
     @RequiresFeature(FeatureCode.DECLARATION_AUDIT)
     public List<TeleworkDeclarationResponse> history(@PathVariable("employeeId") Long employeeId) {
         return teleworkService.history(employeeId);
     }
 
     @GetMapping("/me/history")
-    @PreAuthorize("hasAnyAuthority('ADMIN','HR','EMPLOYEE')")
+    @PreAuthorize("hasAnyAuthority('HR','EMPLOYEE')")
     @RequiresFeature(FeatureCode.TELEWORK_BASIC)
     public List<TeleworkDeclarationResponse> currentEmployeeHistory() {
         return teleworkService.currentEmployeeHistory();
     }
 
     @GetMapping("/recent")
-    @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
+    @PreAuthorize("hasAuthority('HR')")
     @RequiresFeature(FeatureCode.TELEWORK_BASIC)
     public List<TeleworkDeclarationResponse> recentDeclarations() {
         return teleworkService.recentDeclarations();
     }
 
     @GetMapping("/company-summary")
-    @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
+    @PreAuthorize("hasAuthority('HR')")
     @RequiresFeature(FeatureCode.DASHBOARD_ADVANCED)
     public TeleworkCompanySummaryResponse companySummary(
             @RequestParam("year") int year,
             @RequestParam("month") int month,
             @RequestParam(name = "countryCode", required = false) String countryCode) {
         return teleworkService.companySummary(year, month, countryCode);
+    }
+
+    @GetMapping("/compliance-dossier")
+    @PreAuthorize("hasAuthority('HR')")
+    @RequiresFeature(FeatureCode.DECLARATION_AUDIT)
+    public TeleworkComplianceDossierResponse complianceDossier(
+            @RequestParam("year") int year,
+            @RequestParam("month") int month,
+            @RequestParam(name = "countryCode", required = false) String countryCode) {
+        return teleworkService.complianceDossier(year, month, countryCode);
     }
 }

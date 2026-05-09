@@ -6,6 +6,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import com.workrh.common.tenant.TenantContext;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -37,7 +38,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         String token = header.substring(7);
-        if (applyDemoAuthentication(token)) {
+        if (applyDemoAuthentication(request, response, token)) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -56,23 +57,29 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         List<String> roles = claims.get("roles", List.class);
         String username = claims.getSubject();
+        String tokenTenantId = claims.get("tenantId", String.class);
+        if (!enforceTenantMatch(request, response, tokenTenantId)) {
+            return;
+        }
         UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
                 username,
                 null,
                 roles.stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList())
         );
         Map<String, Object> details = new HashMap<>();
-        details.put("tenantId", claims.get("tenantId", String.class));
+        details.put("tenantId", tokenTenantId);
         Object employeeId = claims.get("employeeId");
         if (employeeId != null) {
             details.put("employeeId", employeeId);
         }
         authenticationToken.setDetails(details);
         SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+        TenantContext.setTenantId(tokenTenantId);
         filterChain.doFilter(request, response);
     }
 
-    private boolean applyDemoAuthentication(String token) {
+    private boolean applyDemoAuthentication(HttpServletRequest request, HttpServletResponse response, String token)
+            throws IOException {
         if (!token.startsWith("demo|")) {
             return false;
         }
@@ -83,6 +90,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         String username = parts[1];
+        String tokenTenantId = parts[2];
+        if (!enforceTenantMatch(request, response, tokenTenantId)) {
+            return true;
+        }
         List<SimpleGrantedAuthority> authorities = List.of(parts[3].split(",")).stream()
                 .filter(role -> !role.isBlank())
                 .map(SimpleGrantedAuthority::new)
@@ -94,7 +105,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 authorities
         );
         Map<String, Object> details = new HashMap<>();
-        details.put("tenantId", parts[2]);
+        details.put("tenantId", tokenTenantId);
         if (parts.length == 5 && !parts[4].isBlank()) {
             try {
                 details.put("employeeId", Long.parseLong(parts[4]));
@@ -104,6 +115,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
         authenticationToken.setDetails(details);
         SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+        TenantContext.setTenantId(tokenTenantId);
+        return true;
+    }
+
+    private boolean enforceTenantMatch(HttpServletRequest request, HttpServletResponse response, String tokenTenantId)
+            throws IOException {
+        if (tokenTenantId == null || tokenTenantId.isBlank()) {
+            SecurityContextHolder.clearContext();
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Missing tenant in authentication token");
+            return false;
+        }
+
+        String headerTenantId = request.getHeader("X-Tenant-Id");
+        if (headerTenantId != null
+                && !headerTenantId.isBlank()
+                && !headerTenantId.trim().equalsIgnoreCase(tokenTenantId.trim())) {
+            SecurityContextHolder.clearContext();
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Tenant header does not match authentication token");
+            return false;
+        }
+
         return true;
     }
 }

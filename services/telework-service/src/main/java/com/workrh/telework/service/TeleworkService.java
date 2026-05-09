@@ -6,6 +6,9 @@ import com.workrh.common.events.ThresholdExceededEvent;
 import com.workrh.common.security.SecurityUtils;
 import com.workrh.common.tenant.TenantContext;
 import com.workrh.common.web.BadRequestException;
+import com.workrh.telework.api.dto.TeleworkComplianceChecklistItem;
+import com.workrh.telework.api.dto.TeleworkComplianceDossierResponse;
+import com.workrh.telework.api.dto.TeleworkComplianceEmployeeRisk;
 import com.workrh.telework.api.dto.TeleworkCompanySummaryResponse;
 import com.workrh.telework.api.dto.TeleworkDeclarationRequest;
 import com.workrh.telework.api.dto.TeleworkDeclarationResponse;
@@ -36,6 +39,10 @@ import org.springframework.stereotype.Service;
 public class TeleworkService {
 
     private static final Logger log = LoggerFactory.getLogger(TeleworkService.class);
+    private static final String ACD_TELEWORK_SOURCE = "https://impotsdirects.public.lu/fr/az/t/teletravail.html";
+    private static final String CCSS_FRAMEWORK_SOURCE = "https://ccss.public.lu/fr/employeurs/secteur-prive/activite-etranger/accord-teletravail.html";
+    private static final String ITM_TELEWORK_SOURCE = "https://itm.public.lu/fr/conditions-travail/convention-collectives/teletravail.html";
+    private static final String GUICHET_TELEWORK_SOURCE = "https://guichet.public.lu/fr/entreprises/ressources-humaines/conditions-travail/travail-distance/teletravail.html";
 
     private final TeleworkDeclarationRepository declarationRepository;
     private final ExclusionPeriodRepository exclusionPeriodRepository;
@@ -217,6 +224,140 @@ public class TeleworkService {
                 totalEmployeesOverFiscalLimit,
                 totalEmployeesOverWeeklyPolicy,
                 employees
+        );
+    }
+
+    public TeleworkComplianceDossierResponse complianceDossier(int year, int month, String countryCode) {
+        String tenantId = TenantContext.getTenantId();
+        LocalDate start = LocalDate.of(year, month, 1);
+        LocalDate end = start.withDayOfMonth(start.lengthOfMonth());
+        List<TeleworkDeclaration> monthlyDeclarations = declarationRepository.findAllByTenantIdAndWorkDateBetween(tenantId, start, end);
+        Map<Long, List<TeleworkDeclaration>> byEmployee = monthlyDeclarations.stream()
+                .collect(Collectors.groupingBy(TeleworkDeclaration::getEmployeeId));
+
+        List<TeleworkSummaryResponse> summaries = byEmployee.keySet().stream()
+                .sorted()
+                .map(employeeId -> summary(employeeId, year, month, countryCode))
+                .toList();
+
+        List<TeleworkComplianceEmployeeRisk> employeeRisks = summaries.stream()
+                .map(this::toComplianceRisk)
+                .toList();
+
+        int fiscalAlerts = (int) employeeRisks.stream().filter(TeleworkComplianceEmployeeRisk::fiscalLimitExceeded).count();
+        int a1Required = (int) employeeRisks.stream().filter(TeleworkComplianceEmployeeRisk::a1Required).count();
+        int article13Cases = (int) employeeRisks.stream().filter(TeleworkComplianceEmployeeRisk::article13Required).count();
+        int socialSecurityAlerts = a1Required + article13Cases;
+        String normalizedCountryCode = countryCode == null || countryCode.isBlank()
+                ? TeleworkPolicyService.DEFAULT_COUNTRY_CODE
+                : countryCode.trim().toUpperCase();
+
+        List<TeleworkComplianceChecklistItem> checklist = List.of(
+                new TeleworkComplianceChecklistItem(
+                        "FISCAL_THRESHOLD",
+                        "Seuil fiscal frontalier",
+                        fiscalAlerts == 0 ? "OK" : "ACTION_REQUIRED",
+                        fiscalAlerts == 0 ? "LOW" : "HIGH",
+                        fiscalAlerts == 0
+                                ? "Aucun salarie suivi ne depasse le seuil fiscal annuel configure."
+                                : fiscalAlerts + " salarie(s) depassent le seuil fiscal annuel et necessitent une ventilation imposable hors Luxembourg.",
+                        ACD_TELEWORK_SOURCE
+                ),
+                new TeleworkComplianceChecklistItem(
+                        "SOCIAL_SECURITY_A1",
+                        "Declaration securite sociale et certificat A1",
+                        a1Required == 0 ? "OK" : "ACTION_REQUIRED",
+                        a1Required == 0 ? "LOW" : "HIGH",
+                        a1Required == 0
+                                ? "Aucune activite transfrontaliere suivie ne declenche d'alerte A1 dans la periode."
+                                : a1Required + " salarie(s) ont une situation transfrontaliere a documenter pour le CCSS/A1.",
+                        CCSS_FRAMEWORK_SOURCE
+                ),
+                new TeleworkComplianceChecklistItem(
+                        "ARTICLE_13",
+                        "Risque de bascule article 13",
+                        article13Cases == 0 ? "OK" : "ACTION_REQUIRED",
+                        article13Cases == 0 ? "LOW" : "HIGH",
+                        article13Cases == 0
+                                ? "Aucun cas ne suggere une legislation sociale du pays de residence."
+                                : article13Cases + " salarie(s) necessitent une revue article 13 avant validation RH.",
+                        CCSS_FRAMEWORK_SOURCE
+                ),
+                new TeleworkComplianceChecklistItem(
+                        "AUDIT_TRAIL",
+                        "Historique declaratif et preuves",
+                        monthlyDeclarations.isEmpty() ? "MISSING_DATA" : "OK",
+                        monthlyDeclarations.isEmpty() ? "MEDIUM" : "LOW",
+                        monthlyDeclarations.isEmpty()
+                                ? "Aucune declaration teletravail n'est disponible pour la periode selectionnee."
+                                : monthlyDeclarations.size() + " declaration(s) horodatees disponibles pour la periode.",
+                        null
+                ),
+                new TeleworkComplianceChecklistItem(
+                        "TELEWORK_AGREEMENT",
+                        "Accord ou avenant teletravail",
+                        "MANUAL_REVIEW",
+                        "MEDIUM",
+                        "Verifier hors application que chaque salarie dispose d'un cadre contractuel teletravail et des informations sante, securite et donnees personnelles.",
+                        ITM_TELEWORK_SOURCE
+                )
+        );
+
+        String overallStatus;
+        if (fiscalAlerts > 0 || article13Cases > 0) {
+            overallStatus = "ACTION_REQUIRED";
+        } else if (monthlyDeclarations.isEmpty()) {
+            overallStatus = "MISSING_DATA";
+        } else {
+            overallStatus = "READY_FOR_REVIEW";
+        }
+
+        return new TeleworkComplianceDossierResponse(
+                year,
+                month,
+                normalizedCountryCode,
+                LocalDate.now(),
+                overallStatus,
+                summaries.size(),
+                monthlyDeclarations.size(),
+                fiscalAlerts,
+                socialSecurityAlerts,
+                a1Required,
+                article13Cases,
+                checklist,
+                employeeRisks,
+                List.of(ACD_TELEWORK_SOURCE, CCSS_FRAMEWORK_SOURCE, ITM_TELEWORK_SOURCE, GUICHET_TELEWORK_SOURCE)
+        );
+    }
+
+    private TeleworkComplianceEmployeeRisk toComplianceRisk(TeleworkSummaryResponse summary) {
+        boolean fiscalLimitExceeded = summary.annualFiscalLimitExceeded();
+        boolean a1Required = summary.socialSecurity().a1Required();
+        boolean article13Required = summary.socialSecurity().article13Required();
+        String riskLevel;
+        String recommendation;
+        if (fiscalLimitExceeded || article13Required) {
+            riskLevel = "HIGH";
+            recommendation = "Bloquer ou revoir la situation avant validation paie/RH.";
+        } else if (a1Required || summary.annualRemainingDays() <= 5) {
+            riskLevel = "MEDIUM";
+            recommendation = "Preparer le dossier CCSS/A1 et surveiller le seuil fiscal restant.";
+        } else {
+            riskLevel = "LOW";
+            recommendation = "Suivi standard, conserver les declarations comme preuve.";
+        }
+
+        return new TeleworkComplianceEmployeeRisk(
+                summary.employeeId(),
+                summary.policy().countryCode(),
+                summary.annualUsedDays(),
+                summary.policy().annualFiscalLimitDays(),
+                fiscalLimitExceeded,
+                a1Required,
+                article13Required,
+                summary.socialSecurity().likelyApplicableLegislationCountryCode(),
+                riskLevel,
+                recommendation
         );
     }
 

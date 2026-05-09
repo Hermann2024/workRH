@@ -11,6 +11,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -52,11 +53,15 @@ public class ReportingController {
     @GetMapping(value = "/dashboard/export/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
     @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
     @RequiresFeature(FeatureCode.EXPORTS)
-    public ResponseEntity<byte[]> exportPdf(@RequestParam("year") int year, @RequestParam("month") int month) {
+    public ResponseEntity<byte[]> exportPdf(
+            @RequestParam("year") int year,
+            @RequestParam("month") int month,
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader
+    ) {
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename("dashboard.pdf").build().toString())
                 .contentType(MediaType.APPLICATION_PDF)
-                .body(reportingService.exportPdf(year, month));
+                .body(reportingService.exportPdf(year, month, authorizationHeader));
     }
 
     @GetMapping(value = "/dashboard/export/pdf-placeholder", produces = MediaType.TEXT_PLAIN_VALUE)
