@@ -9,9 +9,10 @@
   <section class="hero">
     <div>
       <p class="section-tag">Trust center</p>
-      <h2>Securite, RGPD et preparation production</h2>
+      <h2>Sécurité, RGPD et préparation production</h2>
       <p class="lede">Centralisez les garanties a presenter aux clients B2B et les points a finaliser avant vente SaaS autonome.</p>
       <div class="action-row">
+        <button class="checkout-button small" type="button" (click)="downloadTrustPack()">Trust pack</button>
         <a class="checkout-button small" routerLink="/onboarding">Onboarding</a>
         <a class="checkout-button outline small" routerLink="/support">Support</a>
         <a class="checkout-button outline small" routerLink="/policies">Politiques</a>
@@ -21,12 +22,12 @@
     <article class="subscription-card trust-score-card">
       <p class="section-tag">Niveau confiance</p>
       <h3>{{ trustScore() }}%</h3>
-      <p class="hint">Score indicatif base sur les controles visibles dans l'application.</p>
+      <p class="hint">Score indicatif base sur les contrôles visibles dans l'application.</p>
     </article>
   </section>
 
   <section class="stats-grid">
-    <article class="metric-card"><span>Controles</span><strong>{{ controls().length }}</strong></article>
+    <article class="metric-card"><span>Contrôles</span><strong>{{ controls().length }}</strong></article>
     <article class="metric-card"><span>Prets</span><strong>{{ readyControls() }}</strong></article>
     <article class="metric-card alert-card"><span>Partiels</span><strong>{{ partialControls() }}</strong></article>
     <article class="metric-card alert-card"><span>A finaliser</span><strong>{{ todoControls() }}</strong></article>
@@ -36,7 +37,7 @@
     <div class="section-head">
       <div>
         <p class="section-tag">Controle client</p>
-        <h2>Matrice securite et RGPD</h2>
+        <h2>Matrice sécurité et RGPD</h2>
       </div>
     </div>
 
@@ -50,6 +51,7 @@
           <span class="badge" [ngClass]="statusClass(control.status)">{{ statusLabel(control.status) }}</span>
         </div>
         <p>{{ control.detail }}</p>
+        <small>{{ control.evidence }}</small>
       </article>
     </div>
   </section>
@@ -58,7 +60,7 @@
     <div class="section-head">
       <div>
         <p class="section-tag">Avant production</p>
-        <h2>Documents a preparer</h2>
+        <h2>Documents à préparer</h2>
       </div>
     </div>
 
@@ -67,16 +69,31 @@
         <span>RGPD</span>
         <strong>DPA et registre</strong>
         <p>Contrat de sous-traitance, base legale, durees de conservation et procedure droits utilisateur.</p>
+        <button class="checkout-button outline small" type="button" (click)="downloadDocument('gdpr')">Registre</button>
       </article>
       <article>
-        <span>Securite</span>
+        <span>Sécurité</span>
         <strong>Plan incident</strong>
-        <p>Contact securite, severites, delais de notification, journalisation et reprise d'activite.</p>
+        <p>Contact sécurité, severites, delais de notification, journalisation et reprise d'activite.</p>
+        <button class="checkout-button outline small" type="button" (click)="downloadDocument('incident')">Plan incident</button>
       </article>
       <article>
-        <span>Operations</span>
+        <span>Opérations</span>
         <strong>SLA client</strong>
         <p>Disponibilite cible, support, sauvegardes, monitoring et page statut.</p>
+        <button class="checkout-button outline small" type="button" (click)="downloadDocument('sla')">SLA</button>
+      </article>
+      <article>
+        <span>Accès</span>
+        <strong>Matrice roles</strong>
+        <p>Roles RH, admin, employé et plateforme avec limites tenant.</p>
+        <button class="checkout-button outline small" type="button" (click)="downloadDocument('roles')">Matrice</button>
+      </article>
+      <article>
+        <span>Retention</span>
+        <strong>Conservation</strong>
+        <p>Durees cibles pour invitations, reset, justificatifs, support et exports.</p>
+        <button class="checkout-button outline small" type="button" (click)="downloadDocument('retention')">Retention</button>
       </article>
     </div>
   </section>

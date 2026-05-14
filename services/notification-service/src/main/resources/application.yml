@@ -17,7 +17,7 @@ spring:
       auto-offset-reset: earliest
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: ${WORKRH_HIBERNATE_DDL_AUTO:validate}
     properties:
       hibernate:
         format_sql: true
@@ -35,7 +35,7 @@ spring:
 
 security:
   jwt:
-    secret: ${WORKRH_JWT_SECRET:c29tZS1yZWFsbHktbG9uZy1iYXNlNjQtc2VjcmV0LWZvci13b3JrcmgtZGVtby1vbmx5}
+    secret: ${WORKRH_JWT_SECRET}
     expiration: 86400
 
 eureka:
@@ -53,6 +53,8 @@ management:
         include: health,info
 
 notification:
+  internal:
+    key: ${WORKRH_NOTIFICATION_INTERNAL_KEY:}
   automations:
     enabled: ${WORKRH_AUTOMATION_EMAILS_ENABLED:true}
     from-email: ${WORKRH_AUTOMATION_FROM_EMAIL:no-reply@workrh.app}
@@ -69,8 +71,8 @@ notification:
     sla-hours-priority: ${WORKRH_SUPPORT_SLA_HOURS_PRIORITY:4}
     sla-hours-onboarding: ${WORKRH_SUPPORT_SLA_HOURS_ONBOARDING:24}
   sms:
-    enabled: ${WORKRH_SMS_ENABLED:true}
-    provider: ${WORKRH_SMS_PROVIDER:demo-webhook}
+    enabled: ${WORKRH_SMS_ENABLED:false}
+    provider: ${WORKRH_SMS_PROVIDER:}
     from: ${WORKRH_SMS_FROM:WorkRH}
     webhook-url: ${WORKRH_SMS_WEBHOOK_URL:}
     api-key: ${WORKRH_SMS_API_KEY:}

@@ -4,12 +4,15 @@ import com.workrh.notification.domain.SupportTicket;
 import com.workrh.notification.domain.SupportTicketStatus;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface SupportTicketRepository extends JpaRepository<SupportTicket, Long> {
     List<SupportTicket> findAllByOrderByCreatedAtDesc();
 
     List<SupportTicket> findAllByTenantIdOrderByCreatedAtDesc(String tenantId);
+
+    Optional<SupportTicket> findByIdAndTenantId(Long id, String tenantId);
 
     List<SupportTicket> findAllByTenantIdAndStatusInOrderByCreatedAtDesc(String tenantId, Collection<SupportTicketStatus> statuses);
 }

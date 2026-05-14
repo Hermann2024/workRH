@@ -148,23 +148,23 @@ public class TeleworkPolicyService {
     private void applyBuiltInMetadata(TeleworkPolicy policy, String countryCode) {
         switch (countryCode) {
             case "FR" -> {
-                policy.setTaxRuleLabel("Luxembourg-France : tolerance fiscale de 34 jours");
-                policy.setLegalReference("FAQ ACD non-residents ; accord-cadre CCSS teletravail");
-                policy.setNotes("Les jours de teletravail, de deplacement professionnel et de formation hors Luxembourg comptent dans le suivi fiscal annuel.");
+            policy.setTaxRuleLabel("Luxembourg-France : tolérance fiscale de 34 jours");
+        policy.setLegalReference("FAQ ACD non-résidents ; accord-cadre CCSS télétravail");
+        policy.setNotes("Les jours de télétravail, de déplacement professionnel et de formation hors Luxembourg comptent dans le suivi fiscal annuel.");
             }
             case "BE" -> {
-                policy.setTaxRuleLabel("Luxembourg-Belgique : tolerance fiscale de 34 jours");
-                policy.setLegalReference("FAQ ACD non-residents ; accord-cadre CCSS teletravail");
-                policy.setNotes("Les jours de teletravail, de deplacement professionnel et de formation hors Luxembourg comptent dans le suivi fiscal annuel.");
+            policy.setTaxRuleLabel("Luxembourg-Belgique : tolérance fiscale de 34 jours");
+        policy.setLegalReference("FAQ ACD non-résidents ; accord-cadre CCSS télétravail");
+        policy.setNotes("Les jours de télétravail, de déplacement professionnel et de formation hors Luxembourg comptent dans le suivi fiscal annuel.");
             }
             case "DE" -> {
-                policy.setTaxRuleLabel("Luxembourg-Allemagne : tolerance fiscale de 34 jours");
-                policy.setLegalReference("FAQ ACD non-residents ; accord-cadre CCSS teletravail");
-                policy.setNotes("Les jours partiels hors Luxembourg comptent en principe pour le seuil fiscal, avec une tolerance technique de 30 minutes configuree pour l'Allemagne.");
+            policy.setTaxRuleLabel("Luxembourg-Allemagne : tolérance fiscale de 34 jours");
+        policy.setLegalReference("FAQ ACD non-résidents ; accord-cadre CCSS télétravail");
+        policy.setNotes("Les jours partiels hors Luxembourg comptent en principe pour le seuil fiscal, avec une tolérance technique de 30 minutes configurée pour l'Allemagne.");
             }
             default -> {
                 policy.setTaxRuleLabel("Politique Luxembourg frontaliers par defaut");
-                policy.setLegalReference("Guichet.lu teletravail ; FAQ ACD ; CCSS accord-cadre teletravail");
+        policy.setLegalReference("Guichet.lu télétravail ; FAQ ACD ; CCSS accord-cadre télétravail");
                 policy.setNotes("Politique generique de repli. Pour les frontaliers, privilegier FR, BE ou DE pour appliquer les seuils officiels.");
             }
         }

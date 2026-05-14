@@ -27,6 +27,7 @@ public class SicknessRecord {
     private String comment;
     private String evidenceFileName;
     private String evidenceContentType;
+    private String evidenceSha256;
     @Column(columnDefinition = "bytea")
     private byte[] evidenceContent;
     private Instant evidenceUploadedAt;

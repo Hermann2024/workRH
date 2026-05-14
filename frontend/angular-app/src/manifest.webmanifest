@@ -1,7 +1,7 @@
 {
   "name": "WorkRH",
   "short_name": "WorkRH",
-  "description": "Pilotage RH, conformite frontaliere et suivi teletravail.",
+  "description": "Pilotage RH, conformité frontalière et suivi télétravail.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

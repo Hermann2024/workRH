@@ -77,13 +77,13 @@ export class EmployeePortalPageComponent {
 
   readonly teleworkModeOptions = [
     {
-      label: 'Teletravail residence',
+      label: 'Télétravail residence',
       helper: 'Jour travaille depuis le pays de residence.',
       apply: () => this.applyTeleworkMode(480, 480, 0, 0, '')
     },
     {
-      label: 'Activite residence hors teletravail',
-      helper: 'Travail dans le pays de residence sans connexion teletravail classique.',
+      label: 'Activite residence hors télétravail',
+      helper: 'Travail dans le pays de residence sans connexion télétravail classique.',
       apply: () => this.applyTeleworkMode(480, 0, 480, 0, '')
     },
     {
@@ -93,7 +93,7 @@ export class EmployeePortalPageComponent {
     },
     {
       label: 'Jour mixte',
-      helper: 'Repartition manuelle entre teletravail, autre activite residence et autre pays.',
+      helper: 'Repartition manuelle entre télétravail, autre activite residence et autre pays.',
       apply: () => this.applyTeleworkMode(480, 240, 120, 120, 'BE')
     }
   ];
@@ -171,7 +171,7 @@ export class EmployeePortalPageComponent {
     this.api.declareTelework(request).subscribe({
       next: () => {
         this.submittingTelework.set(false);
-        this.toastService.success('Jour de teletravail enregistre.');
+        this.toastService.success('Jour de télétravail enregistre.');
         this.teleworkForm.patchValue({
           workDate: this.toDateInput(new Date()),
           totalWorkMinutes: 480,
@@ -186,7 +186,7 @@ export class EmployeePortalPageComponent {
       },
       error: (error) => {
         this.submittingTelework.set(false);
-        this.toastService.error(this.readBackendMessage(error, "Impossible d'enregistrer le teletravail."));
+        this.toastService.error(this.readBackendMessage(error, "Impossible d'enregistrer le télétravail."));
       }
     });
   }
@@ -275,7 +275,7 @@ export class EmployeePortalPageComponent {
   }
 
   cancelLeave(leave: LeaveResponse): void {
-    this.api.cancelLeave(leave.id, 'Annulation demandee par le salarie').subscribe({
+    this.api.cancelLeave(leave.id, 'Annulation demandee par le salarié').subscribe({
       next: () => {
         this.toastService.info('Demande de conge annulee.');
         this.loadWorkspace();
@@ -454,7 +454,7 @@ export class EmployeePortalPageComponent {
       },
       error: (error) => {
         this.loading.set(false);
-        const message = this.readBackendMessage(error, "Impossible de charger l'espace employe.");
+        const message = this.readBackendMessage(error, "Impossible de charger l'espace employé.");
         if (!hadWorkspace) {
           this.loadError.set(message);
         }

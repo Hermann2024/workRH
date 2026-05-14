@@ -10,13 +10,13 @@
     <div>
       <p class="section-tag">Onboarding client</p>
       <h2>Mettre une entreprise en production</h2>
-      <p class="lede">Suivez les etapes de mise en service pour transformer un tenant de demo en environnement client exploitable.</p>
+      <p class="lede">Suivez les étapes de mise en service pour transformer un tenant de démo en environnement client exploitable.</p>
     </div>
     <article class="subscription-card onboarding-score-card">
       <p class="section-tag">Progression</p>
       <h3>{{ progress() }}%</h3>
-      <p class="hint" *ngIf="nextStep() as step">Priorite : {{ step.title }}</p>
-      <p class="hint" *ngIf="!nextStep()">Toutes les etapes critiques sont traitees.</p>
+      <p class="hint" *ngIf="nextStep() as step">Priorité : {{ step.title }}</p>
+      <p class="hint" *ngIf="!nextStep()">Toutes les étapes critiques sont traitées.</p>
     </article>
   </section>
 
@@ -45,11 +45,11 @@
         <strong>{{ company.tenantId }}</strong>
       </article>
       <article>
-        <span>Sieges</span>
-        <strong>{{ company.seatsUsed }} / {{ company.seatsPurchased || 'illimite' }}</strong>
+        <span>Sièges</span>
+        <strong>{{ company.seatsUsed }} / {{ company.seatsPurchased || 'illimité' }}</strong>
       </article>
       <article>
-        <span>Employes actifs</span>
+        <span>Employés actifs</span>
         <strong>{{ company.activeEmployees }}</strong>
       </article>
     </div>
@@ -58,10 +58,10 @@
   <section class="panel onboarding-roadmap">
     <div class="section-head">
       <div>
-        <p class="section-tag">Parcours guide</p>
+        <p class="section-tag">Parcours guidé</p>
         <h2>Checklist de lancement</h2>
       </div>
-      <button class="checkout-button outline small" type="button" (click)="load()">Rafraichir</button>
+      <button class="checkout-button outline small" type="button" (click)="load()">Rafraîchir</button>
     </div>
 
     <div class="onboarding-step-list">
@@ -91,23 +91,23 @@
     <div class="value-proof-grid">
       <article>
         <span>Jour 1</span>
-        <strong>Tenant pret</strong>
-        <small>Entreprise, abonnement, sieges et admin RH valides.</small>
+        <strong>Tenant prêt</strong>
+        <small>Entreprise, abonnement, sièges et admin RH validés.</small>
       </article>
       <article>
         <span>Jour 2</span>
-        <strong>Salaries importes</strong>
-        <small>CSV charge, invitations envoyees, profils RH controles.</small>
+        <strong>Salariés importés</strong>
+        <small>CSV chargé, invitations envoyées, profils RH contrôlés.</small>
       </article>
       <article>
         <span>Jour 3</span>
-        <strong>Conformite active</strong>
+        <strong>Conformité active</strong>
         <small>Dashboard risques, politiques, preuves et exports disponibles.</small>
       </article>
       <article>
         <span>Jour 4</span>
-        <strong>Demo valeur</strong>
-        <small>Pack lancement, impact business et dossier audit presentes.</small>
+        <strong>Démo valeur</strong>
+        <small>Pack lancement, impact business et dossier audit présentés.</small>
       </article>
     </div>
   </section>

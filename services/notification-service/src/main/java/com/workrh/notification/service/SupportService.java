@@ -79,7 +79,7 @@ public class SupportService {
 
     public List<SupportTicketResponse> listTickets() {
         Instant now = Instant.now();
-        return supportTicketRepository.findAllByTenantIdOrderByCreatedAtDesc(TenantContext.getTenantId()).stream()
+        return supportTicketRepository.findAllByTenantIdOrderByCreatedAtDesc(TenantContext.requireTenantId()).stream()
                 .map(ticket -> toResponse(ticket, now))
                 .toList();
     }
@@ -106,9 +106,8 @@ public class SupportService {
             throw new BadRequestException("Resolution message is required");
         }
 
-        String tenantId = TenantContext.getTenantId();
-        SupportTicket ticket = supportTicketRepository.findById(ticketId)
-                .filter(item -> tenantId.equals(item.getTenantId()))
+        String tenantId = TenantContext.requireTenantId();
+        SupportTicket ticket = supportTicketRepository.findByIdAndTenantId(ticketId, tenantId)
                 .orElseThrow(() -> new NotFoundException("Support ticket not found"));
         return resolveTicket(ticket, resolutionMessage);
     }
@@ -128,7 +127,7 @@ public class SupportService {
     public List<SlaTicketResponse> listSlaTickets() {
         Instant now = Instant.now();
         return supportTicketRepository.findAllByTenantIdAndStatusInOrderByCreatedAtDesc(
-                        TenantContext.getTenantId(),
+                        TenantContext.requireTenantId(),
                         Set.of(SupportTicketStatus.OPEN, SupportTicketStatus.IN_PROGRESS)
                 ).stream()
                 .filter(ticket -> ticket.getSlaDueAt() != null)
@@ -144,7 +143,7 @@ public class SupportService {
         validateRequest(request);
 
         SupportTicket ticket = new SupportTicket();
-        ticket.setTenantId(TenantContext.getTenantId());
+        ticket.setTenantId(TenantContext.requireTenantId());
         ticket.setRequesterName(trim(request.requesterName()));
         ticket.setRequesterEmail(trim(request.requesterEmail()));
         ticket.setPhoneNumber(trim(request.phoneNumber()));

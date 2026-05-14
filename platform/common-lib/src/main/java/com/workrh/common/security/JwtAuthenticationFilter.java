@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpHeaders;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -23,9 +24,14 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
+    private final boolean demoAuthenticationEnabled;
 
-    public JwtAuthenticationFilter(JwtService jwtService) {
+    public JwtAuthenticationFilter(
+            JwtService jwtService,
+            @Value("${security.demo-authentication-enabled:false}") boolean demoAuthenticationEnabled
+    ) {
         this.jwtService = jwtService;
+        this.demoAuthenticationEnabled = demoAuthenticationEnabled;
     }
 
     @Override
@@ -80,6 +86,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private boolean applyDemoAuthentication(HttpServletRequest request, HttpServletResponse response, String token)
             throws IOException {
+        if (!demoAuthenticationEnabled) {
+            return false;
+        }
         if (!token.startsWith("demo|")) {
             return false;
         }

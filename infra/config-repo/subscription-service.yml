@@ -9,9 +9,9 @@ subscription:
   user-service:
     base-url: ${USER_SERVICE_BASE_URL:http://localhost:9081}
   workspace:
-    internal-key: ${WORKRH_WORKSPACE_INTERNAL_KEY:workrh-workspace-internal}
+    internal-key: ${WORKRH_WORKSPACE_INTERNAL_KEY}
   preview-all-features:
-    enabled: ${WORKRH_PREVIEW_ALL_FEATURES_ENABLED:true}
-    user-emails: ${WORKRH_PREVIEW_ALL_FEATURES_USER_EMAILS:demo@company.com}
+    enabled: ${WORKRH_PREVIEW_ALL_FEATURES_ENABLED:false}
+    user-emails: ${WORKRH_PREVIEW_ALL_FEATURES_USER_EMAILS:}
   bootstrap:
-    key: ${WORKRH_SUBSCRIPTION_BOOTSTRAP_KEY:workrh-signup-bootstrap}
+    key: ${WORKRH_SUBSCRIPTION_BOOTSTRAP_KEY}

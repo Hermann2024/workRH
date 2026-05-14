@@ -301,7 +301,7 @@
             <button class="checkout-button outline small" *ngIf="hasEntitlement('HARDENED_SECURITY')" (click)="submitSupport('security')" [disabled]="supportLoading()">Revue sécurité</button>
             <button class="checkout-button outline small" *ngIf="hasEntitlement('DEDICATED_HOSTING')" (click)="submitSupport('hosting')" [disabled]="supportLoading()">Hébergement dédié</button>
             <button class="checkout-button outline small" *ngIf="hasEntitlement('CUSTOM_DEVELOPMENT')" (click)="submitSupport('custom-development')" [disabled]="supportLoading()">Dév. sur mesure</button>
-            <button class="checkout-button outline small" *ngIf="hasEntitlement('PUBLIC_API')" (click)="submitSupport('integration')" [disabled]="supportLoading()">Intégration API</button>
+            <button class="checkout-button outline small" *ngIf="hasEntitlement('PUBLIC_API')" (click)="submitSupport('intégration')" [disabled]="supportLoading()">Intégration API</button>
           </div>
         </article>
       </div>
@@ -326,7 +326,7 @@
           <p class="section-tag">Automatisation</p>
           <h2>SMS, SLA et logs</h2>
         </div>
-        <p class="hint">Les options affichees ici dependent du deploiement reel et des integrations configurees.</p>
+        <p class="hint">Les options affichées ici dépendent du déploiement réel et des intégrations configurées.</p>
       </div>
 
       <article class="workspace-form-card" *ngIf="hasEntitlement('SMS_NOTIFICATIONS')">
@@ -352,7 +352,7 @@
 
       <article class="workspace-form-card" *ngIf="hasEntitlement('ACCOUNTING_EXPORT')">
         <h3>Export comptable</h3>
-        <p class="workspace-helper">Télécharge l'export CSV facture/comptabilité exposé par le subscription-service.</p>
+        <p class="workspace-helper">Téléchargé l'export CSV facture/comptabilité exposé par le subscription-service.</p>
         <button class="checkout-button outline small" (click)="downloadAccountingExport()" [disabled]="exportLoading()">
           {{ exportLoading() ? 'Génération...' : "Télécharger l'export comptable" }}
         </button>

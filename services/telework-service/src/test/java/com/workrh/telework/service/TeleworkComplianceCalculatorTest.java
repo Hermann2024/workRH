@@ -106,7 +106,7 @@ class TeleworkComplianceCalculatorTest {
         policy.setPartialDayCountsAsFullDay(true);
         policy.setThresholdProrated(false);
         policy.setThirdCountryDaysCounted(true);
-        policy.setTaxRuleLabel("Luxembourg-France : tolerance fiscale de 34 jours");
+        policy.setTaxRuleLabel("Luxembourg-France : tolérance fiscale de 34 jours");
         return policy;
     }
 

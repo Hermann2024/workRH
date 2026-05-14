@@ -179,6 +179,61 @@ Before broad commercial rollout, keep smoke checks on:
 - policy editing by country
 - subscription upgrade and downgrade flows
 
+## Pilot Mode
+
+If you do not have paid hosting yet, use pilot mode. It is intended for demos and assisted pilots from a local machine.
+
+```powershell
+.\check-pilot-readiness.ps1
+.\launch-workrh.ps1
+```
+
+Pilot mode is documented in:
+
+- `docs/pilot-readiness.md`
+
+It is suitable for:
+
+- prospect demos
+- assisted onboarding
+- test data
+- paid pilots with manual operation
+
+It is not a hosted public SaaS environment.
+
+## Production Operations
+
+Minimum production readiness is tracked in:
+
+- `docs/pilot-readiness.md`
+- `docs/production-readiness.md`
+- `docs/production-deployment.md`
+- `docs/incident-runbook.md`
+
+Run the commercial gate before opening self-service sales:
+
+```powershell
+.\check-commercial-readiness.ps1
+```
+
+Create a full local Postgres backup:
+
+```powershell
+.\backup-workrh.ps1
+```
+
+Restore is intentionally protected by an explicit confirmation token:
+
+```powershell
+.\restore-workrh.ps1 -BackupDirectory .\backups\YYYYMMDD-HHMMSS -ConfirmRestore RESTORE_WORKRH_DATABASES
+```
+
+Deploy a production stack after configuring real managed Postgres, Kafka, image registry, Stripe, SMTP, and public URLs:
+
+```powershell
+.\deploy-workrh-prod.ps1
+```
+
 ## Current Product Status
 
 The codebase is in a good state for:

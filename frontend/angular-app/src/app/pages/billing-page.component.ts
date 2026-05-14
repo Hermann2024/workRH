@@ -156,7 +156,7 @@ export class BillingPageComponent {
       return;
     }
     if (!this.stripeCheckoutAvailable()) {
-      this.checkoutError.set("Le checkout Stripe n'est pas configure pour cet environnement.");
+      this.checkoutError.set("Le checkout Stripe n'est pas configuré pour cet environnement.");
       return;
     }
 

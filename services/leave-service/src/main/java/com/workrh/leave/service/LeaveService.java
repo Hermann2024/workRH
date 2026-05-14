@@ -13,8 +13,11 @@ import com.workrh.leave.domain.LeaveStatus;
 import com.workrh.leave.domain.LeaveType;
 import com.workrh.leave.repository.LeaveRepository;
 import java.io.IOException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.EnumSet;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Set;
 import org.slf4j.Logger;
@@ -97,7 +100,9 @@ public class LeaveService {
         }
 
         try {
-            entity.setEvidenceContent(file.getBytes());
+            byte[] content = file.getBytes();
+            entity.setEvidenceContent(content);
+            entity.setEvidenceSha256(sha256(content));
         } catch (IOException exception) {
             throw new BadRequestException("Unable to read supporting evidence file");
         }
@@ -213,6 +218,7 @@ public class LeaveService {
                 requiresEvidence(entity.getType()),
                 entity.getEvidenceContent() != null && entity.getEvidenceContent().length > 0,
                 entity.getEvidenceFileName(),
+                entity.getEvidenceSha256(),
                 entity.getEvidenceUploadedAt(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
@@ -230,6 +236,14 @@ public class LeaveService {
         String normalized = fileName.replace('\\', '/');
         String lastSegment = normalized.substring(normalized.lastIndexOf('/') + 1);
         return lastSegment.replaceAll("[^A-Za-z0-9._-]", "_");
+    }
+
+    private String sha256(byte[] content) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(content));
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 is not available", exception);
+        }
     }
 
     public record EvidenceDownload(String fileName, String contentType, byte[] content) {

@@ -3,6 +3,7 @@ import { Component, computed, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from './auth.service';
 import { ToastContainerComponent } from './components/toast-container.component';
+import { AutoTranslateDirective } from './i18n/auto-translate.directive';
 import { I18nService } from './i18n/i18n.service';
 import type { LocaleId } from './i18n/locale.types';
 import { SUPPORTED_LOCALES } from './i18n/locale.types';
@@ -10,7 +11,7 @@ import { SUPPORTED_LOCALES } from './i18n/locale.types';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive, ToastContainerComponent],
+  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive, ToastContainerComponent, AutoTranslateDirective],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })
@@ -61,8 +62,8 @@ export class AppComponent {
       }
       if (this.authService.hasRole('HR') || this.authService.hasRole('ADMIN')) {
         items.unshift({ label: t('nav.dashboard'), route: '/dashboard' });
-        items.push({ label: 'Onboarding', route: '/onboarding' });
-        items.push({ label: 'Trust', route: '/trust' });
+        items.push({ label: t('nav.onboarding'), route: '/onboarding' });
+        items.push({ label: t('nav.trust'), route: '/trust' });
         items.push({ label: t('nav.services'), route: '/services' });
         items.push({ label: t('nav.employees'), route: '/employees' });
         items.push({ label: t('nav.billing'), route: '/billing' });

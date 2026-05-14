@@ -93,7 +93,7 @@ export class OnboardingPageComponent {
   saveWorkspace(): void {
     if (this.workspaceForm.invalid) {
       this.workspaceForm.markAllAsTouched();
-      this.toastService.error('Renseignez le nom de l entreprise.');
+      this.toastService.error("Renseignez le nom de l'entreprise.");
       return;
     }
 
@@ -102,11 +102,11 @@ export class OnboardingPageComponent {
       next: (workspace) => {
         this.workspace.set(workspace);
         this.savingWorkspace.set(false);
-        this.toastService.success('Entreprise mise a jour.');
+        this.toastService.success('Entreprise mise à jour.');
       },
       error: (error) => {
         this.savingWorkspace.set(false);
-        this.toastService.error(this.readBackendMessage(error, 'Impossible de mettre a jour l entreprise.'));
+        this.toastService.error(this.readBackendMessage(error, "Impossible de mettre à jour l'entreprise."));
       }
     });
   }
@@ -122,7 +122,7 @@ export class OnboardingPageComponent {
   }
 
   statusLabel(status: OnboardingStepStatus): string {
-    return status === 'DONE' ? 'Pret' : status === 'BLOCKED' ? 'Bloquant' : 'A faire';
+    return status === 'DONE' ? 'Prêt' : status === 'BLOCKED' ? 'Bloquant' : 'À faire';
   }
 
   statusClass(status: OnboardingStepStatus): string {
@@ -148,47 +148,47 @@ export class OnboardingPageComponent {
     return [
       {
         id: 'workspace',
-        title: 'Identifier l entreprise',
-        detail: workspace?.companyName ? `${workspace.companyName} est configuree.` : 'Le nom de l entreprise doit etre renseigne.',
+        title: "Identifier l'entreprise",
+        detail: workspace?.companyName ? `${workspace.companyName} est configurée.` : "Le nom de l'entreprise doit être renseigné.",
         status: workspace?.companyName ? 'DONE' : 'BLOCKED',
         actionLabel: 'Enregistrer'
       },
       {
         id: 'subscription',
-        title: 'Valider abonnement et sieges',
-        detail: vm ? `${vm.subscription.planCode} actif, ${vm.subscription.seatsPurchased} siege(s).` : 'Abonnement non charge.',
+        title: 'Valider abonnement et sièges',
+        detail: vm ? `${vm.subscription.planCode} actif, ${vm.subscription.seatsPurchased} siège(s).` : 'Abonnement non chargé.',
         status: vm?.subscription.status === 'ACTIVE' ? 'DONE' : 'BLOCKED',
         actionLabel: 'Voir billing',
         route: '/billing'
       },
       {
         id: 'employees',
-        title: 'Importer ou inviter les salaries',
-        detail: employees.length ? `${activeEmployees}/${employees.length} compte(s) actif(s), ${pendingInvitations} invitation(s) en attente.` : 'Aucun salarie importe.',
+        title: 'Importer ou inviter les salariés',
+        detail: employees.length ? `${activeEmployees}/${employees.length} compte(s) actif(s), ${pendingInvitations} invitation(s) en attente.` : 'Aucun salarié importé.',
         status: employees.length > 0 || pendingInvitations > 0 ? 'DONE' : 'BLOCKED',
         actionLabel: 'Importer CSV',
         route: '/employees'
       },
       {
         id: 'profiles',
-        title: 'Completer les profils RH',
-        detail: employees.length ? `${completedProfiles}/${employees.length} profil(s) complets.` : 'Les profils seront controles apres import.',
+        title: 'Compléter les profils RH',
+        detail: employees.length ? `${completedProfiles}/${employees.length} profil(s) complets.` : 'Les profils seront contrôlés après import.',
         status: employees.length > 0 && completedProfiles === employees.length ? 'DONE' : employees.length > 0 ? 'TODO' : 'BLOCKED',
-        actionLabel: 'Completer',
+        actionLabel: 'Compléter',
         route: '/employees'
       },
       {
         id: 'compliance',
-        title: 'Activer le cadre legal frontalier',
-        detail: entitlements.includes('TELEWORK_COMPLIANCE_34') ? 'Controle 34 jours, dossier legal et politiques disponibles.' : 'Le plan courant ne donne pas acces a la conformite frontaliere.',
+        title: 'Activer le cadre légal frontalier',
+        detail: entitlements.includes('TELEWORK_COMPLIANCE_34') ? 'Contrôle 34 jours, dossier légal et politiques disponibles.' : 'Le plan courant ne donne pas accès à la conformité frontalière.',
         status: entitlements.includes('TELEWORK_COMPLIANCE_34') ? 'DONE' : 'TODO',
         actionLabel: 'Voir politiques',
         route: '/policies'
       },
       {
         id: 'exports',
-        title: 'Preparer exports et preuves audit',
-        detail: entitlements.includes('EXPORTS') ? 'Exports dashboard et dossier legal disponibles.' : 'Les exports doivent etre inclus dans le plan ou option.',
+        title: 'Préparer exports et preuves audit',
+        detail: entitlements.includes('EXPORTS') ? 'Exports dashboard et dossier légal disponibles.' : 'Les exports doivent être inclus dans le plan ou option.',
         status: entitlements.includes('EXPORTS') ? 'DONE' : 'TODO',
         actionLabel: 'Ouvrir dashboard',
         route: '/dashboard'
@@ -196,7 +196,7 @@ export class OnboardingPageComponent {
       {
         id: 'connectors',
         title: 'Cadrer les connecteurs SIRH / paie',
-        detail: 'Workday, SAP, Lucca, Payfit et Factorial sont presentes. La synchronisation native reste a configurer provider par provider.',
+        detail: 'Workday, SAP, Lucca, Payfit et Factorial sont présentés. La synchronisation native reste à configurer provider par provider.',
         status: 'TODO',
         actionLabel: 'Voir services',
         route: '/services'

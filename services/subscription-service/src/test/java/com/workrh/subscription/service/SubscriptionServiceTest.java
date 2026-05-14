@@ -142,16 +142,98 @@ class SubscriptionServiceTest {
         when(subscriptionRepository.findByTenantId("demo-lu")).thenReturn(Optional.of(subscription));
         when(planRepository.findByCode(PlanCode.STARTER)).thenReturn(Optional.of(starter));
         when(planRepository.findByCode(PlanCode.PRO)).thenReturn(Optional.of(pro));
-        doNothing().when(stripeCheckoutService).syncExistingSubscriptionChange(subscription, pro, false, false, true);
+        doNothing().when(stripeCheckoutService).syncExistingSubscriptionChange(subscription, pro, false, false, false);
         when(subscriptionRepository.save(subscription)).thenReturn(subscription);
 
         var response = subscriptionService.upgrade(new SubscriptionChangeRequest(
-                PlanCode.PRO, 20, false, false, true
+                PlanCode.PRO, 20, false, false, false
         ));
 
         assertThat(response.planCode()).isEqualTo(PlanCode.PRO);
-        assertThat(response.advancedExportOptionEnabled()).isTrue();
+        assertThat(response.advancedExportOptionEnabled()).isFalse();
         verify(workspaceSubscriptionSyncClient).sync(subscription);
+    }
+
+    @Test
+    void shouldNotGrantPremiumEntitlementsToProTenantEvenWithLegacyOptions() {
+        TenantContext.setTenantId("demo-lu");
+        SubscriptionPlan plan = buildPlan(PlanCode.PRO, 10, 50, Set.of(FeatureCode.EXPORTS));
+        TenantSubscription subscription = new TenantSubscription();
+        subscription.setTenantId("demo-lu");
+        subscription.setPlanCode(PlanCode.PRO);
+        subscription.setStatus(SubscriptionStatus.ACTIVE);
+        subscription.setSeatsPurchased(20);
+        subscription.setAdvancedAuditOptionEnabled(true);
+        subscription.setAdvancedExportOptionEnabled(true);
+        subscription.setSmsOptionEnabled(true);
+
+        when(subscriptionRepository.findByTenantId("demo-lu")).thenReturn(Optional.of(subscription));
+        when(planRepository.findByCode(PlanCode.PRO)).thenReturn(Optional.of(plan));
+
+        var response = subscriptionService.currentSubscription();
+
+        assertThat(response.entitlements()).contains(FeatureCode.EXPORTS.name());
+        assertThat(response.entitlements()).doesNotContain(
+                FeatureCode.DECLARATION_AUDIT.name(),
+                FeatureCode.ACCOUNTING_EXPORT.name(),
+                FeatureCode.SMS_NOTIFICATIONS.name()
+        );
+        assertThat(response.advancedAuditOptionEnabled()).isFalse();
+        assertThat(response.advancedExportOptionEnabled()).isFalse();
+        assertThat(response.smsOptionEnabled()).isFalse();
+    }
+
+    @Test
+    void shouldRejectPremiumOptionsOnProChange() {
+        TenantContext.setTenantId("demo-lu");
+        SubscriptionPlan starter = buildPlan(PlanCode.STARTER, 1, 10, Set.of(FeatureCode.EMPLOYEE_MANAGEMENT));
+        starter.setMonthlyPrice(new BigDecimal("199.00"));
+        SubscriptionPlan pro = buildPlan(PlanCode.PRO, 10, 50, Set.of(FeatureCode.EXPORTS));
+        pro.setId(2L);
+        pro.setMonthlyPrice(new BigDecimal("299.00"));
+
+        TenantSubscription subscription = new TenantSubscription();
+        subscription.setTenantId("demo-lu");
+        subscription.setPlanCode(PlanCode.STARTER);
+        subscription.setStatus(SubscriptionStatus.ACTIVE);
+        subscription.setSeatsPurchased(10);
+
+        when(subscriptionRepository.findByTenantId("demo-lu")).thenReturn(Optional.of(subscription));
+        when(planRepository.findByCode(PlanCode.STARTER)).thenReturn(Optional.of(starter));
+        when(planRepository.findByCode(PlanCode.PRO)).thenReturn(Optional.of(pro));
+
+        assertThatThrownBy(() -> subscriptionService.upgrade(new SubscriptionChangeRequest(
+                PlanCode.PRO, 20, false, true, true
+        ))).isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void shouldExposePremiumEntitlementsForPremiumTenant() {
+        TenantContext.setTenantId("demo-lu");
+        SubscriptionPlan plan = buildPlan(PlanCode.PREMIUM, 51, null, Set.of(
+                FeatureCode.EXPORTS,
+                FeatureCode.DECLARATION_AUDIT,
+                FeatureCode.ACCOUNTING_EXPORT,
+                FeatureCode.SLA_SUPPORT,
+                FeatureCode.ONBOARDING_SUPPORT
+        ));
+        TenantSubscription subscription = new TenantSubscription();
+        subscription.setTenantId("demo-lu");
+        subscription.setPlanCode(PlanCode.PREMIUM);
+        subscription.setStatus(SubscriptionStatus.ACTIVE);
+        subscription.setSeatsPurchased(75);
+
+        when(subscriptionRepository.findByTenantId("demo-lu")).thenReturn(Optional.of(subscription));
+        when(planRepository.findByCode(PlanCode.PREMIUM)).thenReturn(Optional.of(plan));
+
+        var response = subscriptionService.currentSubscription();
+
+        assertThat(response.entitlements()).contains(
+                FeatureCode.DECLARATION_AUDIT.name(),
+                FeatureCode.ACCOUNTING_EXPORT.name(),
+                FeatureCode.SLA_SUPPORT.name(),
+                FeatureCode.ONBOARDING_SUPPORT.name()
+        );
     }
 
     @Test

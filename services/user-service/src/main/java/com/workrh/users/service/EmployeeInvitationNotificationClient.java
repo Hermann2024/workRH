@@ -19,7 +19,7 @@ public class EmployeeInvitationNotificationClient {
     @Value("${notification.service.base-url:http://localhost:9085}")
     private String notificationServiceBaseUrl;
 
-    @Value("${notification.internal.key:workrh-notification-internal}")
+    @Value("${notification.internal.key:}")
     private String internalKey;
 
     @Value("${workrh.public-base-url:http://localhost:4200}")

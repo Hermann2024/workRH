@@ -7,7 +7,7 @@ spring:
     password: workrh
 notification:
   internal:
-    key: ${WORKRH_NOTIFICATION_INTERNAL_KEY:workrh-notification-internal}
+    key: ${WORKRH_NOTIFICATION_INTERNAL_KEY}
   automations:
     enabled: true
     from-email: no-reply@workrh.app

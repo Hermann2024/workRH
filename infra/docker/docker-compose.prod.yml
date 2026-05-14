@@ -1,0 +1,163 @@
+x-service-env: &service-env
+  SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:9888
+  EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:9761/eureka
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: ${WORKRH_KAFKA_BOOTSTRAP_SERVERS:?WORKRH_KAFKA_BOOTSTRAP_SERVERS is required}
+  WORKRH_JWT_SECRET: ${WORKRH_JWT_SECRET:?WORKRH_JWT_SECRET is required}
+  WORKRH_DEMO_AUTHENTICATION_ENABLED: ${WORKRH_DEMO_AUTHENTICATION_ENABLED:-false}
+  WORKRH_PRODUCTION_READINESS_ENFORCED: ${WORKRH_PRODUCTION_READINESS_ENFORCED:-true}
+  WORKRH_HIBERNATE_DDL_AUTO: ${WORKRH_HIBERNATE_DDL_AUTO:-validate}
+  SUBSCRIPTION_SERVICE_BASE_URL: http://subscription-service:9087
+
+x-healthcheck: &healthcheck
+  interval: 30s
+  timeout: 5s
+  retries: 5
+  start_period: 45s
+
+services:
+  discovery-service:
+    image: ${WORKRH_IMAGE_REGISTRY:?WORKRH_IMAGE_REGISTRY is required}/discovery-service:${WORKRH_IMAGE_TAG:?WORKRH_IMAGE_TAG is required}
+    restart: unless-stopped
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "java -version >/dev/null 2>&1"]
+
+  config-server:
+    image: ${WORKRH_IMAGE_REGISTRY:?WORKRH_IMAGE_REGISTRY is required}/config-server:${WORKRH_IMAGE_TAG:?WORKRH_IMAGE_TAG is required}
+    restart: unless-stopped
+    environment:
+      SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS: file:/config-repo
+    volumes:
+      - ../config-repo:/config-repo:ro
+    depends_on:
+      - discovery-service
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "java -version >/dev/null 2>&1"]
+
+  api-gateway:
+    image: ${WORKRH_IMAGE_REGISTRY:?WORKRH_IMAGE_REGISTRY is required}/api-gateway:${WORKRH_IMAGE_TAG:?WORKRH_IMAGE_TAG is required}
+    restart: unless-stopped
+    ports:
+      - "${WORKRH_PUBLIC_PORT:-9080}:9080"
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:9888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:9761/eureka
+      WORKRH_FRONTEND_ORIGIN: ${WORKRH_FRONTEND_ORIGIN:?WORKRH_FRONTEND_ORIGIN is required}
+    depends_on:
+      - discovery-service
+      - config-server
+      - user-service
+      - leave-service
+      - sickness-service
+      - telework-service
+      - notification-service
+      - reporting-service
+      - subscription-service
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "java -version >/dev/null 2>&1"]
+
+  user-service:
+    image: ${WORKRH_IMAGE_REGISTRY:?WORKRH_IMAGE_REGISTRY is required}/user-service:${WORKRH_IMAGE_TAG:?WORKRH_IMAGE_TAG is required}
+    restart: unless-stopped
+    environment:
+      <<: *service-env
+      SPRING_DATASOURCE_URL: ${WORKRH_USERS_DATABASE_URL:?WORKRH_USERS_DATABASE_URL is required}
+      SPRING_DATASOURCE_USERNAME: ${WORKRH_DATABASE_USERNAME:?WORKRH_DATABASE_USERNAME is required}
+      SPRING_DATASOURCE_PASSWORD: ${WORKRH_DATABASE_PASSWORD:?WORKRH_DATABASE_PASSWORD is required}
+      WORKRH_SUBSCRIPTION_BOOTSTRAP_KEY: ${WORKRH_SUBSCRIPTION_BOOTSTRAP_KEY:?WORKRH_SUBSCRIPTION_BOOTSTRAP_KEY is required}
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "java -version >/dev/null 2>&1"]
+
+  leave-service:
+    image: ${WORKRH_IMAGE_REGISTRY:?WORKRH_IMAGE_REGISTRY is required}/leave-service:${WORKRH_IMAGE_TAG:?WORKRH_IMAGE_TAG is required}
+    restart: unless-stopped
+    environment:
+      <<: *service-env
+      SPRING_DATASOURCE_URL: ${WORKRH_LEAVES_DATABASE_URL:?WORKRH_LEAVES_DATABASE_URL is required}
+      SPRING_DATASOURCE_USERNAME: ${WORKRH_DATABASE_USERNAME:?WORKRH_DATABASE_USERNAME is required}
+      SPRING_DATASOURCE_PASSWORD: ${WORKRH_DATABASE_PASSWORD:?WORKRH_DATABASE_PASSWORD is required}
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "java -version >/dev/null 2>&1"]
+
+  sickness-service:
+    image: ${WORKRH_IMAGE_REGISTRY:?WORKRH_IMAGE_REGISTRY is required}/sickness-service:${WORKRH_IMAGE_TAG:?WORKRH_IMAGE_TAG is required}
+    restart: unless-stopped
+    environment:
+      <<: *service-env
+      SPRING_DATASOURCE_URL: ${WORKRH_SICKNESS_DATABASE_URL:?WORKRH_SICKNESS_DATABASE_URL is required}
+      SPRING_DATASOURCE_USERNAME: ${WORKRH_DATABASE_USERNAME:?WORKRH_DATABASE_USERNAME is required}
+      SPRING_DATASOURCE_PASSWORD: ${WORKRH_DATABASE_PASSWORD:?WORKRH_DATABASE_PASSWORD is required}
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "java -version >/dev/null 2>&1"]
+
+  telework-service:
+    image: ${WORKRH_IMAGE_REGISTRY:?WORKRH_IMAGE_REGISTRY is required}/telework-service:${WORKRH_IMAGE_TAG:?WORKRH_IMAGE_TAG is required}
+    restart: unless-stopped
+    environment:
+      <<: *service-env
+      SPRING_DATASOURCE_URL: ${WORKRH_TELEWORK_DATABASE_URL:?WORKRH_TELEWORK_DATABASE_URL is required}
+      SPRING_DATASOURCE_USERNAME: ${WORKRH_DATABASE_USERNAME:?WORKRH_DATABASE_USERNAME is required}
+      SPRING_DATASOURCE_PASSWORD: ${WORKRH_DATABASE_PASSWORD:?WORKRH_DATABASE_PASSWORD is required}
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "java -version >/dev/null 2>&1"]
+
+  notification-service:
+    image: ${WORKRH_IMAGE_REGISTRY:?WORKRH_IMAGE_REGISTRY is required}/notification-service:${WORKRH_IMAGE_TAG:?WORKRH_IMAGE_TAG is required}
+    restart: unless-stopped
+    environment:
+      <<: *service-env
+      SPRING_DATASOURCE_URL: ${WORKRH_NOTIFICATIONS_DATABASE_URL:?WORKRH_NOTIFICATIONS_DATABASE_URL is required}
+      SPRING_DATASOURCE_USERNAME: ${WORKRH_DATABASE_USERNAME:?WORKRH_DATABASE_USERNAME is required}
+      SPRING_DATASOURCE_PASSWORD: ${WORKRH_DATABASE_PASSWORD:?WORKRH_DATABASE_PASSWORD is required}
+      WORKRH_NOTIFICATION_INTERNAL_KEY: ${WORKRH_NOTIFICATION_INTERNAL_KEY:?WORKRH_NOTIFICATION_INTERNAL_KEY is required}
+      SMTP_HOST: ${SMTP_HOST:?SMTP_HOST is required}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:?SMTP_USERNAME is required}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:?SMTP_PASSWORD is required}
+      WORKRH_SMS_ENABLED: ${WORKRH_SMS_ENABLED:-false}
+      WORKRH_SMS_PROVIDER: ${WORKRH_SMS_PROVIDER:-}
+      WORKRH_SMS_WEBHOOK_URL: ${WORKRH_SMS_WEBHOOK_URL:-}
+      WORKRH_SMS_API_KEY: ${WORKRH_SMS_API_KEY:-}
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "java -version >/dev/null 2>&1"]
+
+  reporting-service:
+    image: ${WORKRH_IMAGE_REGISTRY:?WORKRH_IMAGE_REGISTRY is required}/reporting-service:${WORKRH_IMAGE_TAG:?WORKRH_IMAGE_TAG is required}
+    restart: unless-stopped
+    environment:
+      <<: *service-env
+      SPRING_DATASOURCE_URL: ${WORKRH_REPORTING_DATABASE_URL:?WORKRH_REPORTING_DATABASE_URL is required}
+      SPRING_DATASOURCE_USERNAME: ${WORKRH_DATABASE_USERNAME:?WORKRH_DATABASE_USERNAME is required}
+      SPRING_DATASOURCE_PASSWORD: ${WORKRH_DATABASE_PASSWORD:?WORKRH_DATABASE_PASSWORD is required}
+      WORKRH_CONNECTOR_SECRET_KEY: ${WORKRH_CONNECTOR_SECRET_KEY:?WORKRH_CONNECTOR_SECRET_KEY is required}
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "java -version >/dev/null 2>&1"]
+
+  subscription-service:
+    image: ${WORKRH_IMAGE_REGISTRY:?WORKRH_IMAGE_REGISTRY is required}/subscription-service:${WORKRH_IMAGE_TAG:?WORKRH_IMAGE_TAG is required}
+    restart: unless-stopped
+    environment:
+      <<: *service-env
+      SPRING_DATASOURCE_URL: ${WORKRH_SUBSCRIPTIONS_DATABASE_URL:?WORKRH_SUBSCRIPTIONS_DATABASE_URL is required}
+      SPRING_DATASOURCE_USERNAME: ${WORKRH_DATABASE_USERNAME:?WORKRH_DATABASE_USERNAME is required}
+      SPRING_DATASOURCE_PASSWORD: ${WORKRH_DATABASE_PASSWORD:?WORKRH_DATABASE_PASSWORD is required}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:?STRIPE_SECRET_KEY is required}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:?STRIPE_WEBHOOK_SECRET is required}
+      STRIPE_PRICE_STARTER: ${STRIPE_PRICE_STARTER:?STRIPE_PRICE_STARTER is required}
+      STRIPE_PRICE_PRO: ${STRIPE_PRICE_PRO:?STRIPE_PRICE_PRO is required}
+      STRIPE_PRICE_PREMIUM: ${STRIPE_PRICE_PREMIUM:?STRIPE_PRICE_PREMIUM is required}
+      STRIPE_PRICE_ENTERPRISE: ${STRIPE_PRICE_ENTERPRISE:-}
+      WORKRH_SUBSCRIPTION_BOOTSTRAP_KEY: ${WORKRH_SUBSCRIPTION_BOOTSTRAP_KEY:?WORKRH_SUBSCRIPTION_BOOTSTRAP_KEY is required}
+      WORKRH_WORKSPACE_INTERNAL_KEY: ${WORKRH_WORKSPACE_INTERNAL_KEY:?WORKRH_WORKSPACE_INTERNAL_KEY is required}
+      WORKRH_ENTERPRISE_ENABLED: ${WORKRH_ENTERPRISE_ENABLED:-false}
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "java -version >/dev/null 2>&1"]

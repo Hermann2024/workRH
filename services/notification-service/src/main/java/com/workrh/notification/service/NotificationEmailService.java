@@ -40,10 +40,10 @@ public class NotificationEmailService {
     public boolean sendThresholdAlert(ThresholdAlertEvent event) {
         return send(
                 resolveRecipients(thresholdRecipient),
-                "Alerte teletravail " + event.alertStagePercent() + "% du seuil fiscal",
+                "Alerte télétravail " + event.alertStagePercent() + "% du seuil fiscal",
                 """
                 <p>Bonjour,</p>
-                <p>Le collaborateur <strong>#%d</strong> a atteint <strong>%d%%</strong> du seuil fiscal teletravail.</p>
+                    <p>Le collaborateur <strong>#%d</strong> a atteint <strong>%d%%</strong> du seuil fiscal télétravail.</p>
                 <p>Consommation actuelle: <strong>%d / %d jours</strong>.</p>
                 <p>Equipe WorkRH</p>
                 """.formatted(
@@ -58,10 +58,10 @@ public class NotificationEmailService {
     public boolean sendThresholdExceeded(ThresholdExceededEvent event) {
         return send(
                 resolveRecipients(thresholdRecipient),
-                "Seuil fiscal teletravail depasse",
+                "Seuil fiscal télétravail dépassé",
                 """
                 <p>Bonjour,</p>
-                <p>Le collaborateur <strong>#%d</strong> a depasse le seuil fiscal teletravail.</p>
+                    <p>Le collaborateur <strong>#%d</strong> a dépassé le seuil fiscal télétravail.</p>
                 <p>Consommation actuelle: <strong>%d / %d jours</strong>.</p>
                 <p>Equipe WorkRH</p>
                 """.formatted(

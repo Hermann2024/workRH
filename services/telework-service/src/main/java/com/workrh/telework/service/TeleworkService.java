@@ -265,7 +265,7 @@ public class TeleworkService {
                 ),
                 new TeleworkComplianceChecklistItem(
                         "SOCIAL_SECURITY_A1",
-                        "Declaration securite sociale et certificat A1",
+                "Déclaration sécurité sociale et certificat A1",
                         a1Required == 0 ? "OK" : "ACTION_REQUIRED",
                         a1Required == 0 ? "LOW" : "HIGH",
                         a1Required == 0
@@ -289,16 +289,16 @@ public class TeleworkService {
                         monthlyDeclarations.isEmpty() ? "MISSING_DATA" : "OK",
                         monthlyDeclarations.isEmpty() ? "MEDIUM" : "LOW",
                         monthlyDeclarations.isEmpty()
-                                ? "Aucune declaration teletravail n'est disponible pour la periode selectionnee."
+                ? "Aucune déclaration télétravail n'est disponible pour la période sélectionnée."
                                 : monthlyDeclarations.size() + " declaration(s) horodatees disponibles pour la periode.",
                         null
                 ),
                 new TeleworkComplianceChecklistItem(
                         "TELEWORK_AGREEMENT",
-                        "Accord ou avenant teletravail",
+                "Accord ou avenant télétravail",
                         "MANUAL_REVIEW",
                         "MEDIUM",
-                        "Verifier hors application que chaque salarie dispose d'un cadre contractuel teletravail et des informations sante, securite et donnees personnelles.",
+                "Vérifier hors application que chaque salarié dispose d'un cadre contractuel télétravail et des informations santé, sécurité et données personnelles.",
                         ITM_TELEWORK_SOURCE
                 )
         );

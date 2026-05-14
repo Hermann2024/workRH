@@ -45,7 +45,7 @@ public class DemoSubscriptionSeeder implements CommandLineRunner {
         subscription.setSeatsPurchased(25);
         subscription.setSmsOptionEnabled(false);
         subscription.setAdvancedAuditOptionEnabled(false);
-        subscription.setAdvancedExportOptionEnabled(true);
+        subscription.setAdvancedExportOptionEnabled(false);
         subscription.setCancelAtPeriodEnd(false);
         subscription.setCancellationReason(null);
         subscription.setStartsAt(LocalDate.now().minusMonths(1));

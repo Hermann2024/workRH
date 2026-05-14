@@ -850,6 +850,9 @@ a:focus-visible {
 .plan-code {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  min-width: 0;
   padding: 7px 12px;
   border-radius: 999px;
   background: rgba(8, 18, 37, 0.05);
@@ -858,6 +861,10 @@ a:focus-visible {
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
+  line-height: 1.25;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
 }
 
 .pricing-heading {
@@ -1008,6 +1015,7 @@ a:focus-visible {
   font-size: 0.96rem;
   font-weight: 700;
   line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .plan-value-list {
@@ -1490,15 +1498,29 @@ a:focus-visible {
   justify-content: space-between;
   gap: 12px;
   align-items: start;
+  min-width: 0;
+}
+
+.service-card-head > div {
+  min-width: 0;
+}
+
+.service-card-head .plan-code {
+  flex: 0 1 44%;
+  max-width: 150px;
 }
 
 .service-card h3 {
   margin: 10px 0 0;
   font-size: 1.1rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
 }
 
 .service-card p {
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .connector-readiness-panel {
@@ -1573,9 +1595,10 @@ a:focus-visible {
 
 .feature-list li {
   display: grid;
-  grid-template-columns: 18px 1fr;
+  grid-template-columns: 18px minmax(0, 1fr);
   gap: 10px;
   align-items: start;
+  min-width: 0;
   margin: 0;
   padding: 10px 12px;
   border-radius: 16px;
@@ -1583,6 +1606,7 @@ a:focus-visible {
   border: 1px solid rgba(13, 17, 23, 0.06);
   line-height: 1.55;
   overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .feature-list li::before {
@@ -2573,7 +2597,7 @@ p,
 }
 
 .feature-list li {
-  grid-template-columns: 14px 1fr;
+  grid-template-columns: 14px minmax(0, 1fr);
   gap: 9px;
   padding: 10px;
 }

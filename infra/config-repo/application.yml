@@ -3,7 +3,7 @@ spring:
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: ${WORKRH_HIBERNATE_DDL_AUTO:validate}
     properties:
       hibernate:
         format_sql: true
@@ -13,9 +13,14 @@ spring:
       auto-offset-reset: earliest
 
 security:
+  demo-authentication-enabled: ${WORKRH_DEMO_AUTHENTICATION_ENABLED:false}
   jwt:
-    secret: ${WORKRH_JWT_SECRET:c29tZS1yZWFsbHktbG9uZy1iYXNlNjQtc2VjcmV0LWZvci13b3JrcmgtZGVtby1vbmx5}
+    secret: ${WORKRH_JWT_SECRET}
     expiration: 86400
+
+workrh:
+  production-readiness:
+    enforced: ${WORKRH_PRODUCTION_READINESS_ENFORCED:false}
 
 eureka:
   client:

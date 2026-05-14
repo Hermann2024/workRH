@@ -1,6 +1,6 @@
 package com.workrh.users.api;
 
-import com.workrh.common.web.UnauthorizedException;
+import com.workrh.common.security.InternalRequestGuard;
 import com.workrh.users.api.dto.TenantWorkspaceResponse;
 import com.workrh.users.api.dto.WorkspaceSubscriptionSyncRequest;
 import com.workrh.users.service.EmployeeService;
@@ -18,7 +18,7 @@ public class InternalWorkspaceController {
 
     private final EmployeeService employeeService;
 
-    @Value("${workspace.internal.key:workrh-workspace-internal}")
+    @Value("${workspace.internal.key:}")
     private String internalKey;
 
     public InternalWorkspaceController(EmployeeService employeeService) {
@@ -29,9 +29,7 @@ public class InternalWorkspaceController {
     public TenantWorkspaceResponse syncSubscription(
             @RequestHeader(value = "X-Internal-Key", required = false) String providedKey,
             @Valid @RequestBody WorkspaceSubscriptionSyncRequest request) {
-        if (!internalKey.equals(providedKey)) {
-            throw new UnauthorizedException("Invalid workspace internal key");
-        }
+        InternalRequestGuard.requireValidKey(internalKey, providedKey, "workspace internal key");
         return employeeService.syncWorkspaceSubscription(request);
     }
 }

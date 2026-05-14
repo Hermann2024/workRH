@@ -12,6 +12,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.MapKeyColumn;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.HashMap;
@@ -44,6 +45,8 @@ public class HrConnectorConfiguration {
 
     private boolean enabled;
     private String clientId;
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(length = 1000)
     private String clientSecret;
     private String apiBaseUrl;
     private String authorizationUrl;
@@ -51,9 +54,11 @@ public class HrConnectorConfiguration {
     private String redirectUri;
     private String scopes;
     @Column(length = 2000)
+    @Convert(converter = EncryptedStringConverter.class)
     private String accessToken;
 
     @Column(length = 2000)
+    @Convert(converter = EncryptedStringConverter.class)
     private String refreshToken;
     private Instant tokenExpiresAt;
     private Instant lastSyncAt;
