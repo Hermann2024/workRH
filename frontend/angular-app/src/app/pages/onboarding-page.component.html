@@ -1,0 +1,114 @@
+<ng-container *ngIf="loadError() as errorMessage; else onboardingState">
+  <section class="panel loading-panel">
+    <h2>Onboarding indisponible</h2>
+    <p>{{ errorMessage }}</p>
+  </section>
+</ng-container>
+
+<ng-template #onboardingState>
+  <section class="hero">
+    <div>
+      <p class="section-tag">Onboarding client</p>
+      <h2>Mettre une entreprise en production</h2>
+      <p class="lede">Suivez les etapes de mise en service pour transformer un tenant de demo en environnement client exploitable.</p>
+    </div>
+    <article class="subscription-card onboarding-score-card">
+      <p class="section-tag">Progression</p>
+      <h3>{{ progress() }}%</h3>
+      <p class="hint" *ngIf="nextStep() as step">Priorite : {{ step.title }}</p>
+      <p class="hint" *ngIf="!nextStep()">Toutes les etapes critiques sont traitees.</p>
+    </article>
+  </section>
+
+  <section class="panel onboarding-control-panel">
+    <div class="section-head">
+      <div>
+        <p class="section-tag">Tenant</p>
+        <h2>Configuration entreprise</h2>
+      </div>
+      <p class="hint" *ngIf="loading()">Chargement...</p>
+    </div>
+
+    <form class="workspace-inline-fields" [formGroup]="workspaceForm" (ngSubmit)="saveWorkspace()">
+      <label class="workspace-field">
+        <span>Nom entreprise</span>
+        <input type="text" formControlName="companyName">
+      </label>
+      <button class="checkout-button small" type="submit" [disabled]="savingWorkspace()">
+        {{ savingWorkspace() ? 'Enregistrement...' : 'Enregistrer' }}
+      </button>
+    </form>
+
+    <div class="onboarding-facts" *ngIf="workspace() as company">
+      <article>
+        <span>Tenant</span>
+        <strong>{{ company.tenantId }}</strong>
+      </article>
+      <article>
+        <span>Sieges</span>
+        <strong>{{ company.seatsUsed }} / {{ company.seatsPurchased || 'illimite' }}</strong>
+      </article>
+      <article>
+        <span>Employes actifs</span>
+        <strong>{{ company.activeEmployees }}</strong>
+      </article>
+    </div>
+  </section>
+
+  <section class="panel onboarding-roadmap">
+    <div class="section-head">
+      <div>
+        <p class="section-tag">Parcours guide</p>
+        <h2>Checklist de lancement</h2>
+      </div>
+      <button class="checkout-button outline small" type="button" (click)="load()">Rafraichir</button>
+    </div>
+
+    <div class="onboarding-step-list">
+      <article *ngFor="let step of steps()" [ngClass]="statusClass(step.status)">
+        <div class="onboarding-step-index">
+          <span>{{ statusLabel(step.status) }}</span>
+        </div>
+        <div>
+          <strong>{{ step.title }}</strong>
+          <p>{{ step.detail }}</p>
+        </div>
+        <button class="checkout-button outline small" type="button" (click)="runStep(step)">
+          {{ step.actionLabel }}
+        </button>
+      </article>
+    </div>
+  </section>
+
+  <section class="panel onboarding-playbook">
+    <div class="section-head">
+      <div>
+        <p class="section-tag">Playbook vente</p>
+        <h2>Ce qu'un client doit obtenir</h2>
+      </div>
+    </div>
+
+    <div class="value-proof-grid">
+      <article>
+        <span>Jour 1</span>
+        <strong>Tenant pret</strong>
+        <small>Entreprise, abonnement, sieges et admin RH valides.</small>
+      </article>
+      <article>
+        <span>Jour 2</span>
+        <strong>Salaries importes</strong>
+        <small>CSV charge, invitations envoyees, profils RH controles.</small>
+      </article>
+      <article>
+        <span>Jour 3</span>
+        <strong>Conformite active</strong>
+        <small>Dashboard risques, politiques, preuves et exports disponibles.</small>
+      </article>
+      <article>
+        <span>Jour 4</span>
+        <strong>Demo valeur</strong>
+        <small>Pack lancement, impact business et dossier audit presentes.</small>
+      </article>
+    </div>
+  </section>
+</ng-template>

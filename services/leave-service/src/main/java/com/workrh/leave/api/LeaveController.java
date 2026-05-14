@@ -8,6 +8,10 @@ import com.workrh.leave.api.dto.LeaveResponseDto;
 import com.workrh.leave.service.LeaveService;
 import jakarta.validation.Valid;
 import java.util.List;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/leaves")
@@ -38,6 +43,27 @@ public class  LeaveController {
     @PreAuthorize("hasAnyAuthority('HR','EMPLOYEE')")
     public LeaveResponseDto findById(@PathVariable("leaveId") Long leaveId) {
         return leaveService.findById(leaveId);
+    }
+
+    @PostMapping(value = "/{leaveId}/evidence", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyAuthority('HR','EMPLOYEE')")
+    public LeaveResponseDto uploadEvidence(
+            @PathVariable("leaveId") Long leaveId,
+            @RequestParam("file") MultipartFile file) {
+        return leaveService.uploadEvidence(leaveId, file);
+    }
+
+    @GetMapping("/{leaveId}/evidence")
+    @PreAuthorize("hasAnyAuthority('HR','EMPLOYEE')")
+    public ResponseEntity<byte[]> downloadEvidence(@PathVariable("leaveId") Long leaveId) {
+        LeaveService.EvidenceDownload evidence = leaveService.downloadEvidence(leaveId);
+        return ResponseEntity.ok()
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment().filename(evidence.fileName()).build().toString()
+                )
+                .contentType(MediaType.parseMediaType(evidence.contentType()))
+                .body(evidence.content());
     }
 
     @PostMapping("/{leaveId}/approve")

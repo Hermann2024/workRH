@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -40,6 +41,7 @@ class StripeCheckoutServiceTest {
     private final SubscriptionInvoiceRepository invoiceRepository = Mockito.mock(SubscriptionInvoiceRepository.class);
     private final RestTemplate restTemplate = Mockito.mock(RestTemplate.class);
     private final StripeWebhookVerifier webhookVerifier = Mockito.mock(StripeWebhookVerifier.class);
+    private final WorkspaceSubscriptionSyncClient workspaceSubscriptionSyncClient = Mockito.mock(WorkspaceSubscriptionSyncClient.class);
     @SuppressWarnings("unchecked")
     private final KafkaTemplate<String, Object> kafkaTemplate = Mockito.mock(KafkaTemplate.class);
 
@@ -50,7 +52,8 @@ class StripeCheckoutServiceTest {
             restTemplate,
             new ObjectMapper(),
             webhookVerifier,
-            kafkaTemplate
+            kafkaTemplate,
+            workspaceSubscriptionSyncClient
     );
 
     @AfterEach
@@ -110,6 +113,7 @@ class StripeCheckoutServiceTest {
         assertThat(subscription.isAdvancedExportOptionEnabled()).isTrue();
         assertThat(subscription.getStartsAt()).isEqualTo(LocalDate.of(2025, 11, 1));
         assertThat(subscription.getRenewsAt()).isEqualTo(LocalDate.of(2025, 11, 15));
+        verify(workspaceSubscriptionSyncClient, atLeastOnce()).sync(subscription);
     }
 
     @Test

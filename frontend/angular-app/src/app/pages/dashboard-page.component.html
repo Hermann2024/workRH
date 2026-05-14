@@ -36,7 +36,234 @@
       <article class="metric-card alert-card"><span>Alertes hebdo</span><strong>{{ data.dashboard.weeklyAlerts }}</strong></article>
     </section>
 
+    <section class="panel command-center" *ngIf="commandCenter() as cockpit">
+      <div class="section-head">
+        <div>
+          <p class="section-tag">Centre de pilotage</p>
+          <h2>Controle RH, fiscal et legal</h2>
+          <p class="hint">{{ cockpit.headline }}</p>
+        </div>
+        <span class="badge command-status" [ngClass]="commandLevelClass(cockpit.level)">{{ cockpit.levelLabel }}</span>
+      </div>
+
+      <div class="command-center-grid">
+        <article class="command-score">
+          <div class="score-ring" [style.background]="cockpit.scoreBackground">
+            <div>
+              <strong>{{ cockpit.score }}</strong>
+              <span>/100</span>
+            </div>
+          </div>
+          <p>Score de controle calcule avec les alertes TAD, dossiers conformite et justificatifs manquants.</p>
+        </article>
+
+        <div class="command-kpis">
+          <article>
+            <span>Urgent</span>
+            <strong>{{ cockpit.criticalCount }}</strong>
+          </article>
+          <article>
+            <span>A surveiller</span>
+            <strong>{{ cockpit.warningCount }}</strong>
+          </article>
+          <article>
+            <span>Justificatifs</span>
+            <strong>{{ cockpit.missingEvidenceCount }}</strong>
+          </article>
+          <article>
+            <span>Dossiers ouverts</span>
+            <strong>{{ cockpit.openCases }}</strong>
+          </article>
+          <article>
+            <span>Prets paie</span>
+            <strong>{{ cockpit.readyCases }}</strong>
+          </article>
+        </div>
+      </div>
+
+      <div class="command-actions" *ngIf="cockpit.actions.length; else noCommandActions">
+        <article *ngFor="let action of cockpit.actions" [ngClass]="commandLevelClass(action.level)">
+          <div>
+            <span>{{ action.source }}</span>
+            <strong>{{ action.title }}</strong>
+            <p>{{ action.detail }}</p>
+          </div>
+          <button
+            *ngIf="action.employeeId"
+            class="checkout-button outline small"
+            type="button"
+            (click)="openEmployeeAbsences(action.employeeId)">
+            Traiter
+          </button>
+        </article>
+      </div>
+      <ng-template #noCommandActions>
+        <div class="command-empty">
+          <strong>Aucune action prioritaire</strong>
+          <p class="hint">Les donnees chargees ne signalent pas de blocage fiscal, legal ou RH.</p>
+        </div>
+      </ng-template>
+    </section>
+
+    <section class="panel launch-readiness" *ngIf="launchReadiness() as launch">
+      <div class="section-head">
+        <div>
+          <p class="section-tag">Go-to-market</p>
+          <h2>Readiness client</h2>
+          <p class="hint">{{ launch.summary }}</p>
+        </div>
+        <div class="action-row">
+          <span class="badge command-status" [ngClass]="commandLevelClass(launch.status)">{{ launch.statusLabel }}</span>
+          <button class="checkout-button small" type="button" (click)="downloadLaunchPack()">Pack lancement</button>
+        </div>
+      </div>
+
+      <div class="launch-readiness-grid">
+        <article class="launch-score" [ngClass]="commandLevelClass(launch.status)">
+          <span>Score deploiement</span>
+          <strong>{{ launch.score }}%</strong>
+          <small>{{ launch.readyCount }} pret(s), {{ launch.warningCount }} a cadrer, {{ launch.blockedCount }} bloquant(s)</small>
+          <button
+            *ngIf="launch.nextAction as nextAction"
+            class="checkout-button small"
+            type="button"
+            (click)="runLaunchAction(nextAction)">
+            Priorite: {{ nextAction.actionLabel }}
+          </button>
+        </article>
+
+        <div class="launch-checklist">
+          <article *ngFor="let item of launch.items" [ngClass]="commandLevelClass(item.status)">
+            <div>
+              <strong>{{ item.label }}</strong>
+              <p>{{ item.detail }}</p>
+            </div>
+            <div class="launch-item-actions">
+              <span class="badge" [ngClass]="commandLevelClass(item.status)">
+                {{ item.status === 'OK' ? 'Pret' : item.status === 'WARNING' ? 'Cadrer' : 'Bloquant' }}
+              </span>
+              <button class="checkout-button outline small" type="button" (click)="runLaunchAction(item)">
+                {{ item.actionLabel }}
+              </button>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel value-proof" *ngIf="valueProof() as proof">
+      <div class="section-head">
+        <div>
+          <p class="section-tag">Valeur client</p>
+          <h2>Impact business estime</h2>
+          <p class="hint">{{ proof.narrative }}</p>
+        </div>
+      </div>
+
+      <div class="value-proof-grid">
+        <article>
+          <span>Exposition evitee</span>
+          <strong>{{ proof.riskExposure | number:'1.0-0' }} EUR</strong>
+          <small>Fiscal, social et pieces RH critiques.</small>
+        </article>
+        <article>
+          <span>Temps RH gagne</span>
+          <strong>{{ proof.adminHoursSaved }} h</strong>
+          <small>Centralisation, preuves et workflows guides.</small>
+        </article>
+        <article>
+          <span>Blocages paie evites</span>
+          <strong>{{ proof.payrollBlockersAvoided }}</strong>
+          <small>Alertes critiques et justificatifs obligatoires.</small>
+        </article>
+        <article>
+          <span>Preuves auditables</span>
+          <strong>{{ proof.auditEvidenceItems }}</strong>
+          <small>Pieces, historiques et traces centralises.</small>
+        </article>
+      </div>
+
+      <details class="value-assumptions">
+        <summary>Hypotheses de calcul</summary>
+        <ul>
+          <li *ngFor="let assumption of proof.assumptions">{{ assumption }}</li>
+        </ul>
+      </details>
+    </section>
+
     <section class="grid-layout">
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <p class="section-tag">Contrats</p>
+            <h2>Proportions CDI, CDD, stage</h2>
+          </div>
+        </div>
+
+        <div class="contract-sphere-layout">
+          <div
+            class="contract-sphere"
+            [style.background]="contractSphereGradient()"
+            tabindex="0"
+            aria-label="Repartition des contrats">
+            <span class="contract-total">{{ employees().length }}</span>
+            <div class="contract-hover-panel" aria-hidden="true">
+              <article *ngFor="let item of contractDistribution()" [class.is-empty]="item.count === 0">
+                <span class="contract-dot" [class.contract-cdi]="item.type === 'CDI'" [class.contract-cdd]="item.type === 'CDD'" [class.contract-stage]="item.type === 'STAGE'" [class.contract-alternance]="item.type === 'ALTERNANCE'" [class.contract-autres]="item.type === 'AUTRES'"></span>
+                <strong>{{ item.label }}</strong>
+                <small>{{ item.percent }}%</small>
+              </article>
+            </div>
+          </div>
+          <div class="contract-legend">
+            <article *ngFor="let item of contractDistribution()">
+              <span class="contract-dot" [class.contract-cdi]="item.type === 'CDI'" [class.contract-cdd]="item.type === 'CDD'" [class.contract-stage]="item.type === 'STAGE'" [class.contract-alternance]="item.type === 'ALTERNANCE'" [class.contract-autres]="item.type === 'AUTRES'"></span>
+              <strong>{{ item.label }}</strong>
+              <small>{{ item.count }} salarie(s)</small>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <p class="section-tag">Genre</p>
+            <h2>Repartition schematique</h2>
+          </div>
+        </div>
+
+        <div class="gender-stat">
+          <div class="gender-stack" aria-label="Repartition par genre">
+            <span
+              *ngFor="let item of genderDistribution()"
+              [class.gender-feminin]="item.type === 'FEMININ'"
+              [class.gender-masculin]="item.type === 'MASCULIN'"
+              [class.gender-autres]="item.type === 'AUTRES'"
+              [style.width.%]="item.percent"
+              [attr.title]="item.label + ' : ' + item.percent + '%'">
+            </span>
+          </div>
+
+          <div class="gender-pictogram">
+            <span
+              *ngFor="let employee of employees()"
+              [class.gender-feminin]="employee.gender === 'FEMININ'"
+              [class.gender-masculin]="employee.gender === 'MASCULIN'"
+              [class.gender-autres]="employee.gender === 'AUTRES'">
+            </span>
+          </div>
+
+          <div class="contract-legend">
+            <article *ngFor="let item of genderDistribution()">
+              <span class="contract-dot" [class.gender-feminin]="item.type === 'FEMININ'" [class.gender-masculin]="item.type === 'MASCULIN'" [class.gender-autres]="item.type === 'AUTRES'"></span>
+              <strong>{{ item.label }}</strong>
+              <small>{{ item.count }} salarie(s), {{ item.percent }}%</small>
+            </article>
+          </div>
+        </div>
+      </section>
+
       <section class="panel">
         <div class="section-head">
           <div>
@@ -78,7 +305,7 @@
       <div class="section-head"><div><p class="section-tag">Tableau RH</p><h2>Vue de base</h2></div></div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Employe</th><th>Mois</th><th>Annuel</th><th>Alerte annuelle</th><th>Restant</th><th>Hebdo</th><th>Fiscal</th><th>Politique</th></tr></thead>
+          <thead><tr><th>Employe</th><th>Mois</th><th>Annuel</th><th>Risque TAD</th><th>Restant</th><th>Hebdo</th><th>Fiscal</th><th>Politique</th></tr></thead>
           <tbody>
             <tr *ngFor="let employee of data.dashboard.employees">
               <td>
@@ -88,10 +315,10 @@
               </td>
               <td>{{ employee.usedDays }}</td>
               <td>{{ employee.annualUsedDays }}</td>
-              <td><span class="badge" [class.badge-alert]="employee.annualAlertLevel !== 'OK'">{{ employee.annualAlertLabel }}</span></td>
+              <td><span class="badge" [class.badge-alert]="employee.riskLevel === 'RED'">{{ employee.riskLabel }} {{ annualFiscalPercent(employee) }}%</span></td>
               <td>{{ employee.remainingDays }}</td>
               <td>{{ employee.weeklyUsedDays }}</td>
-              <td><span class="badge" [class.badge-alert]="employee.annualFiscalLimitExceeded">{{ employee.annualFiscalLimitExceeded ? 'Alerte' : 'OK' }}</span></td>
+              <td><span class="badge" [class.badge-alert]="employee.annualFiscalLimitExceeded">{{ fiscalStatusLabel(employee) }}</span></td>
               <td><span class="badge" [class.badge-alert]="employee.weeklyCompanyLimitExceeded">{{ employee.weeklyCompanyLimitExceeded ? 'Alerte' : 'OK' }}</span></td>
             </tr>
           </tbody>
@@ -121,6 +348,82 @@
           </tbody>
         </table>
       </div>
+    </section>
+
+    <section class="panel" *ngIf="isEntitled('DASHBOARD_ADVANCED')">
+      <div class="section-head">
+        <div>
+          <p class="section-tag">Fiscalite</p>
+          <h2>Simulation d'imposition hors Luxembourg</h2>
+        </div>
+      </div>
+
+      <form class="workspace-inline-fields" [formGroup]="taxSimulationForm" (ngSubmit)="simulateTaxImpact()">
+        <label class="workspace-field">
+          <span>Employe</span>
+          <select formControlName="employeeId">
+            <option [ngValue]="0">Selectionner</option>
+            <option *ngFor="let employee of data.dashboard.employees" [ngValue]="employee.employeeId">
+              {{ employeeName(employee.employeeId) }}
+            </option>
+          </select>
+        </label>
+        <label class="workspace-field">
+          <span>Salaire annuel brut</span>
+          <input type="number" min="1" step="100" formControlName="annualGrossSalary">
+        </label>
+        <label class="workspace-field">
+          <span>Jours reels travailles</span>
+          <input type="number" min="1" step="1" formControlName="annualContractWorkDays">
+        </label>
+        <button class="checkout-button small" type="submit" [disabled]="taxSimulationLoading()">
+          {{ taxSimulationLoading() ? 'Calcul...' : 'Calculer' }}
+        </button>
+      </form>
+
+      <div class="compliance-metrics" *ngIf="taxSimulation() as simulation">
+        <article class="metric-card">
+          <span>Statut seuil</span>
+          <strong>{{ simulation.thresholdExceeded ? 'Depasse' : 'OK' }}</strong>
+        </article>
+        <article class="metric-card">
+          <span>Salaire / jour</span>
+          <strong>{{ simulation.salaryPerWorkDay | number:'1.2-2' }} EUR</strong>
+        </article>
+        <article class="metric-card">
+          <span>Imposable LU</span>
+          <strong>{{ simulation.luxembourgTaxableSalary | number:'1.2-2' }} EUR</strong>
+        </article>
+        <article class="metric-card alert-card">
+          <span>Imposable hors LU</span>
+          <strong>{{ simulation.foreignTaxableSalary | number:'1.2-2' }} EUR</strong>
+        </article>
+      </div>
+      <p class="hint" *ngIf="taxSimulation() as simulation">
+        {{ simulation.annualTeleworkDays }}/{{ simulation.annualFiscalLimitDays }} jours TAD. {{ simulation.disclaimer }}
+      </p>
+      <div class="compliance-note">
+        <strong>Cadre fiscal et RGPD</strong>
+        <p class="hint">Les simulations sont des aides RH documentaires, pas un avis fiscal. Les donnees salariales et de residence doivent rester limitees aux utilisateurs habilites, conservees selon la politique RGPD de l'entreprise et revues par un fiscaliste avant usage paie ou declaration officielle.</p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-head">
+        <div>
+          <p class="section-tag">Integrations</p>
+          <h2>Connecteurs SIRH et paie</h2>
+        </div>
+      </div>
+      <div class="integration-grid">
+        <article class="entitlement enabled"><h3>SAP</h3><p>Connecteur a cadrer via API ou export.</p></article>
+        <article class="entitlement enabled"><h3>Workday</h3><p>Connecteur a cadrer via API ou export.</p></article>
+        <article class="entitlement enabled"><h3>Factorial</h3><p>Connecteur a cadrer via API ou export.</p></article>
+        <article class="entitlement enabled"><h3>BambooHR</h3><p>Connecteur a cadrer via API ou export.</p></article>
+        <article class="entitlement enabled"><h3>Lucca</h3><p>Connecteur a cadrer via API ou export.</p></article>
+        <article class="entitlement enabled"><h3>Payfit</h3><p>Connecteur a cadrer via API ou export.</p></article>
+      </div>
+      <p class="hint">L'application expose deja des API internes et des exports CSV/PDF, mais les connecteurs natifs avec authentification OAuth, mapping de champs et synchronisation automatique restent a implementer provider par provider.</p>
     </section>
 
     <section class="panel compliance-panel" *ngIf="complianceDossier() as dossier">
@@ -322,7 +625,7 @@
       <div class="section-head"><div><p class="section-tag">Conges</p><h2>Validation RH</h2></div><p class="hint">{{ pendingLeaveRequests().length }} en attente.</p></div>
       <div class="table-wrap" *ngIf="leaveRequests().length; else emptyLeaves">
         <table>
-          <thead><tr><th>Employe</th><th>Type</th><th>Periode</th><th>Statut</th><th>Commentaire</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Employe</th><th>Type</th><th>Periode</th><th>Statut</th><th>Justificatif</th><th>Commentaire</th><th>Actions</th></tr></thead>
           <tbody>
             <tr *ngFor="let leave of leaveRequests()">
               <td>
@@ -333,6 +636,20 @@
               <td>{{ leaveTypeLabel(leave.type) }}</td>
               <td>{{ leave.startDate }} - {{ leave.endDate }}</td>
               <td><span class="badge" [class.badge-alert]="leave.status === 'REJECTED'">{{ leave.status }}</span></td>
+              <td>
+                <button
+                  *ngIf="leave.evidenceUploaded; else evidenceStatus"
+                  type="button"
+                  class="checkout-button outline small"
+                  (click)="downloadLeaveEvidence(leave)">
+                  {{ leave.evidenceFileName || 'Telecharger' }}
+                </button>
+                <ng-template #evidenceStatus>
+                  <span class="badge" [class.badge-alert]="leave.evidenceRequired">
+                    {{ leave.evidenceRequired ? 'Manquant' : 'Non requis' }}
+                  </span>
+                </ng-template>
+              </td>
               <td>{{ leave.comment || '-' }}</td>
               <td>
                 <div class="action-row" *ngIf="leave.status === 'REQUESTED'; else leaveDone">
@@ -351,7 +668,7 @@
       <div class="section-head"><div><p class="section-tag">Sante</p><h2>Arrets maladie</h2></div></div>
       <div class="table-wrap" *ngIf="latestSicknessRecords().length; else emptySickness">
         <table>
-          <thead><tr><th>Employe</th><th>Debut</th><th>Fin</th><th>Commentaire</th></tr></thead>
+          <thead><tr><th>Employe</th><th>Debut</th><th>Fin</th><th>Justificatif</th><th>Commentaire</th></tr></thead>
           <tbody>
             <tr *ngFor="let record of latestSicknessRecords()">
               <td>
@@ -361,6 +678,18 @@
               </td>
               <td>{{ record.startDate }}</td>
               <td>{{ record.endDate }}</td>
+              <td>
+                <button
+                  *ngIf="record.evidenceUploaded; else sicknessEvidenceMissing"
+                  type="button"
+                  class="checkout-button outline small"
+                  (click)="downloadSicknessEvidence(record)">
+                  {{ record.evidenceFileName || 'Telecharger' }}
+                </button>
+                <ng-template #sicknessEvidenceMissing>
+                  <span class="badge badge-alert">Manquant</span>
+                </ng-template>
+              </td>
               <td>{{ record.comment || '-' }}</td>
             </tr>
           </tbody>

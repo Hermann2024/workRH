@@ -5,7 +5,9 @@ import com.workrh.common.events.InvoiceIssuedEvent;
 import com.workrh.common.events.ThresholdAlertEvent;
 import com.workrh.common.events.ThresholdExceededEvent;
 import com.workrh.common.tenant.TenantContext;
+import com.workrh.notification.api.dto.EmployeeInvitationEmailRequest;
 import com.workrh.notification.api.dto.NotificationResponseDto;
+import com.workrh.notification.api.dto.PasswordResetEmailRequest;
 import com.workrh.notification.domain.NotificationLog;
 import com.workrh.notification.repository.NotificationLogRepository;
 import java.time.Instant;
@@ -141,6 +143,41 @@ public class NotificationService {
                         log.getSentAt()
                 ))
                 .toList();
+    }
+
+    public boolean sendEmployeeInvitation(EmployeeInvitationEmailRequest request) {
+        boolean sent = notificationEmailService.sendEmployeeInvitation(
+                request.email(),
+                request.firstName(),
+                request.lastName(),
+                request.companyName(),
+                request.invitationUrl()
+        );
+        save(
+                TenantContext.getTenantId(),
+                null,
+                sent ? "EMAIL" : "EMAIL_SKIPPED",
+                "Employee invitation",
+                "Invitation prepared for %s via %s".formatted(request.email(), sent ? "SMTP" : "local fallback")
+        );
+        return sent;
+    }
+
+    public boolean sendPasswordReset(PasswordResetEmailRequest request) {
+        boolean sent = notificationEmailService.sendPasswordReset(
+                request.email(),
+                request.firstName(),
+                request.companyName(),
+                request.resetUrl()
+        );
+        save(
+                TenantContext.getTenantId(),
+                null,
+                sent ? "EMAIL" : "EMAIL_SKIPPED",
+                "Password reset",
+                "Password reset prepared for %s via %s".formatted(request.email(), sent ? "SMTP" : "local fallback")
+        );
+        return sent;
     }
 
     private void save(String tenantId, Long employeeId, String channel, String subject, String payload) {

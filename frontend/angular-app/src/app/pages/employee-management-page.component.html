@@ -21,9 +21,77 @@
 
   <section class="panel">
     <div class="tabs">
+      <button class="tab-button" type="button" [class.active]="activeTab() === 'invite'" (click)="activeTab.set('invite')">Inviter</button>
       <button class="tab-button" type="button" [class.active]="activeTab() === 'create'" (click)="activeTab.set('create')">Creer</button>
+      <button class="tab-button" type="button" [class.active]="activeTab() === 'import'" (click)="activeTab.set('import')">Import CSV</button>
       <button class="tab-button" type="button" [class.active]="activeTab() === 'list'" (click)="activeTab.set('list')">Comptes</button>
     </div>
+    <div class="checkout-banner cancelled" *ngIf="isSeatLimitReached()">
+      Limite de sieges atteinte. Augmentez l'abonnement ou desactivez un compte avant d'ajouter un salarie.
+    </div>
+    <p class="hint" *ngIf="workspace() as company">
+      Sieges utilises : {{ company.seatsUsed }} / {{ company.seatsPurchased || 'illimite' }}.
+    </p>
+  </section>
+
+  <section class="panel" *ngIf="activeTab() === 'invite'">
+      <div class="section-head">
+        <div>
+          <p class="section-tag">Onboarding</p>
+          <h2>Inviter un salarie</h2>
+        </div>
+      </div>
+
+      <form class="workspace-form-card" [formGroup]="invitationForm" (ngSubmit)="inviteEmployee()">
+        <div class="workspace-inline-fields">
+          <label class="workspace-field"><span>Prenom</span><input type="text" formControlName="firstName" autocomplete="given-name"></label>
+          <label class="workspace-field"><span>Nom</span><input type="text" formControlName="lastName" autocomplete="family-name"></label>
+        </div>
+        <div class="workspace-inline-fields">
+          <label class="workspace-field"><span>Email professionnel</span><input type="email" formControlName="email" autocomplete="email"></label>
+          <label class="workspace-field"><span>Pays de residence</span><input type="text" formControlName="countryOfResidence" maxlength="7"></label>
+        </div>
+        <div class="workspace-inline-fields">
+          <label class="workspace-field"><span>Departement</span><input type="text" formControlName="department"></label>
+          <label class="workspace-field"><span>Poste</span><input type="text" formControlName="jobTitle"></label>
+        </div>
+        <div class="workspace-inline-fields">
+          <label class="workspace-field"><span>Date de naissance</span><input type="date" formControlName="birthDate"></label>
+          <label class="workspace-field"><span>Genre</span><select formControlName="gender"><option *ngFor="let gender of genderTypes" [value]="gender">{{ genderLabel(gender) }}</option></select></label>
+        </div>
+        <div class="workspace-inline-fields">
+          <label class="workspace-field"><span>Telephone</span><input type="text" formControlName="phoneNumber" autocomplete="tel"></label>
+          <label class="workspace-field"><span>Statut contrat</span><select formControlName="contractType"><option *ngFor="let type of contractTypes" [value]="type">{{ contractTypeLabel(type) }}</option></select></label>
+          <label class="workspace-field"><span>Date d'embauche</span><input type="date" formControlName="hireDate"></label>
+        </div>
+        <button class="checkout-button" type="submit" [disabled]="inviting() || isSeatLimitReached()">{{ inviting() ? 'Creation...' : 'Creer l invitation' }}</button>
+      </form>
+
+      <div class="workspace-form-card" *ngIf="invitationLink() as link">
+        <p class="section-tag">Lien d'activation</p>
+        <p class="hint">Envoyez ce lien au salarie pour qu'il definisse son mot de passe et active son espace.</p>
+        <div class="action-row">
+          <input class="link-output" type="text" [value]="link" readonly>
+          <button class="checkout-button small" type="button" (click)="copyInvitationLink(link)">Copier</button>
+        </div>
+      </div>
+
+      <div class="table-wrap" *ngIf="invitations().length">
+        <table>
+          <thead><tr><th>Invite</th><th>Fonction</th><th>Expiration</th><th>Statut</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let invitation of invitations()">
+              <td>
+                {{ invitation.firstName }} {{ invitation.lastName }}
+                <div class="small-copy">{{ invitation.email }}</div>
+              </td>
+              <td>{{ invitation.jobTitle || invitation.department || '-' }}</td>
+              <td>{{ invitation.expiresAt | date:'dd/MM/yyyy' }}</td>
+              <td><span class="badge" [class.badge-alert]="invitation.status !== 'PENDING'">{{ invitation.status }}</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
   </section>
 
   <section class="panel" *ngIf="activeTab() === 'create'">
@@ -48,12 +116,95 @@
           <label class="workspace-field"><span>Date d'embauche</span><input type="date" formControlName="hireDate"></label>
         </div>
         <div class="workspace-inline-fields">
+          <label class="workspace-field"><span>Date de naissance</span><input type="date" formControlName="birthDate"></label>
+          <label class="workspace-field"><span>Genre</span><select formControlName="gender"><option *ngFor="let gender of genderTypes" [value]="gender">{{ genderLabel(gender) }}</option></select></label>
+        </div>
+        <div class="workspace-inline-fields">
           <label class="workspace-field"><span>Departement</span><input type="text" formControlName="department"></label>
           <label class="workspace-field"><span>Poste</span><input type="text" formControlName="jobTitle"></label>
         </div>
-        <label class="workspace-field"><span>Telephone</span><input type="text" formControlName="phoneNumber" autocomplete="tel"></label>
-        <button class="checkout-button" type="submit" [disabled]="saving()">{{ saving() ? 'Creation...' : 'Creer le salarie' }}</button>
+        <div class="workspace-inline-fields">
+          <label class="workspace-field"><span>Statut contrat</span><select formControlName="contractType"><option *ngFor="let type of contractTypes" [value]="type">{{ contractTypeLabel(type) }}</option></select></label>
+          <label class="workspace-field"><span>Telephone</span><input type="text" formControlName="phoneNumber" autocomplete="tel"></label>
+        </div>
+        <button class="checkout-button" type="submit" [disabled]="saving() || isSeatLimitReached()">{{ saving() ? 'Creation...' : 'Creer le salarie' }}</button>
       </form>
+  </section>
+
+  <section class="panel" *ngIf="activeTab() === 'import'">
+    <div class="section-head">
+      <div>
+        <p class="section-tag">Onboarding en lot</p>
+        <h2>Importer et inviter des salaries</h2>
+        <p class="hint">Colonnes attendues : email, firstName, lastName, countryOfResidence, department, jobTitle, birthDate, gender, contractType, hireDate, phoneNumber.</p>
+      </div>
+      <button class="checkout-button outline small" type="button" (click)="downloadEmployeeCsvTemplate()">Modele CSV</button>
+    </div>
+
+    <div class="workspace-form-card import-panel">
+      <label class="file-picker">
+        <span>{{ importFileName() || 'Selectionner un fichier CSV' }}</span>
+        <small>Les salaries seront invites, pas crees avec un mot de passe temporaire.</small>
+        <input type="file" accept=".csv,text/csv" (change)="handleEmployeeCsvUpload($event)">
+      </label>
+
+      <div class="import-summary-grid" *ngIf="importRows().length">
+        <article>
+          <span>Lignes</span>
+          <strong>{{ importRows().length }}</strong>
+        </article>
+        <article>
+          <span>Valides</span>
+          <strong>{{ importRows().length - invalidImportRowCount() }}</strong>
+        </article>
+        <article>
+          <span>A corriger</span>
+          <strong>{{ invalidImportRowCount() }}</strong>
+        </article>
+      </div>
+
+      <div class="action-row" *ngIf="importRows().length">
+        <button
+          class="checkout-button"
+          type="button"
+          (click)="importCsvEmployees()"
+          [disabled]="importRunning() || isSeatLimitReached()">
+          {{ importRunning() ? 'Import en cours...' : 'Creer les invitations' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="table-wrap" *ngIf="importRows().length">
+      <table>
+        <thead><tr><th>Ligne</th><th>Salarie</th><th>Residence</th><th>Profil</th><th>Contrat</th><th>Validation</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let row of importRows()">
+            <td>{{ row.lineNumber }}</td>
+            <td>
+              {{ row.firstName }} {{ row.lastName }}
+              <div class="small-copy">{{ row.email }}</div>
+            </td>
+            <td>{{ row.countryOfResidence }}</td>
+            <td>
+              {{ genderLabel(row.gender) }}
+              <div class="small-copy">{{ row.birthDate || 'Naissance non renseignee' }}</div>
+            </td>
+            <td>{{ contractTypeLabel(row.contractType) }}</td>
+            <td>
+              <span class="badge" [class.badge-alert]="row.errors.length">{{ row.errors.length ? row.errors.join(', ') : 'Pret' }}</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="workspace-form-card" *ngIf="importSummary() as summary">
+      <p class="section-tag">Rapport import</p>
+      <p class="hint">{{ summary.imported }} invitation(s) creee(s), {{ summary.failed }} erreur(s).</p>
+      <ul class="import-error-list" *ngIf="summary.errors.length">
+        <li *ngFor="let error of summary.errors">{{ error }}</li>
+      </ul>
+    </div>
   </section>
 
   <section class="panel" *ngIf="activeTab() === 'list'">
@@ -67,7 +218,7 @@
 
       <div class="table-wrap" *ngIf="employees().length; else emptyEmployees">
         <table>
-          <thead><tr><th>Salarie</th><th>Residence</th><th>Fonction</th><th>Statut</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Salarie</th><th>Residence</th><th>Fonction</th><th>Profil</th><th>Statut contrat</th><th>Compte</th><th>Actions</th></tr></thead>
           <tbody>
             <tr *ngFor="let employee of employees()" [formGroup]="editForm">
               <ng-container *ngIf="editingId() === employee.id; else readEmployeeRow">
@@ -86,6 +237,11 @@
                   <label class="workspace-field compact-field"><span>Embauche</span><input type="date" formControlName="hireDate"></label>
                 </td>
                 <td>
+                  <label class="workspace-field compact-field"><span>Naissance</span><input type="date" formControlName="birthDate"></label>
+                  <label class="workspace-field compact-field"><span>Genre</span><select formControlName="gender"><option *ngFor="let gender of genderTypes" [value]="gender">{{ genderLabel(gender) }}</option></select></label>
+                </td>
+                <td><label class="workspace-field compact-field"><span>Statut contrat</span><select formControlName="contractType"><option *ngFor="let type of contractTypes" [value]="type">{{ contractTypeLabel(type) }}</option></select></label></td>
+                <td>
                   <label class="checkbox-line"><input type="checkbox" formControlName="active"> Actif</label>
                 </td>
               </ng-container>
@@ -98,6 +254,11 @@
                 </td>
                 <td>{{ employee.countryOfResidence || '-' }}</td>
                 <td>{{ employee.jobTitle || employee.department || '-' }}</td>
+                <td>
+                  {{ genderLabel(employee.gender) }}
+                  <div class="small-copy">{{ employee.birthDate ? (employee.birthDate | date:'dd/MM/yyyy') : 'Naissance non renseignee' }}</div>
+                </td>
+                <td>{{ contractTypeLabel(employee.contractType) }}</td>
                 <td><span class="badge" [class.badge-alert]="!employee.active">{{ employee.active ? 'Actif' : 'Inactif' }}</span></td>
               </ng-template>
               <td>

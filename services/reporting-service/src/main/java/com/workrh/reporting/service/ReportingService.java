@@ -6,12 +6,17 @@ import com.workrh.common.events.ThresholdExceededEvent;
 import com.workrh.common.tenant.TenantContext;
 import com.workrh.reporting.api.dto.DashboardResponse;
 import com.workrh.reporting.api.dto.MonthlyStatsResponse;
+import com.workrh.reporting.api.dto.TaxSimulationRequest;
+import com.workrh.reporting.api.dto.TaxSimulationResponse;
 import com.workrh.reporting.domain.TeleworkMetricSnapshot;
 import com.workrh.reporting.repository.TeleworkMetricRepository;
+import com.workrh.common.web.NotFoundException;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -42,8 +47,9 @@ import org.springframework.web.client.RestTemplate;
 public class ReportingService {
 
     private static final int ANNUAL_FISCAL_LIMIT = 34;
-    private static final int ANNUAL_ALERT_THRESHOLD = 28;
     private static final int WEEKLY_COMPANY_LIMIT = 2;
+    private static final int RISK_ORANGE_THRESHOLD_PERCENT = 70;
+    private static final int RISK_RED_THRESHOLD_PERCENT = 90;
     private static final Color WORKRH_NAVY = new Color(16, 37, 66);
     private static final Color WORKRH_BLUE = new Color(19, 127, 168);
     private static final Color WORKRH_SKY = new Color(235, 247, 252);
@@ -75,9 +81,10 @@ public class ReportingService {
         snapshot.setMonth(date.getMonthValue());
         snapshot.setUsedDays(snapshot.getUsedDays() + 1);
         snapshot.setAnnualUsedDays(snapshot.getAnnualUsedDays() + 1);
-        snapshot.setAnnualRemainingDays(Math.max(ANNUAL_FISCAL_LIMIT - snapshot.getAnnualUsedDays(), 0));
+        snapshot.setAnnualFiscalLimitDays(normalizeAnnualLimit(snapshot.getAnnualFiscalLimitDays()));
+        snapshot.setAnnualRemainingDays(Math.max(snapshot.getAnnualFiscalLimitDays() - snapshot.getAnnualUsedDays(), 0));
         snapshot.setWeeklyUsedDays(Math.min(snapshot.getWeeklyUsedDays() + 1, 7));
-        snapshot.setAnnualFiscalLimitExceeded(snapshot.getAnnualUsedDays() > ANNUAL_FISCAL_LIMIT);
+        snapshot.setAnnualFiscalLimitExceeded(snapshot.getAnnualUsedDays() > snapshot.getAnnualFiscalLimitDays());
         snapshot.setWeeklyCompanyLimitExceeded(snapshot.getWeeklyUsedDays() > WEEKLY_COMPANY_LIMIT);
         snapshot.setUpdatedAt(Instant.now());
         teleworkMetricRepository.save(snapshot);
@@ -98,6 +105,7 @@ public class ReportingService {
         metrics.forEach(metric -> {
             metric.setAnnualFiscalLimitExceeded(true);
             metric.setAnnualUsedDays(Math.max(metric.getAnnualUsedDays(), thresholdExceededEvent.annualUsedDays()));
+            metric.setAnnualFiscalLimitDays(normalizeAnnualLimit(thresholdExceededEvent.annualLimit()));
             metric.setAnnualRemainingDays(Math.max(thresholdExceededEvent.annualLimit() - thresholdExceededEvent.annualUsedDays(), 0));
             metric.setUpdatedAt(Instant.now());
             teleworkMetricRepository.save(metric);
@@ -118,8 +126,11 @@ public class ReportingService {
                         metric.getAnnualUsedDays(),
                         metric.getAnnualRemainingDays(),
                         metric.getWeeklyUsedDays(),
-                        annualAlertLevel(metric.getAnnualUsedDays()),
-                        annualAlertLabel(metric.getAnnualUsedDays()),
+                        annualAlertLevel(metric),
+                        annualAlertLabel(metric),
+                        riskScorePercent(metric),
+                        riskLevel(metric),
+                        riskLabel(metric),
                         metric.isAnnualFiscalLimitExceeded(),
                         metric.isWeeklyCompanyLimitExceeded()))
                 .toList();
@@ -159,6 +170,53 @@ public class ReportingService {
         return new MonthlyStatsResponse(year, trackedEmployees, peakUsedDays, totalAlertMonths, months);
     }
 
+    public TaxSimulationResponse taxSimulation(int year, int month, TaxSimulationRequest request) {
+        if (request.annualGrossSalary() == null) {
+            throw new IllegalArgumentException("annualGrossSalary is required");
+        }
+
+        TeleworkMetricSnapshot metric = teleworkMetricRepository
+                .findByTenantIdAndEmployeeIdAndYearAndMonth(TenantContext.getTenantId(), request.employeeId(), year, month)
+                .or(() -> teleworkMetricRepository.findTopByTenantIdAndEmployeeIdAndYearAndMonthLessThanEqualOrderByMonthDesc(
+                        TenantContext.getTenantId(),
+                        request.employeeId(),
+                        year,
+                        month
+                ))
+                .orElseThrow(() -> new NotFoundException("No telework reporting metric found for this employee and period"));
+
+        int annualLimit = effectiveAnnualLimit(metric);
+        int annualTeleworkDays = metric.getAnnualUsedDays();
+        boolean thresholdExceeded = annualTeleworkDays > annualLimit;
+        BigDecimal salaryPerWorkDay = request.annualGrossSalary()
+                .divide(BigDecimal.valueOf(request.annualContractWorkDays()), 2, RoundingMode.HALF_UP);
+        BigDecimal foreignTaxableSalary = thresholdExceeded
+                ? salaryPerWorkDay.multiply(BigDecimal.valueOf(annualTeleworkDays)).setScale(2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal luxembourgTaxableSalary = request.annualGrossSalary()
+                .subtract(foreignTaxableSalary)
+                .max(BigDecimal.ZERO)
+                .setScale(2, RoundingMode.HALF_UP);
+
+        return new TaxSimulationResponse(
+                request.employeeId(),
+                year,
+                month,
+                annualTeleworkDays,
+                annualLimit,
+                request.annualContractWorkDays(),
+                thresholdExceeded,
+                request.annualGrossSalary().setScale(2, RoundingMode.HALF_UP),
+                salaryPerWorkDay,
+                luxembourgTaxableSalary,
+                foreignTaxableSalary,
+                thresholdExceeded
+                        ? "Threshold exceeded: salary linked to all days worked outside Luxembourg is allocated outside Luxembourg."
+                        : "Threshold not exceeded: Luxembourg keeps the taxing right on the tracked annual salary.",
+                "Simulation RH. It allocates taxable salary by work location; it is not a final personal income tax assessment."
+        );
+    }
+
     public byte[] exportCsv(int year, int month) {
         List<TeleworkMetricSnapshot> metrics = teleworkMetricRepository.findAllByTenantIdAndYearAndMonth(TenantContext.getTenantId(), year, month);
         DashboardResponse dashboard = dashboard(year, month);
@@ -182,6 +240,8 @@ public class ReportingService {
                 "Cumul annuel",
                 "Solde annuel",
                 "Alerte annuelle",
+                "Score risque",
+                "Risque",
                 "Hebdomadaire",
                 "Statut fiscal",
                 "Statut hebdomadaire",
@@ -196,7 +256,9 @@ public class ReportingService {
                         metric.getUsedDays(),
                         metric.getAnnualUsedDays(),
                         metric.getAnnualRemainingDays(),
-                        annualAlertLabel(metric.getAnnualUsedDays()),
+                        annualAlertLabel(metric),
+                        riskScorePercent(metric) + "%",
+                        riskLabel(metric),
                         metric.getWeeklyUsedDays(),
                         metric.isAnnualFiscalLimitExceeded() ? "Alerte fiscale" : "OK",
                         metric.isWeeklyCompanyLimitExceeded() ? "Alerte hebdomadaire" : "OK",
@@ -385,11 +447,11 @@ public class ReportingService {
         writeText(contentStream, boldFont, 8, margin + 10, y - 16, "Employe");
         writeText(contentStream, boldFont, 8, margin + 140, y - 16, "Mois");
         writeText(contentStream, boldFont, 8, margin + 178, y - 16, "Annuel");
-        writeText(contentStream, boldFont, 8, margin + 224, y - 16, "Alerte an.");
-        writeText(contentStream, boldFont, 8, margin + 296, y - 16, "Hebdo");
-        writeText(contentStream, boldFont, 8, margin + 342, y - 16, "Fiscal");
-        writeText(contentStream, boldFont, 8, margin + 408, y - 16, "Politique");
-        writeText(contentStream, boldFont, 8, margin + 468, y - 16, "Priorite");
+        writeText(contentStream, boldFont, 8, margin + 224, y - 16, "Risque");
+        writeText(contentStream, boldFont, 8, margin + 286, y - 16, "Hebdo");
+        writeText(contentStream, boldFont, 8, margin + 332, y - 16, "Fiscal");
+        writeText(contentStream, boldFont, 8, margin + 394, y - 16, "Politique");
+        writeText(contentStream, boldFont, 8, margin + 456, y - 16, "Priorite");
         return y - 24;
     }
 
@@ -414,11 +476,11 @@ public class ReportingService {
         writeText(contentStream, regularFont, 9, margin + 10, y - 18, truncate(employeeNames.getOrDefault(employee.employeeId(), "#%d".formatted(employee.employeeId())), 25));
         writeText(contentStream, regularFont, 9, margin + 146, y - 18, String.valueOf(employee.usedDays()));
         writeText(contentStream, regularFont, 9, margin + 188, y - 18, String.valueOf(employee.annualUsedDays()));
-        drawStatus(contentStream, regularFont, margin + 220, y - 22, annualPdfStatus(employee.annualAlertLevel()), !"OK".equals(employee.annualAlertLevel()));
-        writeText(contentStream, regularFont, 9, margin + 306, y - 18, String.valueOf(employee.weeklyUsedDays()));
-        drawStatus(contentStream, regularFont, margin + 338, y - 22, employee.annualFiscalLimitExceeded() ? "ALERTE" : "OK", employee.annualFiscalLimitExceeded());
-        drawStatus(contentStream, regularFont, margin + 408, y - 22, employee.weeklyCompanyLimitExceeded() ? "ALERTE" : "OK", employee.weeklyCompanyLimitExceeded());
-        writeText(contentStream, regularFont, 8, margin + 468, y - 18, priorityLabel(employee));
+        drawStatus(contentStream, regularFont, margin + 220, y - 22, riskPdfStatus(employee.riskLevel()), "RED".equals(employee.riskLevel()));
+        writeText(contentStream, regularFont, 9, margin + 292, y - 18, String.valueOf(employee.weeklyUsedDays()));
+        drawStatus(contentStream, regularFont, margin + 328, y - 22, employee.annualFiscalLimitExceeded() ? "ALERTE" : "OK", employee.annualFiscalLimitExceeded());
+        drawStatus(contentStream, regularFont, margin + 394, y - 22, employee.weeklyCompanyLimitExceeded() ? "ALERTE" : "OK", employee.weeklyCompanyLimitExceeded());
+        writeText(contentStream, regularFont, 8, margin + 456, y - 18, priorityLabel(employee));
         return y - rowHeight;
     }
 
@@ -506,34 +568,90 @@ public class ReportingService {
     }
 
     private boolean isAnnualAlert(TeleworkMetricSnapshot metric) {
-        return metric.getAnnualUsedDays() >= ANNUAL_ALERT_THRESHOLD;
+        return riskScorePercent(metric) >= RISK_ORANGE_THRESHOLD_PERCENT;
     }
 
-    private String annualAlertLevel(int annualUsedDays) {
-        if (annualUsedDays > ANNUAL_FISCAL_LIMIT) {
+    private String annualAlertLevel(TeleworkMetricSnapshot metric) {
+        int riskScore = riskScorePercent(metric);
+        if (riskScore > 100) {
             return "EXCEEDED";
         }
-        if (annualUsedDays >= ANNUAL_ALERT_THRESHOLD) {
+        if (riskScore >= RISK_ORANGE_THRESHOLD_PERCENT) {
             return "WARNING";
         }
         return "OK";
     }
 
-    private String annualAlertLabel(int annualUsedDays) {
-        if (annualUsedDays > ANNUAL_FISCAL_LIMIT) {
-            return "Depassement annuel: %d/%d jours".formatted(annualUsedDays, ANNUAL_FISCAL_LIMIT);
+    private String annualAlertLabel(TeleworkMetricSnapshot metric) {
+        int annualUsedDays = metric.getAnnualUsedDays();
+        int annualLimit = effectiveAnnualLimit(metric);
+        int riskScore = riskScorePercent(annualUsedDays, annualLimit);
+        if (riskScore > 100) {
+            return "Depassement annuel: %d/%d jours".formatted(annualUsedDays, annualLimit);
         }
-        if (annualUsedDays >= ANNUAL_ALERT_THRESHOLD) {
-            return "A surveiller: %d/%d jours".formatted(annualUsedDays, ANNUAL_FISCAL_LIMIT);
+        if (riskScore >= RISK_ORANGE_THRESHOLD_PERCENT) {
+            return "A surveiller: %d/%d jours".formatted(annualUsedDays, annualLimit);
         }
-        return "OK: %d/%d jours".formatted(annualUsedDays, ANNUAL_FISCAL_LIMIT);
+        return "OK: %d/%d jours".formatted(annualUsedDays, annualLimit);
     }
 
-    private String annualPdfStatus(String annualAlertLevel) {
-        return switch (annualAlertLevel) {
-            case "EXCEEDED" -> "DEPASSE";
-            case "WARNING" -> "SURV.";
-            default -> "OK";
+    private int riskScorePercent(TeleworkMetricSnapshot metric) {
+        return riskScorePercent(metric.getAnnualUsedDays(), effectiveAnnualLimit(metric));
+    }
+
+    private int effectiveAnnualLimit(TeleworkMetricSnapshot metric) {
+        if (metric.getAnnualFiscalLimitDays() > 0) {
+            return metric.getAnnualFiscalLimitDays();
+        }
+        int effectiveLimit = metric.getAnnualUsedDays() + metric.getAnnualRemainingDays();
+        if (effectiveLimit <= 0) {
+            effectiveLimit = ANNUAL_FISCAL_LIMIT;
+        }
+        return effectiveLimit;
+    }
+
+    private int normalizeAnnualLimit(int annualLimit) {
+        return annualLimit > 0 ? annualLimit : ANNUAL_FISCAL_LIMIT;
+    }
+
+    private int riskScorePercent(int usedDays, int annualLimit) {
+        if (annualLimit <= 0) {
+            return usedDays > 0 ? 100 : 0;
+        }
+        return (int) Math.round((usedDays * 100.0d) / annualLimit);
+    }
+
+    private String riskLevel(TeleworkMetricSnapshot metric) {
+        return riskLevel(riskScorePercent(metric));
+    }
+
+    private String riskLevel(int riskScorePercent) {
+        if (riskScorePercent > RISK_RED_THRESHOLD_PERCENT) {
+            return "RED";
+        }
+        if (riskScorePercent >= RISK_ORANGE_THRESHOLD_PERCENT) {
+            return "ORANGE";
+        }
+        return "GREEN";
+    }
+
+    private String riskLabel(TeleworkMetricSnapshot metric) {
+        return riskLabel(riskScorePercent(metric));
+    }
+
+    private String riskLabel(int riskScorePercent) {
+        return switch (riskLevel(riskScorePercent)) {
+            case "RED" -> "Rouge";
+            case "ORANGE" -> "Orange";
+            default -> "Vert";
+        };
+    }
+
+    private String riskPdfStatus(String riskLevel) {
+        return switch (riskLevel) {
+            case "RED" -> "ROUGE";
+            case "ORANGE" -> "ORANGE";
+            default -> "VERT";
         };
     }
 

@@ -12,6 +12,7 @@ target/
 *.run.out.log
 *.run.err.log
 .run-logs/
+logs/
 
 # Local environment files
 .env

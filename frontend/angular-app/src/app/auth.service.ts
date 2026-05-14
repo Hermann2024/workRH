@@ -32,6 +32,7 @@ export class AuthService {
   }
 
   signup(request: {
+    companyName?: string | null;
     tenantId: string;
     firstName: string;
     lastName: string;
@@ -46,6 +47,8 @@ export class AuthService {
     return this.http.post<LoginApiResponse>(
       `${API_BASE_URL}/api/auth/signup`,
       {
+        companyName: request.companyName?.trim() || null,
+        tenantId: normalizedTenant,
         firstName: request.firstName.trim(),
         lastName: request.lastName.trim(),
         email: normalizedEmail,
@@ -57,6 +60,53 @@ export class AuthService {
       { headers: { 'X-Tenant-Id': normalizedTenant } }
     ).pipe(
       map(response => this.toSession(response, normalizedEmail)),
+      tap(session => this.persistSession(session))
+    );
+  }
+
+  previewInvitation(token: string): Observable<{
+    tenantId: string;
+    companyName: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    expiresAt: string | null;
+  }> {
+    return this.http.get<{
+      tenantId: string;
+      companyName: string;
+      email: string;
+      firstName: string;
+      lastName: string;
+      expiresAt: string | null;
+    }>(`${API_BASE_URL}/api/auth/invitations?token=${encodeURIComponent(token)}`);
+  }
+
+  acceptInvitation(token: string, password: string, email: string): Observable<AuthSession> {
+    return this.http.post<LoginApiResponse>(
+      `${API_BASE_URL}/api/auth/invitations/accept`,
+      { token, password }
+    ).pipe(
+      map(response => this.toSession(response, email.trim().toLowerCase())),
+      tap(session => this.persistSession(session))
+    );
+  }
+
+  requestPasswordReset(email: string, tenantId: string): Observable<{ accepted: boolean; emailSent: boolean }> {
+    const normalizedTenant = this.normalizeTenantId(tenantId);
+    return this.http.post<{ accepted: boolean; emailSent: boolean }>(
+      `${API_BASE_URL}/api/auth/password-reset/request`,
+      { email: email.trim().toLowerCase() },
+      normalizedTenant ? { headers: { 'X-Tenant-Id': normalizedTenant } } : {}
+    );
+  }
+
+  confirmPasswordReset(token: string, password: string): Observable<AuthSession> {
+    return this.http.post<LoginApiResponse>(
+      `${API_BASE_URL}/api/auth/password-reset/confirm`,
+      { token, password }
+    ).pipe(
+      map(response => this.toSession(response, '')),
       tap(session => this.persistSession(session))
     );
   }
@@ -76,7 +126,12 @@ export class AuthService {
       return null;
     }
     try {
-      return JSON.parse(raw) as AuthSession;
+      const session = JSON.parse(raw) as AuthSession;
+      if (!this.isUsableAccessToken(session.accessToken)) {
+        localStorage.removeItem(STORAGE_KEY);
+        return null;
+      }
+      return session;
     } catch {
       localStorage.removeItem(STORAGE_KEY);
       return null;
@@ -95,6 +150,32 @@ export class AuthService {
   private persistSession(session: AuthSession): void {
     this.sessionState.set(session);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+  }
+
+  private isUsableAccessToken(accessToken: string): boolean {
+    if (!accessToken) {
+      return false;
+    }
+    if (accessToken.startsWith('demo|')) {
+      return true;
+    }
+
+    const [, payload] = accessToken.split('.');
+    if (!payload) {
+      return false;
+    }
+
+    try {
+      const normalizedPayload = payload.replace(/-/g, '+').replace(/_/g, '/');
+      const paddedPayload = normalizedPayload.padEnd(
+        normalizedPayload.length + (4 - normalizedPayload.length % 4) % 4,
+        '='
+      );
+      const claims = JSON.parse(atob(paddedPayload)) as { exp?: number };
+      return typeof claims.exp === 'number' && claims.exp * 1000 > Date.now();
+    } catch {
+      return false;
+    }
   }
 
   private normalizeTenantId(tenantId: string): string {

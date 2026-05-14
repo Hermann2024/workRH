@@ -3,6 +3,7 @@ package com.workrh.subscription.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.workrh.common.tenant.TenantContext;
@@ -35,7 +36,13 @@ class SubscriptionServiceTest {
     private final SubscriptionPlanRepository planRepository = Mockito.mock(SubscriptionPlanRepository.class);
     private final TenantSubscriptionRepository subscriptionRepository = Mockito.mock(TenantSubscriptionRepository.class);
     private final StripeCheckoutService stripeCheckoutService = Mockito.mock(StripeCheckoutService.class);
-    private final SubscriptionService subscriptionService = new SubscriptionService(planRepository, subscriptionRepository, stripeCheckoutService);
+    private final WorkspaceSubscriptionSyncClient workspaceSubscriptionSyncClient = Mockito.mock(WorkspaceSubscriptionSyncClient.class);
+    private final SubscriptionService subscriptionService = new SubscriptionService(
+            planRepository,
+            subscriptionRepository,
+            stripeCheckoutService,
+            workspaceSubscriptionSyncClient
+    );
 
     @AfterEach
     void cleanup() {
@@ -144,6 +151,7 @@ class SubscriptionServiceTest {
 
         assertThat(response.planCode()).isEqualTo(PlanCode.PRO);
         assertThat(response.advancedExportOptionEnabled()).isTrue();
+        verify(workspaceSubscriptionSyncClient).sync(subscription);
     }
 
     @Test
@@ -166,6 +174,7 @@ class SubscriptionServiceTest {
 
         assertThat(response.cancelAtPeriodEnd()).isTrue();
         assertThat(response.cancellationReason()).isEqualTo("Budget cut");
+        verify(workspaceSubscriptionSyncClient).sync(subscription);
     }
 
     @Test
@@ -190,6 +199,7 @@ class SubscriptionServiceTest {
 
         assertThat(response.cancelAtPeriodEnd()).isFalse();
         assertThat(response.cancellationReason()).isNull();
+        verify(workspaceSubscriptionSyncClient).sync(subscription);
     }
 
     private SubscriptionPlan buildPlan(PlanCode code, Integer minEmployees, Integer maxEmployees, Set<FeatureCode> features) {

@@ -9,18 +9,27 @@ import com.workrh.sickness.api.dto.SicknessRequestDto;
 import com.workrh.sickness.api.dto.SicknessResponseDto;
 import com.workrh.sickness.domain.SicknessRecord;
 import com.workrh.sickness.repository.SicknessRepository;
+import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class SicknessService {
 
     private static final Logger log = LoggerFactory.getLogger(SicknessService.class);
+    private static final long MAX_EVIDENCE_SIZE_BYTES = 10L * 1024L * 1024L;
+    private static final Set<String> ALLOWED_EVIDENCE_CONTENT_TYPES = Set.of(
+            "application/pdf",
+            "image/jpeg",
+            "image/png"
+    );
 
     private final SicknessRepository sicknessRepository;
     private final KafkaTemplate<String, Object> kafkaTemplate;
@@ -58,10 +67,33 @@ public class SicknessService {
     }
 
     public SicknessResponseDto findById(Long sicknessId) {
+        return toDto(getAccessibleRecord(sicknessId));
+    }
+
+    public SicknessResponseDto uploadEvidence(Long sicknessId, MultipartFile file) {
+        SicknessRecord record = getAccessibleRecord(sicknessId);
+        storeEvidence(record, file);
+        record.setUpdatedAt(Instant.now());
+        return toDto(sicknessRepository.save(record));
+    }
+
+    public EvidenceDownload downloadEvidence(Long sicknessId) {
+        SicknessRecord record = getAccessibleRecord(sicknessId);
+        if (record.getEvidenceContent() == null || record.getEvidenceContent().length == 0) {
+            throw new NotFoundException("Sickness supporting evidence not found");
+        }
+        return new EvidenceDownload(
+                record.getEvidenceFileName(),
+                record.getEvidenceContentType(),
+                record.getEvidenceContent()
+        );
+    }
+
+    private SicknessRecord getAccessibleRecord(Long sicknessId) {
         SicknessRecord record = sicknessRepository.findByIdAndTenantId(sicknessId, TenantContext.getTenantId())
                 .orElseThrow(() -> new NotFoundException("Sickness record not found"));
         assertCanAccessEmployee(record.getEmployeeId());
-        return toDto(record);
+        return record;
     }
 
     public List<SicknessResponseDto> listCurrentEmployee() {
@@ -81,9 +113,47 @@ public class SicknessService {
                 record.getStartDate(),
                 record.getEndDate(),
                 record.getComment(),
+                true,
+                record.getEvidenceContent() != null && record.getEvidenceContent().length > 0,
+                record.getEvidenceFileName(),
+                record.getEvidenceUploadedAt(),
                 record.getCreatedAt(),
                 record.getUpdatedAt()
         );
+    }
+
+    private void storeEvidence(SicknessRecord record, MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new BadRequestException("Sickness supporting evidence file is required");
+        }
+        if (file.getSize() > MAX_EVIDENCE_SIZE_BYTES) {
+            throw new BadRequestException("Sickness supporting evidence file must be 10 MB or less");
+        }
+        String contentType = file.getContentType();
+        if (contentType == null || !ALLOWED_EVIDENCE_CONTENT_TYPES.contains(contentType)) {
+            throw new BadRequestException("Sickness supporting evidence must be a PDF, JPG or PNG file");
+        }
+        try {
+            record.setEvidenceContent(file.getBytes());
+        } catch (IOException exception) {
+            throw new BadRequestException("Unable to read sickness supporting evidence file");
+        }
+        record.setEvidenceFileName(sanitizeFileName(file.getOriginalFilename()));
+        record.setEvidenceContentType(contentType);
+        record.setEvidenceUploadedAt(Instant.now());
+        record.setEvidenceUploadedBy(SecurityUtils.currentUsername());
+    }
+
+    private String sanitizeFileName(String fileName) {
+        if (fileName == null || fileName.isBlank()) {
+            return "justificatif-maladie";
+        }
+        String normalized = fileName.replace('\\', '/');
+        String lastSegment = normalized.substring(normalized.lastIndexOf('/') + 1);
+        return lastSegment.replaceAll("[^A-Za-z0-9._-]", "_");
+    }
+
+    public record EvidenceDownload(String fileName, String contentType, byte[] content) {
     }
 
     private void assertCanAccessEmployee(Long employeeId) {

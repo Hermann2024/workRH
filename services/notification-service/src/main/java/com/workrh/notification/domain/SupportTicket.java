@@ -1,5 +1,6 @@
 package com.workrh.notification.domain;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -25,7 +26,11 @@ public class SupportTicket {
     private String requesterName;
     private String requesterEmail;
     private String phoneNumber;
+
+    @Column(length = 1024)
     private String subject;
+
+    @Column(columnDefinition = "TEXT")
     private String message;
 
     @Enumerated(EnumType.STRING)
@@ -39,6 +44,9 @@ public class SupportTicket {
 
     private Instant slaDueAt;
     private Instant resolvedAt;
+    @Column(columnDefinition = "TEXT")
+    private String resolutionMessage;
+    private String resolvedBy;
     private Instant createdAt = Instant.now();
     private Instant updatedAt = Instant.now();
 }

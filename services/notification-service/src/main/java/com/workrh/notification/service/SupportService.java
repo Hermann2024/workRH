@@ -2,6 +2,7 @@ package com.workrh.notification.service;
 
 import com.workrh.common.tenant.TenantContext;
 import com.workrh.common.web.BadRequestException;
+import com.workrh.common.web.NotFoundException;
 import com.workrh.notification.api.dto.SlaTicketResponse;
 import com.workrh.notification.api.dto.SupportTicketRequest;
 import com.workrh.notification.api.dto.SupportTicketResponse;
@@ -17,6 +18,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -82,6 +84,47 @@ public class SupportService {
                 .toList();
     }
 
+    public List<SupportTicketResponse> listPlatformTickets() {
+        Instant now = Instant.now();
+        return supportTicketRepository.findAllByOrderByCreatedAtDesc().stream()
+                .map(ticket -> toResponse(ticket, now))
+                .toList();
+    }
+
+    public SupportTicketResponse resolvePlatformTicket(Long ticketId, String resolutionMessage) {
+        if (isBlank(resolutionMessage)) {
+            throw new BadRequestException("Resolution message is required");
+        }
+
+        SupportTicket ticket = supportTicketRepository.findById(ticketId)
+                .orElseThrow(() -> new NotFoundException("Support ticket not found"));
+        return resolveTicket(ticket, resolutionMessage);
+    }
+
+    public SupportTicketResponse resolveTenantTicket(Long ticketId, String resolutionMessage) {
+        if (isBlank(resolutionMessage)) {
+            throw new BadRequestException("Resolution message is required");
+        }
+
+        String tenantId = TenantContext.getTenantId();
+        SupportTicket ticket = supportTicketRepository.findById(ticketId)
+                .filter(item -> tenantId.equals(item.getTenantId()))
+                .orElseThrow(() -> new NotFoundException("Support ticket not found"));
+        return resolveTicket(ticket, resolutionMessage);
+    }
+
+    public void deletePlatformTicket(Long ticketId) {
+        SupportTicket ticket = supportTicketRepository.findById(ticketId)
+                .orElseThrow(() -> new NotFoundException("Support ticket not found"));
+        supportTicketRepository.delete(ticket);
+        saveLog(
+                ticket.getTenantId(),
+                "SUPPORT_DELETE",
+                "Support ticket deleted #" + ticket.getId(),
+                "Support ticket #%d deleted by %s".formatted(ticket.getId(), currentActor())
+        );
+    }
+
     public List<SlaTicketResponse> listSlaTickets() {
         Instant now = Instant.now();
         return supportTicketRepository.findAllByTenantIdAndStatusInOrderByCreatedAtDesc(
@@ -144,6 +187,35 @@ public class SupportService {
         return createTicket(request, category, SupportTicketPriority.PRIORITY, slaDueAt);
     }
 
+    private SupportTicketResponse resolveTicket(SupportTicket ticket, String resolutionMessage) {
+        Instant now = Instant.now();
+        ticket.setStatus(SupportTicketStatus.RESOLVED);
+        ticket.setResolutionMessage(trim(resolutionMessage));
+        ticket.setResolvedBy(currentActor());
+        ticket.setResolvedAt(now);
+        ticket.setUpdatedAt(now);
+
+        SupportTicket saved = supportTicketRepository.save(ticket);
+        boolean resolutionSent = supportEmailService.sendResolution(saved);
+        saveLog(
+                saved.getTenantId(),
+                resolutionSent ? "EMAIL_RESOLUTION" : "EMAIL_RESOLUTION_SKIPPED",
+                "Support ticket resolved #" + saved.getId(),
+                "Resolution for support ticket #%d by %s".formatted(saved.getId(), defaultValue(saved.getResolvedBy(), "admin"))
+        );
+        saveLog(
+                saved.getTenantId(),
+                "SUPPORT_RESOLVED_HR",
+                "Ticket support résolu #" + saved.getId(),
+                "Le ticket support #%d (%s) a été résolu par %s. Réponse : %s".formatted(
+                        saved.getId(),
+                        defaultValue(saved.getSubject(), "sans sujet"),
+                        defaultValue(saved.getResolvedBy(), "admin"),
+                        defaultValue(saved.getResolutionMessage(), "non renseignée"))
+        );
+        return toResponse(saved);
+    }
+
     private void validateRequest(SupportTicketRequest request) {
         if (request == null) {
             throw new BadRequestException("Support ticket payload is required");
@@ -166,6 +238,7 @@ public class SupportService {
     private SupportTicketResponse toResponse(SupportTicket ticket, Instant now) {
         return new SupportTicketResponse(
                 ticket.getId(),
+                ticket.getTenantId(),
                 ticket.getCategory().name(),
                 ticket.getPriority().name(),
                 ticket.getStatus().name(),
@@ -174,7 +247,10 @@ public class SupportService {
                 ticket.getPhoneNumber(),
                 ticket.getSubject(),
                 ticket.getMessage(),
+                ticket.getResolutionMessage(),
+                ticket.getResolvedBy(),
                 ticket.getSlaDueAt(),
+                ticket.getResolvedAt(),
                 ticket.getCreatedAt(),
                 ticket.getSlaDueAt() != null && now.isAfter(ticket.getSlaDueAt())
         );
@@ -213,5 +289,13 @@ public class SupportService {
 
     private String defaultValue(String value, String fallback) {
         return isBlank(value) ? fallback : value;
+    }
+
+    private String currentActor() {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || isBlank(authentication.getName())) {
+            return "platform-admin";
+        }
+        return authentication.getName();
     }
 }

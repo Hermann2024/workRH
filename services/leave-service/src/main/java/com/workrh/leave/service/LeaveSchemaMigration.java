@@ -29,6 +29,11 @@ public class LeaveSchemaMigration implements CommandLineRunner {
         jdbcTemplate.execute(
                 "ALTER TABLE leave_requests ADD CONSTRAINT leave_requests_type_check CHECK (type IN (" + allowedTypes + "))"
         );
+        jdbcTemplate.execute("ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS evidence_file_name VARCHAR(255)");
+        jdbcTemplate.execute("ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS evidence_content_type VARCHAR(120)");
+        jdbcTemplate.execute("ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS evidence_content BYTEA");
+        jdbcTemplate.execute("ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS evidence_uploaded_at TIMESTAMP WITH TIME ZONE");
+        jdbcTemplate.execute("ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS evidence_uploaded_by VARCHAR(255)");
         jdbcTemplate.execute("CREATE INDEX IF NOT EXISTS idx_leave_requests_tenant ON leave_requests (tenant_id)");
         jdbcTemplate.execute("CREATE INDEX IF NOT EXISTS idx_leave_requests_tenant_employee ON leave_requests (tenant_id, employee_id)");
         jdbcTemplate.execute("CREATE INDEX IF NOT EXISTS idx_leave_requests_tenant_dates ON leave_requests (tenant_id, start_date, end_date)");

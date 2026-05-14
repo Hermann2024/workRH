@@ -7,6 +7,10 @@ import com.workrh.sickness.api.dto.SicknessResponseDto;
 import com.workrh.sickness.service.SicknessService;
 import jakarta.validation.Valid;
 import java.util.List;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/sickness")
@@ -37,6 +42,27 @@ public class SicknessController {
     @PreAuthorize("hasAnyAuthority('HR','EMPLOYEE')")
     public SicknessResponseDto findById(@PathVariable("sicknessId") Long sicknessId) {
         return sicknessService.findById(sicknessId);
+    }
+
+    @PostMapping(value = "/{sicknessId}/evidence", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyAuthority('HR','EMPLOYEE')")
+    public SicknessResponseDto uploadEvidence(
+            @PathVariable("sicknessId") Long sicknessId,
+            @RequestParam("file") MultipartFile file) {
+        return sicknessService.uploadEvidence(sicknessId, file);
+    }
+
+    @GetMapping("/{sicknessId}/evidence")
+    @PreAuthorize("hasAnyAuthority('HR','EMPLOYEE')")
+    public ResponseEntity<byte[]> downloadEvidence(@PathVariable("sicknessId") Long sicknessId) {
+        SicknessService.EvidenceDownload evidence = sicknessService.downloadEvidence(sicknessId);
+        return ResponseEntity.ok()
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment().filename(evidence.fileName()).build().toString()
+                )
+                .contentType(MediaType.parseMediaType(evidence.contentType()))
+                .body(evidence.content());
     }
 
     @GetMapping

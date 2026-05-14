@@ -5,8 +5,10 @@ import static org.mockito.Mockito.when;
 
 import com.workrh.common.tenant.TenantContext;
 import com.workrh.common.events.ThresholdAlertEvent;
+import com.workrh.reporting.api.dto.TaxSimulationRequest;
 import com.workrh.reporting.domain.TeleworkMetricSnapshot;
 import com.workrh.reporting.repository.TeleworkMetricRepository;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
@@ -99,6 +101,90 @@ class ReportingServiceTest {
         assertThat(response.months()).hasSize(12);
         assertThat(response.months().get(2).usedDays()).isEqualTo(12);
         assertThat(response.months().get(3).fiscalAlerts()).isEqualTo(1);
+    }
+
+    @Test
+    void shouldExposeRiskScoreOnDashboard() {
+        TenantContext.setTenantId("tenant-a");
+        TeleworkMetricSnapshot metric = new TeleworkMetricSnapshot();
+        metric.setTenantId("tenant-a");
+        metric.setEmployeeId(42L);
+        metric.setYear(2026);
+        metric.setMonth(3);
+        metric.setUsedDays(5);
+        metric.setAnnualUsedDays(24);
+        metric.setAnnualRemainingDays(10);
+        metric.setWeeklyUsedDays(1);
+
+        when(teleworkMetricRepository.findAllByTenantIdAndYearAndMonth("tenant-a", 2026, 3))
+                .thenReturn(List.of(metric));
+
+        var response = reportingService.dashboard(2026, 3);
+
+        assertThat(response.annualAlerts()).isEqualTo(1);
+        assertThat(response.employees()).singleElement()
+                .satisfies(employee -> {
+                    assertThat(employee.riskScorePercent()).isEqualTo(71);
+                    assertThat(employee.riskLevel()).isEqualTo("ORANGE");
+                    assertThat(employee.riskLabel()).isEqualTo("Orange");
+                });
+    }
+
+    @Test
+    void shouldSimulateForeignTaxableSalaryWhenThresholdExceeded() {
+        TenantContext.setTenantId("tenant-a");
+        TeleworkMetricSnapshot metric = new TeleworkMetricSnapshot();
+        metric.setTenantId("tenant-a");
+        metric.setEmployeeId(42L);
+        metric.setYear(2026);
+        metric.setMonth(12);
+        metric.setAnnualUsedDays(40);
+        metric.setAnnualFiscalLimitDays(34);
+        metric.setAnnualRemainingDays(0);
+        metric.setAnnualFiscalLimitExceeded(true);
+
+        when(teleworkMetricRepository.findByTenantIdAndEmployeeIdAndYearAndMonth("tenant-a", 42L, 2026, 12))
+                .thenReturn(java.util.Optional.of(metric));
+
+        var response = reportingService.taxSimulation(
+                2026,
+                12,
+                new TaxSimulationRequest(42L, new BigDecimal("99892.00"), 226)
+        );
+
+        assertThat(response.thresholdExceeded()).isTrue();
+        assertThat(response.salaryPerWorkDay()).isEqualByComparingTo("442.00");
+        assertThat(response.foreignTaxableSalary()).isEqualByComparingTo("17680.00");
+        assertThat(response.luxembourgTaxableSalary()).isEqualByComparingTo("82212.00");
+    }
+
+    @Test
+    void shouldUseLatestAvailableYearMetricForTaxSimulationWhenRequestedMonthHasNoSnapshot() {
+        TenantContext.setTenantId("tenant-a");
+        TeleworkMetricSnapshot metric = new TeleworkMetricSnapshot();
+        metric.setTenantId("tenant-a");
+        metric.setEmployeeId(42L);
+        metric.setYear(2026);
+        metric.setMonth(4);
+        metric.setAnnualUsedDays(24);
+        metric.setAnnualFiscalLimitDays(34);
+        metric.setAnnualRemainingDays(10);
+
+        when(teleworkMetricRepository.findByTenantIdAndEmployeeIdAndYearAndMonth("tenant-a", 42L, 2026, 5))
+                .thenReturn(java.util.Optional.empty());
+        when(teleworkMetricRepository.findTopByTenantIdAndEmployeeIdAndYearAndMonthLessThanEqualOrderByMonthDesc("tenant-a", 42L, 2026, 5))
+                .thenReturn(java.util.Optional.of(metric));
+
+        var response = reportingService.taxSimulation(
+                2026,
+                5,
+                new TaxSimulationRequest(42L, new BigDecimal("60000.00"), 220)
+        );
+
+        assertThat(response.month()).isEqualTo(5);
+        assertThat(response.annualTeleworkDays()).isEqualTo(24);
+        assertThat(response.thresholdExceeded()).isFalse();
+        assertThat(response.foreignTaxableSalary()).isEqualByComparingTo("0.00");
     }
 
     @Test

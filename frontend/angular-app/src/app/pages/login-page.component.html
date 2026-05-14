@@ -1,27 +1,27 @@
 <section class="login-layout">
   <article class="login-intro panel">
-    <p class="section-tag">Accès</p>
-    <h2>{{ showDemoHints ? 'Comptes de démonstration' : 'Connexion sécurisée' }}</h2>
+    <p class="section-tag">{{ 'login.access_tag' | t }}</p>
+    <h2>{{ showDemoHints ? ('login.demo_title' | t) : ('login.secure_title' | t) }}</h2>
 
     <div class="login-points" *ngIf="showDemoHints; else productionIntro">
       <button type="button" class="login-point" (click)="fillCredentials('demo@company.com')">
-        <strong>Compte démo</strong>
+        <strong>{{ 'login.demo_account' | t }}</strong>
         <span>demo&#64;company.com</span>
       </button>
       <div class="login-point">
-        <strong>Tenant</strong>
+        <strong>{{ 'login.tenant' | t }}</strong>
         <span>{{ loginForm.controls.tenantId.value || 'demo-lu' }}</span>
       </div>
       <button type="button" class="login-point" (click)="fillCredentials('rh@company.com')">
-        <strong>Compte RH</strong>
+        <strong>{{ 'login.hr_account' | t }}</strong>
         <span>rh&#64;company.com</span>
       </button>
       <div class="login-point">
-        <strong>Compte admin</strong>
+        <strong>{{ 'login.admin_account' | t }}</strong>
         <span>admin&#64;company.com</span>
       </div>
       <div class="login-point">
-        <strong>Compte employé</strong>
+        <strong>{{ 'login.employee_account' | t }}</strong>
         <span>employee&#64;company.com</span>
       </div>
     </div>
@@ -29,29 +29,29 @@
     <ng-template #productionIntro>
       <div class="login-points">
         <div class="login-point">
-          <strong>Tenant dédié</strong>
-          <span>Chaque entreprise se connecte sur son propre espace.</span>
+          <strong>{{ 'login.prod_tenant_title' | t }}</strong>
+          <span>{{ 'login.prod_tenant_body' | t }}</span>
         </div>
         <div class="login-point">
-          <strong>Accès par rôles</strong>
-          <span>Parcours séparés pour RH, administrateurs et employés.</span>
+          <strong>{{ 'login.prod_roles_title' | t }}</strong>
+          <span>{{ 'login.prod_roles_body' | t }}</span>
         </div>
         <div class="login-point">
-          <strong>Conformité tracée</strong>
-          <span>Suivi du télétravail, des congés et des alertes dans un même espace.</span>
+          <strong>{{ 'login.prod_compliance_title' | t }}</strong>
+          <span>{{ 'login.prod_compliance_body' | t }}</span>
         </div>
       </div>
     </ng-template>
 
-    <p class="hint" *ngIf="showDemoHints">Mot de passe: <strong>{{ loginForm.controls.password.value || 'secret' }}</strong>.</p>
-    <p class="hint" *ngIf="!showDemoHints">Utilisez les identifiants transmis lors de l'onboarding WorkRH.</p>
+    <p class="hint" *ngIf="showDemoHints">{{ 'login.demo_password' | t }} <strong>{{ loginForm.controls.password.value || 'secret' }}</strong>.</p>
+    <p class="hint" *ngIf="!showDemoHints">{{ 'login.prod_hint' | t }}</p>
   </article>
 
   <section class="panel login-panel">
     <div class="login-panel-head">
       <div>
-        <p class="section-tag">Session</p>
-        <h2>Se connecter</h2>
+        <p class="section-tag">{{ 'login.session_tag' | t }}</p>
+        <h2>{{ 'login.title' | t }}</h2>
       </div>
     </div>
 
@@ -61,28 +61,32 @@
 
     <form [formGroup]="loginForm" (ngSubmit)="submit()" class="login-form">
       <label class="login-field">
-        <span>Tenant</span>
+        <span>{{ 'login.tenant' | t }}</span>
         <input type="text" formControlName="tenantId" placeholder="acme-lu">
       </label>
 
       <label class="login-field">
-        <span>Email</span>
+        <span>{{ 'login.email' | t }}</span>
         <input type="email" formControlName="email" placeholder="contact@entreprise.com">
       </label>
 
       <label class="login-field">
-        <span>Mot de passe</span>
+        <span>{{ 'login.password' | t }}</span>
         <input type="password" formControlName="password">
       </label>
 
       <button type="submit" [disabled]="submitting()">
-        {{ submitting() ? 'Connexion...' : 'Se connecter' }}
+        {{ submitting() ? ('login.submitting' | t) : ('login.submit' | t) }}
       </button>
     </form>
 
     <p class="hint auth-switch-copy">
-      Nouveau sur WorkRH ?
-      <a routerLink="/signup">Créer un compte</a>
+      <a routerLink="/forgot-password">{{ 'login.forgot' | t }}</a>
+    </p>
+
+    <p class="hint auth-switch-copy">
+      {{ 'login.new_hint' | t }}
+      <a routerLink="/signup">{{ 'login.create_account' | t }}</a>
     </p>
   </section>
 </section>

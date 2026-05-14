@@ -13,10 +13,21 @@ import com.workrh.common.tenant.TenantContext;
 import com.workrh.common.web.BadRequestException;
 import com.workrh.users.api.dto.EmployeeCreateRequest;
 import com.workrh.users.api.dto.EmployeeUpdateRequest;
+import com.workrh.users.api.dto.PasswordResetConfirmRequest;
 import com.workrh.users.api.dto.SignupRequest;
 import com.workrh.users.domain.Employee;
+import com.workrh.users.domain.EmployeeGender;
+import com.workrh.users.domain.EmploymentContractType;
+import com.workrh.users.domain.PasswordResetToken;
 import com.workrh.users.domain.Role;
+import com.workrh.users.domain.TenantWorkspace;
 import com.workrh.users.repository.EmployeeRepository;
+import com.workrh.users.repository.EmployeeInvitationRepository;
+import com.workrh.users.repository.PasswordResetTokenRepository;
+import com.workrh.users.repository.TenantWorkspaceRepository;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.HexFormat;
 import java.time.LocalDate;
 import java.time.Instant;
 import java.util.Optional;
@@ -33,11 +44,20 @@ class EmployeeServiceTest {
     private final JwtService jwtService = Mockito.mock(JwtService.class);
     private final SubscriptionBootstrapClient subscriptionBootstrapClient =
             Mockito.mock(SubscriptionBootstrapClient.class);
+    private final TenantWorkspaceRepository tenantWorkspaceRepository = Mockito.mock(TenantWorkspaceRepository.class);
+    private final EmployeeInvitationRepository employeeInvitationRepository = Mockito.mock(EmployeeInvitationRepository.class);
+    private final PasswordResetTokenRepository passwordResetTokenRepository = Mockito.mock(PasswordResetTokenRepository.class);
+    private final EmployeeInvitationNotificationClient invitationNotificationClient =
+            Mockito.mock(EmployeeInvitationNotificationClient.class);
     private final EmployeeService employeeService = new EmployeeService(
             employeeRepository,
             passwordEncoder,
             jwtService,
-            subscriptionBootstrapClient
+            subscriptionBootstrapClient,
+            tenantWorkspaceRepository,
+            employeeInvitationRepository,
+            passwordResetTokenRepository,
+            invitationNotificationClient
     );
 
     @AfterEach
@@ -57,13 +77,16 @@ class EmployeeServiceTest {
         });
 
         var response = employeeService.create(new EmployeeCreateRequest(
-                "jane@corp.com", "secret", "Jane", "Doe", "FR", "0600000000", "HR", "Manager", true,
+                "jane@corp.com", "secret", "Jane", "Doe", "FR", "0600000000", "HR", "Manager",
+                LocalDate.of(1990, 2, 3), EmployeeGender.FEMININ, EmploymentContractType.CDI, true,
                 LocalDate.of(2025, 1, 1), Set.of(Role.HR)
         ));
 
         assertThat(response.id()).isEqualTo(1L);
         assertThat(response.crossBorderWorker()).isTrue();
         assertThat(response.department()).isEqualTo("HR");
+        assertThat(response.gender()).isEqualTo(EmployeeGender.FEMININ);
+        assertThat(response.contractType()).isEqualTo(EmploymentContractType.CDI);
     }
 
     @Test
@@ -72,9 +95,30 @@ class EmployeeServiceTest {
         when(employeeRepository.existsByEmailAndTenantId("jane@corp.com", "tenant-a")).thenReturn(true);
 
         assertThatThrownBy(() -> employeeService.create(new EmployeeCreateRequest(
-                "jane@corp.com", "secret", "Jane", "Doe", "FR", null, null, null, true,
+                "jane@corp.com", "secret", "Jane", "Doe", "FR", null, null, null,
+                null, EmployeeGender.AUTRES, EmploymentContractType.CDI, true,
                 LocalDate.of(2025, 1, 1), Set.of(Role.HR)
         ))).isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void shouldRejectEmployeeCreationWhenSeatLimitReached() {
+        TenantContext.setTenantId("tenant-a");
+        TenantWorkspace workspace = new TenantWorkspace();
+        workspace.setTenantId("tenant-a");
+        workspace.setCompanyName("Tenant A");
+        workspace.setSeatsPurchased(1);
+
+        when(employeeRepository.existsByEmailAndTenantId("jane@corp.com", "tenant-a")).thenReturn(false);
+        when(tenantWorkspaceRepository.findById("tenant-a")).thenReturn(Optional.of(workspace));
+        when(employeeRepository.countByTenantId("tenant-a")).thenReturn(1L);
+
+        assertThatThrownBy(() -> employeeService.create(new EmployeeCreateRequest(
+                "jane@corp.com", "secret", "Jane", "Doe", "FR", null, null, null,
+                null, EmployeeGender.AUTRES, EmploymentContractType.CDI, true,
+                LocalDate.of(2025, 1, 1), Set.of(Role.EMPLOYEE)
+        ))).isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Seat limit reached");
     }
 
     @Test
@@ -95,11 +139,13 @@ class EmployeeServiceTest {
         when(employeeRepository.save(any(Employee.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         var response = employeeService.update(1L, new EmployeeUpdateRequest(
-                "jane.doe@corp.com", "Jane", "Doe", "FR", "0600000000", "Finance", "HRBP", true,
+                "jane.doe@corp.com", "Jane", "Doe", "FR", "0600000000", "Finance", "HRBP",
+                LocalDate.of(1990, 2, 3), EmployeeGender.FEMININ, EmploymentContractType.CDD, true,
                 LocalDate.of(2025, 1, 1), Set.of(Role.ADMIN, Role.HR), true
         ));
 
         assertThat(response.email()).isEqualTo("jane.doe@corp.com");
+        assertThat(response.contractType()).isEqualTo(EmploymentContractType.CDD);
         assertThat(response.roles()).contains(Role.ADMIN);
     }
 
@@ -117,6 +163,8 @@ class EmployeeServiceTest {
         when(jwtService.generateToken(any(), any(), any(), any())).thenReturn("token");
 
         var response = employeeService.signup(new SignupRequest(
+                null,
+                null,
                 "Owner",
                 "Admin",
                 "owner@corp.com",
@@ -144,6 +192,8 @@ class EmployeeServiceTest {
         when(jwtService.generateToken(any(), any(), any(), any())).thenReturn("token");
 
         employeeService.signup(new SignupRequest(
+                null,
+                null,
                 "Owner",
                 "Admin",
                 "owner@corp.com",
@@ -170,6 +220,8 @@ class EmployeeServiceTest {
         when(jwtService.generateToken(any(), any(), any(), any())).thenReturn("token");
 
         var response = employeeService.signup(new SignupRequest(
+                null,
+                null,
                 "Jane",
                 "Employee",
                 "employee@corp.com",
@@ -181,5 +233,44 @@ class EmployeeServiceTest {
 
         assertThat(response.roles()).containsExactly("EMPLOYEE");
         verify(subscriptionBootstrapClient, never()).initializeTrial(any(), any(), anyInt(), any());
+    }
+
+    @Test
+    void shouldConfirmPasswordResetAndConsumeToken() throws Exception {
+        String token = "reset-token";
+        String tokenHash = hashToken(token);
+        PasswordResetToken resetToken = new PasswordResetToken();
+        resetToken.setTenantId("tenant-a");
+        resetToken.setEmail("jane@corp.com");
+        resetToken.setTokenHash(tokenHash);
+        resetToken.setExpiresAt(Instant.now().plusSeconds(900));
+
+        Employee employee = new Employee();
+        employee.setId(42L);
+        employee.setTenantId("tenant-a");
+        employee.setEmail("jane@corp.com");
+        employee.setPassword("old");
+        employee.setFirstName("Jane");
+        employee.setLastName("Doe");
+        employee.setActive(true);
+        employee.setRoles(Set.of(Role.EMPLOYEE));
+
+        when(passwordResetTokenRepository.findByTokenHash(tokenHash)).thenReturn(Optional.of(resetToken));
+        when(employeeRepository.findByEmailAndTenantId("jane@corp.com", "tenant-a")).thenReturn(Optional.of(employee));
+        when(passwordEncoder.encode("newsecret")).thenReturn("new-hash");
+        when(employeeRepository.save(any(Employee.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(passwordResetTokenRepository.save(any(PasswordResetToken.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(jwtService.generateToken(any(), any(), any(), any())).thenReturn("token");
+
+        var response = employeeService.confirmPasswordReset(new PasswordResetConfirmRequest(token, "newsecret"));
+
+        assertThat(response.roles()).containsExactly("EMPLOYEE");
+        assertThat(employee.getPassword()).isEqualTo("new-hash");
+        assertThat(resetToken.getUsedAt()).isNotNull();
+    }
+
+    private String hashToken(String token) throws Exception {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        return HexFormat.of().formatHex(digest.digest(token.getBytes(StandardCharsets.UTF_8)));
     }
 }

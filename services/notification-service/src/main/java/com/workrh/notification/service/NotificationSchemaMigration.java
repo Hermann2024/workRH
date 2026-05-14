@@ -23,5 +23,27 @@ public class NotificationSchemaMigration implements CommandLineRunner {
         jdbcTemplate.execute("CREATE INDEX IF NOT EXISTS idx_support_tickets_tenant ON support_tickets (tenant_id)");
         jdbcTemplate.execute("CREATE INDEX IF NOT EXISTS idx_support_tickets_tenant_status ON support_tickets (tenant_id, status)");
         jdbcTemplate.execute("CREATE INDEX IF NOT EXISTS idx_support_tickets_tenant_created ON support_tickets (tenant_id, created_at)");
+        widenSupportTicketTextColumns();
+    }
+
+    /**
+     * Tickets store automatic context (URL, user agent); the default varchar(255) overflows and causes 500 errors.
+     */
+    private void widenSupportTicketTextColumns() {
+        try {
+            jdbcTemplate.execute("ALTER TABLE support_tickets ALTER COLUMN message TYPE TEXT");
+        } catch (Exception ignored) {
+            // Column may already be TEXT or table missing on first bootstrap order.
+        }
+        try {
+            jdbcTemplate.execute("ALTER TABLE support_tickets ALTER COLUMN resolution_message TYPE TEXT");
+        } catch (Exception ignored) {
+            // Same as above.
+        }
+        try {
+            jdbcTemplate.execute("ALTER TABLE support_tickets ALTER COLUMN subject TYPE VARCHAR(1024)");
+        } catch (Exception ignored) {
+            // Same as above.
+        }
     }
 }

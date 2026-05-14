@@ -188,10 +188,27 @@
             <textarea formControlName="comment" rows="3" placeholder="Contexte ou précision utile"></textarea>
           </label>
 
+          <div class="workspace-field">
+            <span>Justificatif</span>
+            <ng-container *ngIf="selectedLeaveRequiresEvidence(); else evidenceNotRequired">
+              <label class="file-picker">
+                <span>Choisir un fichier</span>
+                <small>PDF, JPG ou PNG - 10 Mo max.</small>
+                <input type="file" accept="application/pdf,image/jpeg,image/png" (change)="onLeaveEvidenceSelected($event)">
+              </label>
+              <p class="workspace-helper" *ngIf="selectedLeaveEvidenceFile() as evidenceFile">
+                Fichier selectionne : {{ evidenceFile.name }}
+              </p>
+            </ng-container>
+            <ng-template #evidenceNotRequired>
+              <p class="workspace-helper">Aucun justificatif obligatoire pour ce type d'absence.</p>
+            </ng-template>
+          </div>
+
           <p class="workspace-helper">{{ selectedLeaveHelper() }}</p>
 
           <button class="checkout-button" type="submit" [disabled]="submittingLeave()">
-            {{ submittingLeave() ? 'Transmission...' : "Poser l'absence" }}
+            {{ submittingLeave() ? (leaveEvidenceUploadId() ? 'Envoi du justificatif...' : 'Transmission...') : "Poser l'absence" }}
           </button>
         </form>
 
@@ -220,6 +237,19 @@
             <span>Commentaire</span>
             <textarea formControlName="comment" rows="3" placeholder="Précision utile pour l'équipe RH"></textarea>
           </label>
+
+          <label class="workspace-field">
+            <span>Justificatif maladie obligatoire</span>
+            <label class="file-picker">
+              <span>Choisir un fichier</span>
+              <small>PDF, JPG ou PNG - 10 Mo max.</small>
+              <input type="file" accept="application/pdf,image/jpeg,image/png" (change)="onSicknessEvidenceSelected($event)">
+            </label>
+          </label>
+
+          <p class="workspace-helper" *ngIf="selectedSicknessEvidenceFile() as evidenceFile">
+            Fichier selectionne : {{ evidenceFile.name }}
+          </p>
 
           <button class="checkout-button" type="submit" [disabled]="submittingSickness()">
             {{ submittingSickness() ? 'Transmission...' : "Déclarer l'arrêt" }}
@@ -341,6 +371,9 @@
           <div>
             <strong>{{ leaveTypeLabel(item.type) }}</strong>
             <p class="small-copy">{{ item.startDate | date:'dd/MM/yyyy' }} -> {{ item.endDate | date:'dd/MM/yyyy' }}</p>
+            <p class="small-copy" *ngIf="item.evidenceRequired">
+              Justificatif : {{ item.evidenceUploaded ? (item.evidenceFileName || 'recu') : 'manquant' }}
+            </p>
           </div>
           <div class="history-actions">
             <span
@@ -349,6 +382,17 @@
               [class.badge-alert]="item.status === 'REJECTED'">
               {{ leaveStatusLabel(item.status) }}
             </span>
+            <button
+              *ngIf="item.evidenceUploaded"
+              type="button"
+              class="checkout-button outline small"
+              (click)="downloadLeaveEvidence(item)">
+              Justificatif
+            </button>
+            <label class="checkout-button outline small file-action" *ngIf="canUploadLeaveEvidence(item)">
+              {{ leaveEvidenceUploadId() === item.id ? 'Envoi...' : (item.evidenceUploaded ? 'Remplacer' : 'Ajouter justificatif') }}
+              <input type="file" accept="application/pdf,image/jpeg,image/png" (change)="uploadLeaveEvidence(item, $event)" [disabled]="leaveEvidenceUploadId() === item.id">
+            </label>
             <button
               *ngIf="canCancelLeave(item)"
               type="button"
@@ -379,8 +423,24 @@
         <div>
           <strong>{{ item.startDate | date:'dd/MM/yyyy' }} -> {{ item.endDate | date:'dd/MM/yyyy' }}</strong>
           <p class="small-copy">{{ item.comment || 'Sans commentaire' }}</p>
+          <p class="small-copy">
+            Justificatif : {{ item.evidenceUploaded ? (item.evidenceFileName || 'recu') : 'manquant' }}
+          </p>
         </div>
         <span class="badge">Enregistré</span>
+        <div class="history-actions">
+          <button
+            *ngIf="item.evidenceUploaded"
+            type="button"
+            class="checkout-button outline small"
+            (click)="downloadSicknessEvidence(item)">
+            Justificatif
+          </button>
+          <label class="checkout-button outline small file-action">
+            {{ sicknessEvidenceUploadId() === item.id ? 'Envoi...' : (item.evidenceUploaded ? 'Remplacer' : 'Ajouter justificatif') }}
+            <input type="file" accept="application/pdf,image/jpeg,image/png" (change)="uploadSicknessEvidence(item, $event)" [disabled]="sicknessEvidenceUploadId() === item.id">
+          </label>
+        </div>
       </article>
     </div>
 

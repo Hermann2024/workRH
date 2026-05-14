@@ -89,6 +89,43 @@ public class NotificationEmailService {
         );
     }
 
+    public boolean sendEmployeeInvitation(String recipient, String firstName, String lastName, String companyName, String invitationUrl) {
+        return send(
+                new String[] { recipient },
+                "Invitation a rejoindre " + companyName + " sur WorkRH",
+                """
+                <p>Bonjour %s %s,</p>
+                <p><strong>%s</strong> vous invite a rejoindre son espace WorkRH.</p>
+                <p>Pour activer votre compte salarie, choisissez votre mot de passe depuis le lien ci-dessous :</p>
+                <p><a href="%s">Activer mon compte WorkRH</a></p>
+                <p>Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :</p>
+                <p>%s</p>
+                <p>Equipe WorkRH</p>
+                """.formatted(
+                        firstName,
+                        lastName,
+                        companyName,
+                        invitationUrl,
+                        invitationUrl
+                )
+        );
+    }
+
+    public boolean sendPasswordReset(String recipient, String firstName, String companyName, String resetUrl) {
+        return send(
+                new String[] { recipient },
+                "Reinitialisation de votre mot de passe WorkRH",
+                """
+                <p>Bonjour %s,</p>
+                <p>Une demande de reinitialisation de mot de passe a ete effectuee pour votre compte <strong>%s</strong>.</p>
+                <p>Choisissez un nouveau mot de passe depuis le lien ci-dessous :</p>
+                <p><a href="%s">Reinitialiser mon mot de passe</a></p>
+                <p>Si vous n'etes pas a l'origine de cette demande, ignorez cet email.</p>
+                <p>Equipe WorkRH</p>
+                """.formatted(firstName, companyName, resetUrl)
+        );
+    }
+
     private boolean send(String[] recipients, String subject, String body) {
         if (!automationEmailsEnabled || mailHost == null || mailHost.isBlank() || recipients.length == 0) {
             return false;

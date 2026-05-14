@@ -7,6 +7,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 public record SignupRequest(
+        @Size(min = 2, max = 120) String companyName,
+        @Size(min = 3, max = 120) String tenantId,
         @NotBlank @Size(min = 2, max = 80) String firstName,
         @NotBlank @Size(min = 2, max = 80) String lastName,
         @Email @NotBlank String email,

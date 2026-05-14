@@ -1,5 +1,6 @@
 package com.workrh.sickness.domain;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -24,6 +25,12 @@ public class SicknessRecord {
     private LocalDate startDate;
     private LocalDate endDate;
     private String comment;
+    private String evidenceFileName;
+    private String evidenceContentType;
+    @Column(columnDefinition = "bytea")
+    private byte[] evidenceContent;
+    private Instant evidenceUploadedAt;
+    private String evidenceUploadedBy;
     private Instant createdAt = Instant.now();
     private Instant updatedAt = Instant.now();
 }

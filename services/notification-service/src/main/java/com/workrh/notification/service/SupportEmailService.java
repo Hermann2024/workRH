@@ -63,6 +63,25 @@ public class SupportEmailService {
         }
     }
 
+    public boolean sendResolution(SupportTicket ticket) {
+        if (mailHost == null || mailHost.isBlank() || ticket.getRequesterEmail() == null || ticket.getRequesterEmail().isBlank()) {
+            return false;
+        }
+
+        try {
+            var mimeMessage = mailSender.createMimeMessage();
+            var helper = new MimeMessageHelper(mimeMessage, StandardCharsets.UTF_8.name());
+            helper.setFrom(fromEmail);
+            helper.setTo(ticket.getRequesterEmail());
+            helper.setSubject("Support WorkRH - ticket #" + ticket.getId() + " resolu");
+            helper.setText(buildResolutionBody(ticket), true);
+            mailSender.send(mimeMessage);
+            return true;
+        } catch (Exception exception) {
+            return false;
+        }
+    }
+
     private String buildBody(SupportTicket ticket) {
         return """
                 <p>Bonjour %s,</p>
@@ -105,6 +124,22 @@ public class SupportEmailService {
                 defaultValue(ticket.getPhoneNumber(), "non renseigne"),
                 ticket.getSubject(),
                 ticket.getMessage()
+        );
+    }
+
+    private String buildResolutionBody(SupportTicket ticket) {
+        return """
+                <p>Bonjour %s,</p>
+                <p>Votre ticket support <strong>#%d</strong> a ete traite et cloture.</p>
+                <p><strong>Sujet :</strong> %s</p>
+                <p><strong>Reponse WorkRH :</strong></p>
+                <pre style="white-space: pre-wrap; font-family: Arial, sans-serif;">%s</pre>
+                <p>Equipe WorkRH</p>
+                """.formatted(
+                defaultValue(ticket.getRequesterName(), "client"),
+                ticket.getId(),
+                ticket.getSubject(),
+                defaultValue(ticket.getResolutionMessage(), "Le probleme a ete resolu.")
         );
     }
 

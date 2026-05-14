@@ -32,7 +32,7 @@ public class SubscriptionCatalogSeeder implements CommandLineRunner {
     @Value("${stripe.prices.enterprise:}")
     private String enterpriseStripePriceId;
 
-    @Value("${notification.sms.enabled:true}")
+    @Value("${notification.sms.enabled:false}")
     private boolean smsEnabled;
 
     @Value("${notification.sms.webhook-url:}")
@@ -47,9 +47,9 @@ public class SubscriptionCatalogSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        seed(PlanCode.STARTER, "Starter", new BigDecimal("199.00"), starterStripePriceId, 1, 15, false, false, true, starterFeatures());
-        seed(PlanCode.PRO, "Pro", new BigDecimal("299.00"), proStripePriceId, 16, 100, true, false, true, proFeatures());
-        seed(PlanCode.PREMIUM, "Premium", new BigDecimal("399.00"), premiumStripePriceId, 101, 300, false, false, true, premiumFeatures());
+        seed(PlanCode.STARTER, "Starter", new BigDecimal("199.00"), starterStripePriceId, 1, 10, false, false, true, starterFeatures());
+        seed(PlanCode.PRO, "Pro", new BigDecimal("299.00"), proStripePriceId, 11, 50, true, false, true, proFeatures());
+        seed(PlanCode.PREMIUM, "Premium", new BigDecimal("399.00"), premiumStripePriceId, 51, null, false, false, true, premiumFeatures());
         seed(
                 PlanCode.ENTERPRISE,
                 "Enterprise",
@@ -59,7 +59,7 @@ public class SubscriptionCatalogSeeder implements CommandLineRunner {
                 null,
                 false,
                 true,
-                enterprisePlanEnabled,
+                false,
                 enterpriseFeatures()
         );
     }

@@ -35,7 +35,10 @@ public class BaseSecurityConfig {
                                 new AntPathRequestMatcher("/api/subscriptions/plans", "GET"),
                                 new AntPathRequestMatcher("/api/subscriptions/catalog/readiness", "GET"),
                                 new AntPathRequestMatcher("/api/subscriptions/bootstrap", "POST"),
-                                new AntPathRequestMatcher("/api/subscriptions/webhooks/stripe", "POST")
+                                new AntPathRequestMatcher("/api/subscriptions/webhooks/stripe", "POST"),
+                                new AntPathRequestMatcher("/api/notifications/invitations", "POST"),
+                                new AntPathRequestMatcher("/api/notifications/password-reset", "POST"),
+                                new AntPathRequestMatcher("/api/internal/**")
                         ).permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(tenantFilter, AuthorizationFilter.class)
