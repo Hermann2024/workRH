@@ -1,5 +1,6 @@
 package com.workrh.leave.domain;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -30,6 +31,12 @@ public class LeaveRequestEntity {
     private LocalDate startDate;
     private LocalDate endDate;
     private String comment;
+    private String evidenceFileName;
+    private String evidenceContentType;
+    @Column(columnDefinition = "bytea")
+    private byte[] evidenceContent;
+    private Instant evidenceUploadedAt;
+    private String evidenceUploadedBy;
     private Instant createdAt = Instant.now();
     private Instant updatedAt = Instant.now();
 }

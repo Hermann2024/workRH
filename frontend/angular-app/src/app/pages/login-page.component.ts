@@ -3,6 +3,8 @@ import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../auth.service';
+import { TranslatePipe } from '../i18n/translate.pipe';
+import { I18nService } from '../i18n/i18n.service';
 import {
   DEFAULT_LOGIN_EMAIL,
   DEFAULT_LOGIN_PASSWORD,
@@ -13,7 +15,7 @@ import {
 @Component({
   selector: 'app-login-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe],
   templateUrl: './login-page.component.html',
   styleUrl: './page-styles.css'
 })
@@ -22,6 +24,7 @@ export class LoginPageComponent {
   private readonly authService = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly i18n = inject(I18nService);
 
   readonly showDemoHints = SHOW_DEMO_HINTS;
   readonly submitting = signal(false);
@@ -65,7 +68,7 @@ export class LoginPageComponent {
       error: (error) => {
         this.submitting.set(false);
         this.errorMessage.set(
-          error?.error?.message || 'Une erreur est survenue lors de la connexion. Veuillez réessayer.'
+          error?.error?.message || this.i18n.translate('login.error_generic')
         );
       }
     });

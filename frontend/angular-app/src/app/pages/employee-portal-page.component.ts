@@ -29,6 +29,10 @@ export class EmployeePortalPageComponent {
   readonly submittingTelework = signal(false);
   readonly submittingLeave = signal(false);
   readonly submittingSickness = signal(false);
+  readonly selectedLeaveEvidenceFile = signal<File | null>(null);
+  readonly leaveEvidenceUploadId = signal<number | null>(null);
+  readonly selectedSicknessEvidenceFile = signal<File | null>(null);
+  readonly sicknessEvidenceUploadId = signal<number | null>(null);
   readonly workspace = signal<EmployeeWorkspaceVm | null>(null);
   readonly activeTab = signal<'telework' | 'leave' | 'sickness' | 'history'>('telework');
 
@@ -193,9 +197,14 @@ export class EmployeePortalPageComponent {
       this.leaveForm.markAllAsTouched();
       return;
     }
+    const formValue = this.leaveForm.getRawValue();
+    const evidenceFile = this.selectedLeaveEvidenceFile();
+    if (this.requiresLeaveEvidence(formValue.type) && !evidenceFile) {
+      this.toastService.error('Ajoutez un justificatif pour ce type d absence.');
+      return;
+    }
 
     this.submittingLeave.set(true);
-    const formValue = this.leaveForm.getRawValue();
     this.api.createLeaveRequest({
       employeeId: profile.id,
       type: formValue.type,
@@ -203,16 +212,21 @@ export class EmployeePortalPageComponent {
       endDate: formValue.endDate,
       comment: formValue.comment.trim()
     }).subscribe({
-      next: () => {
-        this.submittingLeave.set(false);
-        this.toastService.success('Demande d’absence transmise.');
-        this.leaveForm.patchValue({
-          startDate: this.toDateInput(new Date()),
-          endDate: this.toDateInput(new Date()),
-          comment: ''
-        });
-        this.loadWorkspace();
-        this.activeTab.set('history');
+      next: (leave) => {
+        if (evidenceFile && leave.evidenceRequired) {
+          this.leaveEvidenceUploadId.set(leave.id);
+          this.api.uploadLeaveEvidence(leave.id, evidenceFile).subscribe({
+            next: () => this.finishLeaveSubmission('Demande d absence et justificatif transmis.'),
+            error: (error) => {
+              this.submittingLeave.set(false);
+              this.leaveEvidenceUploadId.set(null);
+              this.toastService.error(this.readBackendMessage(error, 'La demande est creee, mais le justificatif n a pas pu etre transmis.'));
+              this.loadWorkspace();
+            }
+          });
+          return;
+        }
+        this.finishLeaveSubmission('Demande d absence transmise.');
       },
       error: (error) => {
         this.submittingLeave.set(false);
@@ -227,6 +241,11 @@ export class EmployeePortalPageComponent {
       this.sicknessForm.markAllAsTouched();
       return;
     }
+    const evidenceFile = this.selectedSicknessEvidenceFile();
+    if (!evidenceFile) {
+      this.toastService.error('Ajoutez un justificatif pour declarer une absence maladie.');
+      return;
+    }
 
     this.submittingSickness.set(true);
     const formValue = this.sicknessForm.getRawValue();
@@ -236,16 +255,17 @@ export class EmployeePortalPageComponent {
       endDate: formValue.endDate,
       comment: formValue.comment.trim()
     }).subscribe({
-      next: () => {
-        this.submittingSickness.set(false);
-        this.toastService.success('Arret maladie declare.');
-        this.sicknessForm.patchValue({
-          startDate: this.toDateInput(new Date()),
-          endDate: this.toDateInput(new Date()),
-          comment: ''
+      next: (record) => {
+        this.sicknessEvidenceUploadId.set(record.id);
+        this.api.uploadSicknessEvidence(record.id, evidenceFile).subscribe({
+          next: () => this.finishSicknessSubmission('Arret maladie et justificatif transmis.'),
+          error: (error) => {
+            this.submittingSickness.set(false);
+            this.sicknessEvidenceUploadId.set(null);
+            this.toastService.error(this.readBackendMessage(error, 'L arret maladie est cree, mais le justificatif n a pas pu etre transmis.'));
+            this.loadWorkspace();
+          }
         });
-        this.loadWorkspace();
-        this.activeTab.set('history');
       },
       error: (error) => {
         this.submittingSickness.set(false);
@@ -263,6 +283,108 @@ export class EmployeePortalPageComponent {
       error: (error) => {
         this.toastService.error(this.readBackendMessage(error, "Impossible d'annuler cette demande."));
       }
+    });
+  }
+
+  onLeaveEvidenceSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    if (!file) {
+      this.selectedLeaveEvidenceFile.set(null);
+      return;
+    }
+    if (!this.isAllowedEvidenceFile(file)) {
+      this.selectedLeaveEvidenceFile.set(null);
+      input.value = '';
+      this.toastService.error('Le justificatif doit etre un PDF, JPG ou PNG de 10 Mo maximum.');
+      return;
+    }
+    this.selectedLeaveEvidenceFile.set(file);
+  }
+
+  uploadLeaveEvidence(leave: LeaveResponse, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    if (!file) {
+      return;
+    }
+    if (!this.isAllowedEvidenceFile(file)) {
+      input.value = '';
+      this.toastService.error('Le justificatif doit etre un PDF, JPG ou PNG de 10 Mo maximum.');
+      return;
+    }
+
+    this.leaveEvidenceUploadId.set(leave.id);
+    this.api.uploadLeaveEvidence(leave.id, file).subscribe({
+      next: () => {
+        this.leaveEvidenceUploadId.set(null);
+        this.toastService.success('Justificatif transmis aux RH.');
+        input.value = '';
+        this.loadWorkspace();
+      },
+      error: (error) => {
+        this.leaveEvidenceUploadId.set(null);
+        input.value = '';
+        this.toastService.error(this.readBackendMessage(error, 'Impossible de transmettre le justificatif.'));
+      }
+    });
+  }
+
+  downloadLeaveEvidence(leave: LeaveResponse): void {
+    this.api.downloadLeaveEvidence(leave.id).subscribe({
+      next: (blob) => this.saveBlob(blob, leave.evidenceFileName || `justificatif-absence-${leave.id}`),
+      error: (error) => this.toastService.error(this.readBackendMessage(error, 'Impossible de telecharger le justificatif.'))
+    });
+  }
+
+  onSicknessEvidenceSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    if (!file) {
+      this.selectedSicknessEvidenceFile.set(null);
+      return;
+    }
+    if (!this.isAllowedEvidenceFile(file)) {
+      this.selectedSicknessEvidenceFile.set(null);
+      input.value = '';
+      this.toastService.error('Le justificatif doit etre un PDF, JPG ou PNG de 10 Mo maximum.');
+      return;
+    }
+    this.selectedSicknessEvidenceFile.set(file);
+  }
+
+  uploadSicknessEvidence(record: { id: number }, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    if (!file) {
+      return;
+    }
+    if (!this.isAllowedEvidenceFile(file)) {
+      input.value = '';
+      this.toastService.error('Le justificatif doit etre un PDF, JPG ou PNG de 10 Mo maximum.');
+      return;
+    }
+
+    this.sicknessEvidenceUploadId.set(record.id);
+    this.api.uploadSicknessEvidence(record.id, file).subscribe({
+      next: () => {
+        this.sicknessEvidenceUploadId.set(null);
+        this.toastService.success('Justificatif maladie transmis aux RH.');
+        input.value = '';
+        this.loadWorkspace();
+      },
+      error: (error) => {
+        this.sicknessEvidenceUploadId.set(null);
+        input.value = '';
+        this.toastService.error(this.readBackendMessage(error, 'Impossible de transmettre le justificatif maladie.'));
+      }
+    });
+  }
+
+  downloadSicknessEvidence(record: { id: number; evidenceFileName?: string | null }): void {
+    this.api.downloadSicknessEvidence(record.id).subscribe({
+      next: (blob) => this.saveBlob(blob, record.evidenceFileName || `justificatif-maladie-${record.id}`),
+      error: (error) => this.toastService.error(this.readBackendMessage(error, 'Impossible de telecharger le justificatif maladie.'))
     });
   }
 
@@ -297,12 +419,23 @@ export class EmployeePortalPageComponent {
 
   selectedLeaveHelper(): string {
     const selectedType = this.leaveForm.controls.type.value;
-    return this.leaveTypeOptions.find((option) => option.value === selectedType)?.helper
+    const baseHelper = this.leaveTypeOptions.find((option) => option.value === selectedType)?.helper
       ?? 'Ajoutez un commentaire si vous souhaitez aider le traitement RH.';
+    return this.requiresLeaveEvidence(selectedType)
+      ? `${baseHelper} Justificatif obligatoire.`
+      : baseHelper;
+  }
+
+  selectedLeaveRequiresEvidence(): boolean {
+    return this.requiresLeaveEvidence(this.leaveForm.controls.type.value);
   }
 
   canCancelLeave(leave: LeaveResponse): boolean {
     return leave.status === 'REQUESTED';
+  }
+
+  canUploadLeaveEvidence(leave: LeaveResponse): boolean {
+    return leave.evidenceRequired && leave.status === 'REQUESTED';
   }
 
   private loadWorkspace(): void {
@@ -351,6 +484,61 @@ export class EmployeePortalPageComponent {
     return typeof backendMessage === 'string' && backendMessage.trim()
       ? backendMessage
       : fallback;
+  }
+
+  private finishLeaveSubmission(message: string): void {
+    this.submittingLeave.set(false);
+    this.leaveEvidenceUploadId.set(null);
+    this.selectedLeaveEvidenceFile.set(null);
+    this.toastService.success(message);
+    this.leaveForm.patchValue({
+      startDate: this.toDateInput(new Date()),
+      endDate: this.toDateInput(new Date()),
+      comment: ''
+    });
+    this.loadWorkspace();
+    this.activeTab.set('history');
+  }
+
+  private finishSicknessSubmission(message: string): void {
+    this.submittingSickness.set(false);
+    this.sicknessEvidenceUploadId.set(null);
+    this.selectedSicknessEvidenceFile.set(null);
+    this.toastService.success(message);
+    this.sicknessForm.patchValue({
+      startDate: this.toDateInput(new Date()),
+      endDate: this.toDateInput(new Date()),
+      comment: ''
+    });
+    this.loadWorkspace();
+    this.activeTab.set('history');
+  }
+
+  private requiresLeaveEvidence(type: LeaveType): boolean {
+    return [
+      'PATERNITY',
+      'MOVING',
+      'MARRIAGE',
+      'BIRTH_OR_ADOPTION',
+      'FAMILY_CARE',
+      'BEREAVEMENT',
+      'MEDICAL_APPOINTMENT',
+      'TRAINING',
+      'ADMINISTRATIVE'
+    ].includes(type);
+  }
+
+  private isAllowedEvidenceFile(file: File): boolean {
+    return ['application/pdf', 'image/jpeg', 'image/png'].includes(file.type) && file.size <= 10 * 1024 * 1024;
+  }
+
+  private saveBlob(blob: Blob, filename: string): void {
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    window.URL.revokeObjectURL(url);
   }
 
   private sortByDateDesc<T>(items: T[], getValue: (item: T) => string): T[] {

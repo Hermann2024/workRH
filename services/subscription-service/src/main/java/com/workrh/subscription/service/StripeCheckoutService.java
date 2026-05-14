@@ -55,6 +55,7 @@ public class StripeCheckoutService {
     private final ObjectMapper objectMapper;
     private final StripeWebhookVerifier stripeWebhookVerifier;
     private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final WorkspaceSubscriptionSyncClient workspaceSubscriptionSyncClient;
 
     @Value("${stripe.secret-key:}")
     private String stripeSecretKey;
@@ -78,7 +79,8 @@ public class StripeCheckoutService {
             RestTemplate restTemplate,
             ObjectMapper objectMapper,
             StripeWebhookVerifier stripeWebhookVerifier,
-            KafkaTemplate<String, Object> kafkaTemplate) {
+            KafkaTemplate<String, Object> kafkaTemplate,
+            WorkspaceSubscriptionSyncClient workspaceSubscriptionSyncClient) {
         this.subscriptionPlanRepository = subscriptionPlanRepository;
         this.tenantSubscriptionRepository = tenantSubscriptionRepository;
         this.subscriptionInvoiceRepository = subscriptionInvoiceRepository;
@@ -86,6 +88,7 @@ public class StripeCheckoutService {
         this.objectMapper = objectMapper;
         this.stripeWebhookVerifier = stripeWebhookVerifier;
         this.kafkaTemplate = kafkaTemplate;
+        this.workspaceSubscriptionSyncClient = workspaceSubscriptionSyncClient;
     }
 
     public StripeCheckoutResponse createCheckoutSession(StripeCheckoutRequest request) {
@@ -288,6 +291,7 @@ public class StripeCheckoutService {
         subscription.setRenewsAt(LocalDate.now().plusDays(FREE_TRIAL_DAYS));
         subscription.setUpdatedAt(Instant.now());
         TenantSubscription saved = tenantSubscriptionRepository.save(subscription);
+        workspaceSubscriptionSyncClient.sync(saved);
         syncSubscriptionState(saved, object.path("subscription"));
     }
 
@@ -301,7 +305,8 @@ public class StripeCheckoutService {
                     subscription.setRenewsAt(readStripeDate(object, "current_period_end", subscription.getRenewsAt()));
                     subscription.setCancelledAt(readStripeDate(object, "canceled_at", subscription.getCancelledAt()));
                     subscription.setUpdatedAt(Instant.now());
-                    tenantSubscriptionRepository.save(subscription);
+                    TenantSubscription saved = tenantSubscriptionRepository.save(subscription);
+                    workspaceSubscriptionSyncClient.sync(saved);
                 });
     }
 
@@ -313,7 +318,8 @@ public class StripeCheckoutService {
                     subscription.setCancelledAt(readStripeDate(object, "canceled_at", LocalDate.now()));
                     subscription.setCancelAtPeriodEnd(false);
                     subscription.setUpdatedAt(Instant.now());
-                    tenantSubscriptionRepository.save(subscription);
+                    TenantSubscription saved = tenantSubscriptionRepository.save(subscription);
+                    workspaceSubscriptionSyncClient.sync(saved);
                 });
     }
 
@@ -323,7 +329,8 @@ public class StripeCheckoutService {
                 .ifPresent(subscription -> {
                     subscription.setStatus(SubscriptionStatus.PAST_DUE);
                     subscription.setUpdatedAt(Instant.now());
-                    tenantSubscriptionRepository.save(subscription);
+                    TenantSubscription saved = tenantSubscriptionRepository.save(subscription);
+                    workspaceSubscriptionSyncClient.sync(saved);
                 });
     }
 
@@ -339,7 +346,8 @@ public class StripeCheckoutService {
                         subscription.setPendingPlanCode(null);
                     }
                     subscription.setUpdatedAt(Instant.now());
-                    tenantSubscriptionRepository.save(subscription);
+                    TenantSubscription saved = tenantSubscriptionRepository.save(subscription);
+                    workspaceSubscriptionSyncClient.sync(saved);
                     publishInvoiceIssuedEvent(subscription, object);
                 });
     }

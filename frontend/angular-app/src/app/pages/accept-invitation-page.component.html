@@ -1,0 +1,44 @@
+<section class="hero">
+  <div>
+    <p class="section-tag">{{ 'invite.hero_tag' | t }}</p>
+    <h2>{{ 'invite.hero_title' | t }}</h2>
+    <p class="lede" *ngIf="invitation() as preview">
+      {{ 'invite.lede' | t: { company: preview.companyName } }}
+    </p>
+  </div>
+</section>
+
+<section class="panel loading-panel" *ngIf="loading()">
+  <h2>{{ 'invite.loading_title' | t }}</h2>
+  <p>{{ 'invite.loading_body' | t }}</p>
+</section>
+
+<section class="panel loading-panel" *ngIf="!loading() && errorMessage() as message">
+  <h2>{{ 'invite.error_title' | t }}</h2>
+  <p>{{ message }}</p>
+  <a class="checkout-button outline" routerLink="/login">{{ 'common.back_login' | t }}</a>
+</section>
+
+<section class="panel" *ngIf="!loading() && !errorMessage() && invitation() as preview">
+  <div class="section-head">
+    <div>
+      <p class="section-tag">{{ preview.email }}</p>
+      <h2>{{ preview.firstName }} {{ preview.lastName }}</h2>
+    </div>
+    <p class="hint" *ngIf="preview.expiresAt">{{ 'invite.expires' | t }} {{ preview.expiresAt | date:'dd/MM/yyyy' }}</p>
+  </div>
+
+  <form class="workspace-form-card" [formGroup]="passwordForm" (ngSubmit)="acceptInvitation()">
+    <label class="workspace-field">
+      <span>{{ 'invite.password' | t }}</span>
+      <input type="password" formControlName="password" autocomplete="new-password">
+    </label>
+    <label class="workspace-field">
+      <span>{{ 'invite.confirm_password' | t }}</span>
+      <input type="password" formControlName="confirmPassword" autocomplete="new-password">
+    </label>
+    <button class="checkout-button" type="submit" [disabled]="accepting()">
+      {{ accepting() ? ('invite.activating' | t) : ('invite.activate' | t) }}
+    </button>
+  </form>
+</section>

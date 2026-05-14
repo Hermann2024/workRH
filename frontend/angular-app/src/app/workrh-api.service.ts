@@ -11,9 +11,15 @@ export interface DashboardEmployeeItem {
   weeklyUsedDays: number;
   annualAlertLevel: 'OK' | 'WARNING' | 'EXCEEDED';
   annualAlertLabel: string;
+  riskScorePercent: number;
+  riskLevel: 'GREEN' | 'ORANGE' | 'RED';
+  riskLabel: string;
   annualFiscalLimitExceeded: boolean;
   weeklyCompanyLimitExceeded: boolean;
 }
+
+export type EmploymentContractType = 'CDI' | 'CDD' | 'STAGE' | 'ALTERNANCE' | 'AUTRES';
+export type EmployeeGender = 'MASCULIN' | 'FEMININ' | 'AUTRES';
 
 export interface EmployeeProfileResponse {
   id: number;
@@ -24,6 +30,9 @@ export interface EmployeeProfileResponse {
   phoneNumber: string | null;
   department: string | null;
   jobTitle: string | null;
+  birthDate: string | null;
+  gender: EmployeeGender;
+  contractType: EmploymentContractType;
   crossBorderWorker: boolean;
   hireDate: string | null;
   active: boolean;
@@ -41,6 +50,9 @@ export interface EmployeeCreateRequest {
   phoneNumber?: string | null;
   department?: string | null;
   jobTitle?: string | null;
+  birthDate?: string | null;
+  gender: EmployeeGender;
+  contractType: EmploymentContractType;
   crossBorderWorker: boolean;
   hireDate?: string | null;
   roles: string[];
@@ -54,10 +66,76 @@ export interface EmployeeUpdateRequest {
   phoneNumber?: string | null;
   department?: string | null;
   jobTitle?: string | null;
+  birthDate?: string | null;
+  gender: EmployeeGender;
+  contractType: EmploymentContractType;
   crossBorderWorker: boolean;
   hireDate?: string | null;
   roles: string[];
   active: boolean;
+}
+
+export interface EmployeeInvitationRequest {
+  email: string;
+  firstName: string;
+  lastName: string;
+  countryOfResidence?: string | null;
+  phoneNumber?: string | null;
+  department?: string | null;
+  jobTitle?: string | null;
+  birthDate?: string | null;
+  gender?: EmployeeGender | null;
+  contractType?: EmploymentContractType | null;
+  hireDate?: string | null;
+}
+
+export interface EmployeeInvitationResponse {
+  id: number;
+  email: string;
+  firstName: string;
+  lastName: string;
+  countryOfResidence: string | null;
+  phoneNumber: string | null;
+  department: string | null;
+  jobTitle: string | null;
+  birthDate: string | null;
+  gender: EmployeeGender;
+  contractType: EmploymentContractType;
+  hireDate: string | null;
+  token: string | null;
+  emailSent: boolean;
+  status: 'PENDING' | 'ACCEPTED' | 'EXPIRED';
+  expiresAt: string | null;
+  acceptedAt: string | null;
+  createdAt: string;
+}
+
+export interface TenantWorkspaceResponse {
+  tenantId: string;
+  companyName: string;
+  ownerEmail: string | null;
+  planCode: string | null;
+  seatsPurchased: number | null;
+  seatsUsed: number;
+  activeEmployees: number;
+  seatLimitExceeded: boolean;
+  active: boolean;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface PlatformWorkspaceResponse {
+  tenantId: string;
+  companyName: string;
+  ownerEmail: string | null;
+  planCode: string | null;
+  seatsPurchased: number | null;
+  seatsUsed: number;
+  activeEmployees: number;
+  seatLimitExceeded: boolean;
+  active: boolean;
+  createdAt: string | null;
+  updatedAt: string | null;
 }
 
 export interface DashboardResponse {
@@ -68,6 +146,28 @@ export interface DashboardResponse {
   fiscalAlerts: number;
   weeklyAlerts: number;
   employees: DashboardEmployeeItem[];
+}
+
+export interface TaxSimulationRequest {
+  employeeId: number;
+  annualGrossSalary: number;
+  annualContractWorkDays: number;
+}
+
+export interface TaxSimulationResponse {
+  employeeId: number;
+  year: number;
+  month: number;
+  annualTeleworkDays: number;
+  annualFiscalLimitDays: number;
+  annualContractWorkDays: number;
+  thresholdExceeded: boolean;
+  annualGrossSalary: number;
+  salaryPerWorkDay: number;
+  luxembourgTaxableSalary: number;
+  foreignTaxableSalary: number;
+  calculationRule: string;
+  disclaimer: string;
 }
 
 export interface PlanResponse {
@@ -151,6 +251,7 @@ export interface MonthlyStatsResponse {
 
 export interface SupportTicketResponse {
   id: number;
+  tenantId: string;
   category: string;
   priority: string;
   status: string;
@@ -159,7 +260,10 @@ export interface SupportTicketResponse {
   phoneNumber: string | null;
   subject: string;
   message: string;
+  resolutionMessage: string | null;
+  resolvedBy: string | null;
   slaDueAt: string | null;
+  resolvedAt: string | null;
   createdAt: string;
   slaBreached: boolean;
 }
@@ -490,6 +594,10 @@ export interface LeaveResponse {
   startDate: string;
   endDate: string;
   comment: string | null;
+  evidenceRequired: boolean;
+  evidenceUploaded: boolean;
+  evidenceFileName: string | null;
+  evidenceUploadedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -500,6 +608,10 @@ export interface SicknessResponse {
   startDate: string;
   endDate: string;
   comment: string | null;
+  evidenceRequired: boolean;
+  evidenceUploaded: boolean;
+  evidenceFileName: string | null;
+  evidenceUploadedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -630,8 +742,24 @@ export class WorkRhApiService {
     return this.http.get<EmployeeProfileResponse[]>(`${API_BASE_URL}/api/users`);
   }
 
+  getWorkspace(): Observable<TenantWorkspaceResponse> {
+    return this.http.get<TenantWorkspaceResponse>(`${API_BASE_URL}/api/users/workspace`);
+  }
+
+  updateWorkspace(request: { companyName: string }): Observable<TenantWorkspaceResponse> {
+    return this.http.put<TenantWorkspaceResponse>(`${API_BASE_URL}/api/users/workspace`, request);
+  }
+
   createEmployee(request: EmployeeCreateRequest): Observable<EmployeeProfileResponse> {
     return this.http.post<EmployeeProfileResponse>(`${API_BASE_URL}/api/users`, request);
+  }
+
+  getEmployeeInvitations(): Observable<EmployeeInvitationResponse[]> {
+    return this.http.get<EmployeeInvitationResponse[]>(`${API_BASE_URL}/api/users/invitations`);
+  }
+
+  inviteEmployee(request: EmployeeInvitationRequest): Observable<EmployeeInvitationResponse> {
+    return this.http.post<EmployeeInvitationResponse>(`${API_BASE_URL}/api/users/invitations`, request);
   }
 
   updateEmployee(employeeId: number, request: EmployeeUpdateRequest): Observable<EmployeeProfileResponse> {
@@ -656,6 +784,10 @@ export class WorkRhApiService {
 
   getMonthlyStats(year: number): Observable<MonthlyStatsResponse> {
     return this.http.get<MonthlyStatsResponse>(`${API_BASE_URL}/api/reports/monthly-stats?year=${year}`);
+  }
+
+  simulateTeleworkTaxImpact(year: number, month: number, request: TaxSimulationRequest): Observable<TaxSimulationResponse> {
+    return this.http.post<TaxSimulationResponse>(`${API_BASE_URL}/api/reports/tax-simulation?year=${year}&month=${month}`, request);
   }
 
   checkFeature(feature: string): Observable<FeatureCheckResponse> {
@@ -793,6 +925,16 @@ export class WorkRhApiService {
     return this.http.post<LeaveResponse>(`${API_BASE_URL}/api/leaves/${leaveId}/reject`, { comment });
   }
 
+  uploadLeaveEvidence(leaveId: number, file: File): Observable<LeaveResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<LeaveResponse>(`${API_BASE_URL}/api/leaves/${leaveId}/evidence`, formData);
+  }
+
+  downloadLeaveEvidence(leaveId: number): Observable<Blob> {
+    return this.http.get(`${API_BASE_URL}/api/leaves/${leaveId}/evidence`, { responseType: 'blob' });
+  }
+
   getCurrentEmployeeSickness(): Observable<SicknessResponse[]> {
     return this.http.get<SicknessResponse[]>(`${API_BASE_URL}/api/sickness/me`);
   }
@@ -811,12 +953,48 @@ export class WorkRhApiService {
     return this.http.post<SicknessResponse>(`${API_BASE_URL}/api/sickness`, request);
   }
 
+  uploadSicknessEvidence(sicknessId: number, file: File): Observable<SicknessResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<SicknessResponse>(`${API_BASE_URL}/api/sickness/${sicknessId}/evidence`, formData);
+  }
+
+  downloadSicknessEvidence(sicknessId: number): Observable<Blob> {
+    return this.http.get(`${API_BASE_URL}/api/sickness/${sicknessId}/evidence`, { responseType: 'blob' });
+  }
+
   getNotifications(): Observable<NotificationResponse[]> {
     return this.http.get<NotificationResponse[]>(`${API_BASE_URL}/api/notifications`);
   }
 
   getSupportTickets(): Observable<SupportTicketResponse[]> {
     return this.http.get<SupportTicketResponse[]>(`${API_BASE_URL}/api/support/tickets`);
+  }
+
+  getPlatformSupportTickets(): Observable<SupportTicketResponse[]> {
+    return this.http.get<SupportTicketResponse[]>(`${API_BASE_URL}/api/support/platform/tickets`);
+  }
+
+  getPlatformWorkspaces(): Observable<PlatformWorkspaceResponse[]> {
+    return this.http.get<PlatformWorkspaceResponse[]>(`${API_BASE_URL}/api/platform/workspaces`);
+  }
+
+  resolvePlatformSupportTicket(ticketId: number, message: string): Observable<SupportTicketResponse> {
+    return this.http.post<SupportTicketResponse>(
+      `${API_BASE_URL}/api/support/platform/tickets/${ticketId}/resolve`,
+      { message }
+    );
+  }
+
+  resolveTenantSupportTicket(ticketId: number, message: string): Observable<SupportTicketResponse> {
+    return this.http.post<SupportTicketResponse>(
+      `${API_BASE_URL}/api/support/tickets/${ticketId}/resolve`,
+      { message }
+    );
+  }
+
+  deletePlatformSupportTicket(ticketId: number): Observable<void> {
+    return this.http.delete<void>(`${API_BASE_URL}/api/support/platform/tickets/${ticketId}`);
   }
 
   getSlaTickets(): Observable<SlaTicketResponse[]> {

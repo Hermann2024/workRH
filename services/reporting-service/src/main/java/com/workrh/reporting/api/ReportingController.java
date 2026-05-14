@@ -4,14 +4,19 @@ import com.workrh.common.subscription.FeatureCode;
 import com.workrh.common.subscription.RequiresFeature;
 import com.workrh.reporting.api.dto.DashboardResponse;
 import com.workrh.reporting.api.dto.MonthlyStatsResponse;
+import com.workrh.reporting.api.dto.TaxSimulationRequest;
+import com.workrh.reporting.api.dto.TaxSimulationResponse;
 import com.workrh.reporting.service.ReportingService;
+import jakarta.validation.Valid;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -38,6 +43,16 @@ public class ReportingController {
     @RequiresFeature(FeatureCode.MONTHLY_STATS)
     public MonthlyStatsResponse monthlyStats(@RequestParam("year") int year) {
         return reportingService.monthlyStats(year);
+    }
+
+    @PostMapping("/tax-simulation")
+    @PreAuthorize("hasAnyAuthority('ADMIN','HR')")
+    @RequiresFeature(FeatureCode.DASHBOARD_ADVANCED)
+    public TaxSimulationResponse taxSimulation(
+            @RequestParam("year") int year,
+            @RequestParam("month") int month,
+            @Valid @RequestBody TaxSimulationRequest request) {
+        return reportingService.taxSimulation(year, month, request);
     }
 
     @GetMapping(value = "/dashboard/export/csv", produces = "text/csv")

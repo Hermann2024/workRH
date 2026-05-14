@@ -4,6 +4,9 @@ import { Router } from '@angular/router';
 import { catchError, forkJoin, map, Observable, of } from 'rxjs';
 import { AuthService } from '../auth.service';
 import { SHOW_DEMO_HINTS } from '../config';
+import { I18nService } from '../i18n/i18n.service';
+import { TranslatePipe } from '../i18n/translate.pipe';
+import { CommercialPlanCode, PLAN_COMMERCIAL_CONTENT } from '../plan-commercial-content';
 import { toCommercialFeatureLabel } from '../plan-feature-labels';
 import { ToastService } from '../services/toast.service';
 import { CatalogReadinessResponse, PlanResponse, SubscriptionResponse, WorkRhApiService } from '../workrh-api.service';
@@ -17,7 +20,7 @@ interface PricingVm {
 @Component({
   selector: 'app-pricing-page',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslatePipe],
   templateUrl: './pricing-page.component.html',
   styleUrl: './page-styles.css'
 })
@@ -26,6 +29,7 @@ export class PricingPageComponent {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly toastService = inject(ToastService);
+  private readonly i18n = inject(I18nService);
 
   readonly showDemoHints = SHOW_DEMO_HINTS;
   readonly loading = signal(true);
@@ -63,34 +67,66 @@ export class PricingPageComponent {
         this.loading.set(false);
       },
       error: (error) => {
-        this.loadError.set(this.readBackendMessage(error, 'Impossible de charger les offres sans données réelles.'));
+        this.loadError.set(this.readBackendMessage(error, 'pricing.err_load'));
         this.loading.set(false);
       }
     });
   }
 
   featureLabel(feature: string): string {
-    return toCommercialFeatureLabel(feature);
+    this.i18n.locale();
+    const key = `planFeature.${feature}`;
+    const translated = this.i18n.translate(key);
+    return translated !== key ? translated : toCommercialFeatureLabel(feature);
+  }
+
+  planHeadline(plan: PlanResponse): string {
+    return this.planCopy(plan, 'headline');
+  }
+
+  planIdealFor(plan: PlanResponse): string {
+    return this.planCopy(plan, 'idealFor');
+  }
+
+  topBusinessValues(plan: PlanResponse): string[] {
+    this.i18n.locale();
+    const fallback = this.commercialFallback(plan).businessValue;
+    const values: string[] = [];
+    for (let index = 0; index < 2; index += 1) {
+      const key = `pricing.plan.${plan.code}.bv${index}`;
+      const translated = this.i18n.translate(key);
+      values.push(translated !== key ? translated : (fallback[index] ?? ''));
+    }
+    return values.filter((line) => line.length > 0);
   }
 
   planActionLabel(plan: PlanResponse): string {
+    this.i18n.locale();
     if (this.previewModeActive()) {
-      return this.showDemoHints ? "Ouvrir l'espace" : "Accéder à l'espace";
+      return this.showDemoHints
+        ? this.i18n.translate('pricing.action_preview_demo')
+        : this.i18n.translate('pricing.action_preview_prod');
     }
 
     if (!this.authService.isAuthenticated()) {
-      return plan.customPricing ? 'Créer un compte pour contacter' : 'Créer un compte pour choisir';
+      return plan.customPricing
+        ? this.i18n.translate('pricing.action_signup_custom')
+        : this.i18n.translate('pricing.action_signup');
     }
 
     if (!this.stripeCheckoutAvailable() && !plan.customPricing) {
-      return 'Paiement bientôt disponible';
+      return this.i18n.translate('pricing.action_payment_soon');
     }
 
     if (!this.canManageSubscriptions()) {
-      return plan.customPricing ? 'Contacter les RH' : 'Accès RH requis';
+      return plan.customPricing
+        ? this.i18n.translate('pricing.action_hr_only_custom')
+        : this.i18n.translate('pricing.action_hr_only');
     }
 
-    return plan.customPricing ? "Contacter l'équipe commerciale" : 'Accéder à la facturation';
+    return plan.customPricing
+      ? this.i18n.translate('pricing.action_contact_sales')
+      : this.i18n.translate('pricing.action_billing');
   }
 
   openPlan(plan: PlanResponse): void {
@@ -109,12 +145,12 @@ export class PricingPageComponent {
     }
 
     if (!this.canManageSubscriptions()) {
-      this.toastService.warning('Seuls les utilisateurs RH ou administrateurs peuvent gérer un abonnement.');
+      this.toastService.warning(this.i18n.translate('pricing.toast_hr_only'));
       return;
     }
 
     if (!this.stripeCheckoutAvailable() && !plan.customPricing) {
-      this.toastService.warning("Le paiement Stripe n'est pas encore actif sur cet environnement.");
+      this.toastService.warning(this.i18n.translate('pricing.toast_stripe'));
       return;
     }
 
@@ -138,10 +174,27 @@ export class PricingPageComponent {
     this.router.navigateByUrl('/dashboard');
   }
 
-  private readBackendMessage(error: unknown, fallback: string): string {
+  private commercialFallback(plan: PlanResponse) {
+    const code = plan.code as CommercialPlanCode;
+    return PLAN_COMMERCIAL_CONTENT[code] ?? PLAN_COMMERCIAL_CONTENT.STARTER;
+  }
+
+  private planCopy(plan: PlanResponse, field: 'headline' | 'idealFor'): string {
+    this.i18n.locale();
+    const key = `pricing.plan.${plan.code}.${field}`;
+    const translated = this.i18n.translate(key);
+    if (translated !== key) {
+      return translated;
+    }
+    return field === 'headline' ? this.commercialFallback(plan).headline : this.commercialFallback(plan).idealFor;
+  }
+
+  private readBackendMessage(error: unknown, fallbackKey: string): string {
+    this.i18n.locale();
     const backendMessage = (error as { error?: { message?: string } })?.error?.message;
-    return typeof backendMessage === 'string' && backendMessage.trim()
-      ? backendMessage
-      : fallback;
+    if (typeof backendMessage === 'string' && backendMessage.trim()) {
+      return backendMessage;
+    }
+    return this.i18n.translate(fallbackKey);
   }
 }

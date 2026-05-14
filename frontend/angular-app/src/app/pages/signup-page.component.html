@@ -1,33 +1,40 @@
 <section class="login-layout">
   <article class="login-intro panel">
-    <p class="section-tag">Inscription</p>
-    <h2>Creer votre espace</h2>
+    <p class="section-tag">{{ 'signup.intro_tag' | t }}</p>
+    <h2>{{ 'signup.intro_title' | t }}</h2>
 
     <div class="login-points">
       <div class="login-point">
-        <strong>1. Espace</strong>
-        <span>Choisissez le nom technique de votre tenant.</span>
+        <strong>{{ 'signup.step1_title' | t }}</strong>
+        <span>{{ 'signup.step1_body' | t }}</span>
       </div>
       <div class="login-point">
-        <strong>2. Type de compte</strong>
-        <span>Un compte RH cree l'espace entreprise. Un compte employe rejoint un espace existant.</span>
+        <strong>{{ 'signup.step2_title' | t }}</strong>
+        <span>{{ 'signup.step2_body' | t }}</span>
       </div>
       <div class="login-point">
-        <strong>3. Facturation</strong>
-        <span>Uniquement pour les comptes RH responsables de l'espace.</span>
+        <strong>{{ 'signup.step3_title' | t }}</strong>
+        <span>{{ 'signup.step3_body' | t }}</span>
       </div>
     </div>
 
-    <p class="hint" *ngIf="requestedPlan() as plan">Plan demande : <strong>{{ plan }}</strong></p>
-    <p class="hint">Vous utilisez votre propre adresse email. WorkRH ne cree pas de boite mail.</p>
+    <p class="hint" *ngIf="requestedPlan() as plan">{{ 'signup.plan_requested' | t }} <strong>{{ plan }}</strong></p>
+    <p class="hint">{{ 'signup.email_hint' | t }}</p>
+
+    <div class="signup-plan-summary" *ngIf="isHrSignup()">
+      <span>{{ 'signup.trial_label' | t }}</span>
+      <strong>{{ seatRules().label }}</strong>
+      <p>{{ trialPlanSummaryDisplay().headline }}</p>
+      <small>{{ trialPlanSummaryDisplay().idealFor }}</small>
+    </div>
   </article>
 
   <section class="panel login-panel">
     <div class="login-panel-head">
       <div>
-        <p class="section-tag">Nouveau compte</p>
-        <h2>{{ isHrSignup() ? 'Creer un espace RH' : 'Creer mes identifiants employe' }}</h2>
-        <p class="hint">Exemple de tenant: `acme-lu`.</p>
+        <p class="section-tag">{{ 'signup.new_account_tag' | t }}</p>
+        <h2>{{ isHrSignup() ? ('signup.title_hr' | t) : ('signup.title_emp' | t) }}</h2>
+        <p class="hint">{{ 'signup.tenant_example' | t }}</p>
       </div>
     </div>
 
@@ -36,59 +43,66 @@
     </div>
 
     <form [formGroup]="signupForm" (ngSubmit)="submit()" class="login-form" novalidate>
-      <div class="mode-grid" role="group" aria-label="Type de compte">
+      <div class="mode-grid" role="group" [attr.aria-label]="'signup.account_type_label' | t">
         <button
           class="mode-button"
           [class.mode-button-active]="isHrSignup()"
           type="button"
           (click)="selectAccountType('HR')">
-          <strong>Compte RH</strong>
-          <span>Creation de l'espace entreprise, abonnement et gestion des salaries.</span>
+          <strong>{{ 'signup.mode_hr_title' | t }}</strong>
+          <span>{{ 'signup.mode_hr_body' | t }}</span>
         </button>
         <button
           class="mode-button"
           [class.mode-button-active]="!isHrSignup()"
           type="button"
           (click)="selectAccountType('EMPLOYEE')">
-          <strong>Compte employe</strong>
-          <span>Creation d'identifiants personnels dans un tenant deja ouvert.</span>
+          <strong>{{ 'signup.mode_emp_title' | t }}</strong>
+          <span>{{ 'signup.mode_emp_body' | t }}</span>
         </button>
       </div>
 
+      <label class="login-field" [class.field-invalid]="hasFieldError('companyName')" *ngIf="isHrSignup()">
+        <span>{{ 'signup.company_name' | t }}</span>
+        <input type="text" formControlName="companyName" placeholder="Acme Luxembourg">
+        <small class="field-help">{{ 'signup.company_help' | t }}</small>
+        <small class="field-error" *ngIf="fieldError('companyName') as error">{{ error }}</small>
+      </label>
+
       <label class="login-field" [class.field-invalid]="hasFieldError('tenantId')">
-        <span>Tenant</span>
+        <span>{{ 'login.tenant' | t }}</span>
         <input type="text" formControlName="tenantId" placeholder="acme-lu">
-        <small class="field-help">{{ isHrSignup() ? 'Doit etre unique. Exemple : `acme-lu`.' : 'Demandez cet identifiant a votre service RH.' }}</small>
+        <small class="field-help">{{ isHrSignup() ? ('signup.tenant_help_hr' | t) : ('signup.tenant_help_emp' | t) }}</small>
         <small class="field-error" *ngIf="fieldError('tenantId') as error">{{ error }}</small>
       </label>
 
       <label class="login-field" [class.field-invalid]="hasFieldError('firstName')">
-        <span>Prenom</span>
+        <span>{{ 'signup.first_name' | t }}</span>
         <input type="text" formControlName="firstName">
         <small class="field-error" *ngIf="fieldError('firstName') as error">{{ error }}</small>
       </label>
 
       <label class="login-field" [class.field-invalid]="hasFieldError('lastName')">
-        <span>Nom</span>
+        <span>{{ 'signup.last_name' | t }}</span>
         <input type="text" formControlName="lastName">
         <small class="field-error" *ngIf="fieldError('lastName') as error">{{ error }}</small>
       </label>
 
       <label class="login-field" [class.field-invalid]="hasFieldError('email')">
-        <span>Email</span>
+        <span>{{ 'login.email' | t }}</span>
         <input type="email" formControlName="email">
         <small class="field-error" *ngIf="fieldError('email') as error">{{ error }}</small>
       </label>
 
       <label class="login-field" [class.field-invalid]="hasFieldError('password')">
-        <span>Mot de passe</span>
+        <span>{{ 'login.password' | t }}</span>
         <input type="password" formControlName="password">
-        <small class="field-help">Minimum 8 caracteres.</small>
+        <small class="field-help">{{ 'signup.password_help' | t }}</small>
         <small class="field-error" *ngIf="fieldError('password') as error">{{ error }}</small>
       </label>
 
       <label class="login-field" [class.field-invalid]="hasFieldError('seatsPurchased')" *ngIf="isHrSignup()">
-        <span>Nombre d'employes</span>
+        <span>{{ 'signup.seats_label' | t }}</span>
         <input
           type="number"
           [attr.min]="seatRules().min"
@@ -99,13 +113,13 @@
       </label>
 
       <button type="submit" [disabled]="submitting()">
-        {{ submitting() ? 'Creation...' : (isHrSignup() ? 'Creer mon espace RH' : 'Creer mes identifiants') }}
+        {{ submitting() ? ('signup.submitting' | t) : (isHrSignup() ? ('signup.btn_hr' | t) : ('signup.btn_emp' | t)) }}
       </button>
     </form>
 
     <p class="hint auth-switch-copy">
-      Vous avez deja un compte ?
-      <a routerLink="/login">Se connecter</a>
+      {{ 'signup.account_exists' | t }}
+      <a routerLink="/login">{{ 'signup.login_link' | t }}</a>
     </p>
   </section>
 </section>

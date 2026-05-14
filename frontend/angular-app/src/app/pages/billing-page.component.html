@@ -38,6 +38,55 @@
       {{ readinessWarnings().join(' ') }}
     </div>
 
+    <article class="workspace-form-card" *ngIf="workspace() as company">
+      <div class="section-head">
+        <div>
+          <p class="section-tag">Espace entreprise</p>
+          <h2>{{ company.companyName }}</h2>
+        </div>
+        <span class="badge" [class.badge-alert]="company.seatLimitExceeded">
+          {{ company.active ? 'Actif' : 'Inactif' }}
+        </span>
+      </div>
+
+      <div class="billing-facts">
+        <div class="billing-fact">
+          <span>Tenant</span>
+          <strong>{{ company.tenantId }}</strong>
+        </div>
+        <div class="billing-fact">
+          <span>Proprietaire</span>
+          <strong>{{ company.ownerEmail || data.subscription.stripeCustomerEmail || '-' }}</strong>
+        </div>
+        <div class="billing-fact">
+          <span>Plan</span>
+          <strong>{{ data.subscription.planCode }}</strong>
+        </div>
+        <div class="billing-fact">
+          <span>Sieges</span>
+          <strong>{{ company.seatsUsed }} / {{ data.subscription.seatsPurchased }}</strong>
+        </div>
+        <div class="billing-fact">
+          <span>Comptes actifs</span>
+          <strong>{{ company.activeEmployees }}</strong>
+        </div>
+      </div>
+
+      <div class="checkout-banner cancelled" *ngIf="company.seatLimitExceeded">
+        Le nombre de comptes depasse les sieges achetes. Ajustez l'abonnement ou desactivez des comptes.
+      </div>
+
+      <div class="workspace-inline-fields">
+        <label class="workspace-field">
+          <span>Nom de l'entreprise</span>
+          <input [(ngModel)]="workspaceDraft.companyName" name="workspaceCompanyName">
+        </label>
+        <button class="checkout-button small" type="button" (click)="saveWorkspace()" [disabled]="workspaceSaving()">
+          {{ workspaceSaving() ? 'Sauvegarde...' : 'Sauvegarder' }}
+        </button>
+      </div>
+    </article>
+
     <div class="billing-grid">
       <article class="subscription-card billing-hero-card" *ngIf="currentPlan() as plan">
         <div class="billing-card-top">

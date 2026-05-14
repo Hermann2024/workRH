@@ -1,29 +1,211 @@
 <section class="hero">
   <div>
-    <p class="section-tag">Administration plateforme</p>
-    <h2>Console de confidentialité</h2>
-    <p class="lede">Votre compte admin pilote l'exploitation de WorkRH sans accès direct aux dossiers RH des tenants.</p>
+    <p class="section-tag">{{ i18n.t('platform.hero_tag') }}</p>
+    <h2>{{ i18n.t('platform.hero_title') }}</h2>
+    <p class="lede">{{ i18n.t('platform.hero_lede') }}</p>
   </div>
   <article class="subscription-card">
-    <p class="section-tag">Session</p>
+    <p class="section-tag">{{ i18n.t('platform.session_tag') }}</p>
     <h3>{{ session()?.email }}</h3>
-    <p class="hint">Rôle : administrateur plateforme</p>
+    <p class="hint">{{ i18n.t('platform.session_role') }}</p>
   </article>
 </section>
 
 <section class="grid-layout">
   <article class="legal-note-card">
-    <h3>Données tenant protégées</h3>
-    <p>Les salariés, documents, règles RH et informations personnelles restent accessibles uniquement aux rôles RH du tenant concerné.</p>
+    <h3>{{ i18n.t('platform.privacy_title') }}</h3>
+    <p>{{ i18n.t('platform.privacy_body') }}</p>
   </article>
 
   <article class="legal-note-card">
-    <h3>Support encadré</h3>
-    <p>En cas d'incident, l'accès aux données client doit être temporaire, justifié par un ticket et tracé dans l'audit.</p>
+    <h3>{{ i18n.t('platform.support_title') }}</h3>
+    <p>{{ i18n.t('platform.support_body') }}</p>
   </article>
 
   <article class="legal-note-card">
-    <h3>Administration limitée</h3>
-    <p>Ce compte sert à superviser l'application, la configuration et les incidents sans consulter silencieusement les informations RH.</p>
+    <h3>{{ i18n.t('platform.limited_title') }}</h3>
+    <p>{{ i18n.t('platform.limited_body') }}</p>
   </article>
 </section>
+
+<section class="panel">
+  <div class="section-head">
+    <div>
+      <p class="section-tag">{{ i18n.t('platform.clients_tag') }}</p>
+      <h2>{{ i18n.t('platform.clients_title') }}</h2>
+      <p class="hint">{{ i18n.t('platform.clients_hint') }}</p>
+    </div>
+    <button class="checkout-button outline small" type="button" (click)="refreshWorkspaces()" [disabled]="loadingWorkspaces()">
+      {{ loadingWorkspaces() ? i18n.t('common.loading') : i18n.t('common.refresh') }}
+    </button>
+  </div>
+
+  <div class="checkout-banner cancelled" *ngIf="workspaceError() as errorMessage">{{ errorMessage }}</div>
+
+  <div class="table-wrap" *ngIf="workspaces().length; else emptyWorkspaces">
+    <table>
+      <thead>
+        <tr>
+          <th>{{ i18n.t('platform.company') }}</th>
+          <th>Tenant</th>
+          <th>Plan</th>
+          <th>{{ i18n.t('platform.seats') }}</th>
+          <th>{{ i18n.t('platform.active') }}</th>
+          <th>{{ i18n.t('platform.owner') }}</th>
+          <th>{{ i18n.t('platform.status') }}</th>
+          <th>{{ i18n.t('platform.created_at') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let workspace of workspaces()">
+          <td>
+            <strong>{{ workspace.companyName }}</strong>
+            <div class="small-copy">{{ workspace.updatedAt ? (i18n.t('platform.updated_at') + ' ' + workspace.updatedAt) : '' }}</div>
+          </td>
+          <td>{{ workspace.tenantId }}</td>
+          <td><span class="badge">{{ workspace.planCode || '-' }}</span></td>
+          <td>
+            <span class="badge" [class.badge-alert]="workspace.seatLimitExceeded">{{ seatUsageLabel(workspace) }}</span>
+          </td>
+          <td>{{ workspace.activeEmployees }}</td>
+          <td>{{ workspace.ownerEmail || '-' }}</td>
+          <td><span class="badge" [class.badge-alert]="!workspace.active">{{ workspace.active ? i18n.t('platform.active_yes') : i18n.t('platform.active_no') }}</span></td>
+          <td>{{ workspace.createdAt || '-' }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="section-head">
+    <div>
+      <p class="section-tag">{{ i18n.t('platform.incidents_tag') }}</p>
+      <h2>{{ i18n.t('platform.incidents_title') }}</h2>
+      <p class="hint">{{ i18n.t('platform.incidents_hint') }}</p>
+    </div>
+    <button class="checkout-button outline small" type="button" (click)="refreshTickets()" [disabled]="loadingTickets()">
+      {{ loadingTickets() ? i18n.t('common.loading') : i18n.t('common.refresh') }}
+    </button>
+  </div>
+
+  <div class="checkout-banner cancelled" *ngIf="ticketError() as errorMessage">{{ errorMessage }}</div>
+
+  <div class="table-wrap" *ngIf="tickets().length; else emptyPlatformTickets">
+    <table>
+      <thead>
+        <tr>
+          <th>Ticket</th>
+          <th>Tenant</th>
+          <th>{{ i18n.t('support.priority') }}</th>
+          <th>{{ i18n.t('platform.status') }}</th>
+          <th>{{ i18n.t('support.drawer_requester') }}</th>
+          <th>SLA</th>
+          <th>Message</th>
+          <th>{{ i18n.t('platform.action') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let ticket of tickets()" class="clickable-row" (click)="openTicket(ticket)">
+          <td>
+            <strong>#{{ ticket.id }}</strong>
+            <div class="small-copy">{{ ticket.subject }}</div>
+            <div class="small-copy">{{ ticket.category }}</div>
+          </td>
+          <td>{{ ticket.tenantId }}</td>
+          <td><span class="badge" [class.badge-alert]="ticket.priority === 'PRIORITY'">{{ ticket.priority }}</span></td>
+          <td><span class="badge" [class.badge-alert]="ticket.slaBreached">{{ ticket.status }}</span></td>
+          <td>
+            {{ ticket.requesterName || '-' }}
+            <div class="small-copy">{{ ticket.requesterEmail }}</div>
+            <div class="small-copy" *ngIf="ticket.phoneNumber">{{ ticket.phoneNumber }}</div>
+          </td>
+          <td>
+            <span *ngIf="ticket.slaDueAt; else noSla">{{ ticket.slaDueAt }}</span>
+            <ng-template #noSla><span class="small-copy">Standard</span></ng-template>
+          </td>
+          <td>{{ visibleMessage(ticket) }}</td>
+          <td>
+            <button class="checkout-button outline small" type="button" (click)="openTicket(ticket); $event.stopPropagation()">
+              {{ i18n.t('platform.open') }}
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="ticket-drawer" *ngIf="selectedTicket() as ticket">
+  <div class="ticket-drawer-backdrop" (click)="closeTicketPanel()"></div>
+  <article class="ticket-drawer-panel">
+    <div class="section-head">
+      <div>
+        <p class="section-tag">Ticket #{{ ticket.id }}</p>
+        <h2>{{ ticket.subject }}</h2>
+        <p class="hint">{{ ticket.tenantId }} · {{ ticket.category }} · {{ ticket.createdAt }}</p>
+      </div>
+      <button class="checkout-button outline small" type="button" (click)="closeTicketPanel()">{{ i18n.t('common.close') }}</button>
+    </div>
+
+    <div class="ticket-detail-grid">
+      <div class="legal-note-card">
+        <h3>{{ i18n.t('support.drawer_requester') }}</h3>
+        <p>{{ ticket.requesterName || '-' }}</p>
+        <p class="small-copy">{{ ticket.requesterEmail }}</p>
+        <p class="small-copy" *ngIf="ticket.phoneNumber">{{ ticket.phoneNumber }}</p>
+      </div>
+      <div class="legal-note-card">
+        <h3>{{ i18n.t('support.drawer_status') }}</h3>
+        <p><span class="badge" [class.badge-alert]="ticket.slaBreached">{{ ticket.status }}</span></p>
+        <p class="small-copy" *ngIf="ticket.resolvedAt">{{ i18n.t('support.drawer_closed_by', { date: ticket.resolvedAt, actor: ticket.resolvedBy || '-' }) }}</p>
+        <p class="small-copy" *ngIf="ticket.slaDueAt">SLA : {{ ticket.slaDueAt }}</p>
+      </div>
+    </div>
+
+    <div class="ticket-message-block">
+      <h3>{{ i18n.t('platform.request_content') }}</h3>
+      <p>{{ ticket.message }}</p>
+    </div>
+
+    <div class="ticket-message-block" *ngIf="ticket.resolutionMessage">
+      <h3>{{ i18n.t('support.drawer_resolution') }}</h3>
+      <p>{{ ticket.resolutionMessage }}</p>
+    </div>
+
+    <label class="workspace-field">
+      <span>{{ i18n.t('platform.resolve_label') }}</span>
+      <textarea [(ngModel)]="resolutionDraft" [disabled]="workingTicket() || ticket.status === 'RESOLVED'"></textarea>
+    </label>
+
+    <div class="checkout-banner success" *ngIf="ticketActionMessage() as message">{{ message }}</div>
+    <div class="checkout-banner cancelled" *ngIf="ticketActionError() as error">{{ error }}</div>
+
+    <div class="action-row">
+      <button
+        class="checkout-button small"
+        type="button"
+        (click)="resolveSelectedTicket()"
+        [disabled]="workingTicket() || ticket.status === 'RESOLVED'">
+        {{ i18n.t('platform.resolve_submit') }}
+      </button>
+      <button class="checkout-button danger small" type="button" (click)="deleteSelectedTicket()" [disabled]="workingTicket()">
+        {{ i18n.t('platform.delete') }}
+      </button>
+    </div>
+  </article>
+</section>
+
+<ng-template #emptyPlatformTickets>
+  <article class="legal-note-card">
+    <h3>{{ i18n.t('platform.empty_tickets_title') }}</h3>
+    <p>{{ i18n.t('platform.empty_tickets_body') }}</p>
+  </article>
+</ng-template>
+
+<ng-template #emptyWorkspaces>
+  <article class="legal-note-card">
+    <h3>{{ i18n.t('platform.empty_workspaces_title') }}</h3>
+    <p>{{ i18n.t('platform.empty_workspaces_body') }}</p>
+  </article>
+</ng-template>

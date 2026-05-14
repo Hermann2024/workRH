@@ -1,81 +1,81 @@
 <section class="hero">
   <div>
-    <p class="section-tag">Support</p>
-    <h2>Signaler un bug ou une panne</h2>
-    <p class="lede">Ouvrez un ticket suivi avec contexte technique et accusé de réception.</p>
+    <p class="section-tag">{{ i18n.t('support.hero_tag') }}</p>
+    <h2>{{ i18n.t('support.hero_title') }}</h2>
+    <p class="lede">{{ i18n.t('support.hero_lede') }}</p>
   </div>
   <article class="subscription-card">
-    <p class="section-tag">Délai</p>
-    <h3>{{ prioritySupportAvailable() ? 'Prioritaire' : 'Standard' }}</h3>
+    <p class="section-tag">{{ i18n.t('support.delay_tag') }}</p>
+    <h3>{{ prioritySupportAvailable() ? i18n.t('support.delay_priority') : i18n.t('support.delay_standard') }}</h3>
     <p class="hint">{{ responseTimeLabel() }}</p>
   </article>
 </section>
 
 <div class="checkout-banner success" *ngIf="successTicket() as ticket">
-  Ticket #{{ ticket.id }} créé. Référence : {{ ticket.category }} - {{ ticket.status }}.
+  {{ i18n.t('support.success_ticket', { id: ticket.id, category: ticket.category, status: ticket.status }) }}
 </div>
 <div class="checkout-banner cancelled" *ngIf="loadError() as errorMessage">
   {{ errorMessage }}
 </div>
 
 <section class="grid-layout">
-  <section class="panel">
+  <section class="panel" *ngIf="canCreateSupportTicket()">
     <div class="section-head">
       <div>
-        <p class="section-tag">Ticket</p>
-        <h2>Votre demande</h2>
+        <p class="section-tag">{{ i18n.t('support.panel_ticket_tag') }}</p>
+        <h2>{{ i18n.t('support.panel_ticket_title') }}</h2>
       </div>
     </div>
 
     <form class="workspace-form-card" (ngSubmit)="submitSupport()">
       <div class="workspace-inline-fields">
         <label class="workspace-field">
-          <span>Nom</span>
+          <span>{{ i18n.t('support.name') }}</span>
           <input [(ngModel)]="supportDraft.requesterName" name="requesterName" autocomplete="name">
         </label>
         <label class="workspace-field">
-          <span>Email</span>
+          <span>{{ i18n.t('support.email') }}</span>
           <input type="email" [(ngModel)]="supportDraft.requesterEmail" name="requesterEmail" autocomplete="email" required>
         </label>
       </div>
 
       <div class="workspace-inline-fields">
         <label class="workspace-field">
-          <span>Type</span>
+          <span>{{ i18n.t('support.type') }}</span>
           <select [(ngModel)]="supportDraft.impact" name="impact">
-            <option *ngFor="let option of impactOptions" [value]="option.value">{{ option.label }}</option>
+            <option *ngFor="let option of impactOptions()" [value]="option.value">{{ option.label }}</option>
           </select>
         </label>
         <label class="workspace-field">
-          <span>Priorité</span>
+          <span>{{ i18n.t('support.priority') }}</span>
           <select [(ngModel)]="supportDraft.priority" name="priority">
-            <option *ngFor="let option of priorityOptions" [value]="option.value">{{ option.label }}</option>
+            <option *ngFor="let option of priorityOptions()" [value]="option.value">{{ option.label }}</option>
           </select>
         </label>
       </div>
 
       <div class="workspace-inline-fields">
         <label class="workspace-field">
-          <span>Téléphone</span>
+          <span>{{ i18n.t('support.phone') }}</span>
           <input [(ngModel)]="supportDraft.phoneNumber" name="phoneNumber" autocomplete="tel">
         </label>
         <label class="workspace-field">
-          <span>Sujet</span>
+          <span>{{ i18n.t('support.subject') }}</span>
           <input [(ngModel)]="supportDraft.subject" name="subject" required>
         </label>
       </div>
 
       <label class="workspace-field">
-        <span>Description</span>
+        <span>{{ i18n.t('support.description') }}</span>
         <textarea [(ngModel)]="supportDraft.message" name="message" rows="6" required></textarea>
       </label>
 
       <p class="workspace-helper">
-        Le ticket inclut automatiquement la page courante, le tenant, l'utilisateur et le navigateur pour accélérer le diagnostic.
+        {{ i18n.t('support.helper') }}
       </p>
 
       <button class="checkout-button" type="submit" [disabled]="loading()">
-        {{ loading() ? 'Transmission...' : 'Envoyer au support' }}
+        {{ loading() ? i18n.t('support.submit_loading') : i18n.t('support.submit') }}
       </button>
     </form>
   </section>
@@ -83,16 +83,17 @@
   <section class="panel">
     <div class="section-head">
       <div>
-        <p class="section-tag">Suivi</p>
-        <h2>Références récentes</h2>
+        <p class="section-tag">{{ i18n.t('support.panel_history_tag') }}</p>
+        <h2>{{ i18n.t('support.panel_history_title') }}</h2>
       </div>
     </div>
 
     <div class="timeline-list" *ngIf="ticketHistory().length; else emptyTickets">
-      <article class="timeline-card" *ngFor="let ticket of ticketHistory()">
+      <article class="timeline-card clickable-row" *ngFor="let ticket of ticketHistory()" (click)="openHistoryTicket(ticket)">
         <div>
           <strong>#{{ ticket.id }} - {{ ticket.subject }}</strong>
           <p>{{ ticket.category }} - {{ ticket.priority }}</p>
+          <p class="small-copy">{{ ticket.requesterEmail }}</p>
         </div>
         <div class="timeline-meta">
           <span class="badge" [class.badge-alert]="ticket.slaBreached">{{ ticket.status }}</span>
@@ -103,14 +104,71 @@
 
     <ng-template #emptyTickets>
       <article class="legal-note-card">
-        <h3>Aucun ticket récent</h3>
-        <p>Après envoi, la référence du ticket s'affichera ici.</p>
+        <h3>{{ i18n.t('support.empty_history_title') }}</h3>
+        <p>{{ i18n.t('support.empty_history_body') }}</p>
       </article>
     </ng-template>
 
     <article class="legal-note-card">
-      <h3>En cas de panne générale</h3>
-      <p>Choisissez le type panne ou indisponibilité et la priorité critique. Les détails techniques seront joints automatiquement au ticket.</p>
+      <h3>{{ i18n.t('support.note_outage_title') }}</h3>
+      <p>{{ i18n.t('support.note_outage_body') }}</p>
     </article>
   </section>
+</section>
+
+<section class="ticket-drawer" *ngIf="selectedHistoryTicket() as ticket">
+  <div class="ticket-drawer-backdrop" (click)="closeHistoryTicket()"></div>
+  <article class="ticket-drawer-panel">
+    <div class="section-head">
+      <div>
+        <p class="section-tag">{{ i18n.t('support.drawer_ticket', { id: ticket.id }) }}</p>
+        <h2>{{ ticket.subject }}</h2>
+        <p class="hint">{{ ticket.tenantId }} · {{ ticket.category }} · {{ ticket.createdAt }}</p>
+      </div>
+      <button class="checkout-button outline small" type="button" (click)="closeHistoryTicket()">{{ i18n.t('common.close') }}</button>
+    </div>
+
+    <div class="ticket-detail-grid">
+      <div class="legal-note-card">
+        <h3>{{ i18n.t('support.drawer_requester') }}</h3>
+        <p>{{ ticket.requesterName || '-' }}</p>
+        <p class="small-copy">{{ ticket.requesterEmail }}</p>
+        <p class="small-copy" *ngIf="ticket.phoneNumber">{{ ticket.phoneNumber }}</p>
+      </div>
+      <div class="legal-note-card">
+        <h3>{{ i18n.t('support.drawer_status') }}</h3>
+        <p><span class="badge" [class.badge-alert]="ticket.slaBreached">{{ ticket.status }}</span></p>
+        <p class="small-copy" *ngIf="ticket.resolvedAt">{{ i18n.t('support.drawer_closed_by', { date: ticket.resolvedAt, actor: ticket.resolvedBy || '-' }) }}</p>
+        <p class="small-copy" *ngIf="ticket.slaDueAt">SLA : {{ ticket.slaDueAt }}</p>
+      </div>
+    </div>
+
+    <div class="ticket-message-block">
+      <h3>{{ i18n.t('support.drawer_message') }}</h3>
+      <p>{{ ticket.message }}</p>
+    </div>
+
+    <div class="ticket-message-block" *ngIf="ticket.resolutionMessage">
+      <h3>{{ i18n.t('support.drawer_resolution') }}</h3>
+      <p>{{ ticket.resolutionMessage }}</p>
+    </div>
+
+    <ng-container *ngIf="canResolveSupportTicket()">
+      <label class="workspace-field">
+        <span>{{ i18n.t('support.resolve_label') }}</span>
+        <textarea [(ngModel)]="resolutionDraft" [disabled]="resolvingTicket() || ticket.status === 'RESOLVED'"></textarea>
+      </label>
+
+      <div class="checkout-banner success" *ngIf="ticketActionMessage() as message">{{ message }}</div>
+      <div class="checkout-banner cancelled" *ngIf="ticketActionError() as error">{{ error }}</div>
+
+      <button
+        class="checkout-button small"
+        type="button"
+        (click)="resolveHistoryTicket()"
+        [disabled]="resolvingTicket() || ticket.status === 'RESOLVED'">
+        {{ resolvingTicket() ? i18n.t('support.resolve_loading') : i18n.t('support.resolve_submit') }}
+      </button>
+    </ng-container>
+  </article>
 </section>

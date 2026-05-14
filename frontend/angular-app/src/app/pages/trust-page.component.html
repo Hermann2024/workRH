@@ -1,0 +1,83 @@
+<ng-container *ngIf="loadError() as errorMessage; else trustState">
+  <section class="panel loading-panel">
+    <h2>Centre de confiance indisponible</h2>
+    <p>{{ errorMessage }}</p>
+  </section>
+</ng-container>
+
+<ng-template #trustState>
+  <section class="hero">
+    <div>
+      <p class="section-tag">Trust center</p>
+      <h2>Securite, RGPD et preparation production</h2>
+      <p class="lede">Centralisez les garanties a presenter aux clients B2B et les points a finaliser avant vente SaaS autonome.</p>
+      <div class="action-row">
+        <a class="checkout-button small" routerLink="/onboarding">Onboarding</a>
+        <a class="checkout-button outline small" routerLink="/support">Support</a>
+        <a class="checkout-button outline small" routerLink="/policies">Politiques</a>
+      </div>
+    </div>
+
+    <article class="subscription-card trust-score-card">
+      <p class="section-tag">Niveau confiance</p>
+      <h3>{{ trustScore() }}%</h3>
+      <p class="hint">Score indicatif base sur les controles visibles dans l'application.</p>
+    </article>
+  </section>
+
+  <section class="stats-grid">
+    <article class="metric-card"><span>Controles</span><strong>{{ controls().length }}</strong></article>
+    <article class="metric-card"><span>Prets</span><strong>{{ readyControls() }}</strong></article>
+    <article class="metric-card alert-card"><span>Partiels</span><strong>{{ partialControls() }}</strong></article>
+    <article class="metric-card alert-card"><span>A finaliser</span><strong>{{ todoControls() }}</strong></article>
+  </section>
+
+  <section class="panel trust-panel">
+    <div class="section-head">
+      <div>
+        <p class="section-tag">Controle client</p>
+        <h2>Matrice securite et RGPD</h2>
+      </div>
+    </div>
+
+    <div class="trust-control-grid">
+      <article *ngFor="let control of controls()" [ngClass]="statusClass(control.status)">
+        <div class="trust-control-head">
+          <div>
+            <span>{{ control.owner }}</span>
+            <h3>{{ control.title }}</h3>
+          </div>
+          <span class="badge" [ngClass]="statusClass(control.status)">{{ statusLabel(control.status) }}</span>
+        </div>
+        <p>{{ control.detail }}</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="panel trust-panel">
+    <div class="section-head">
+      <div>
+        <p class="section-tag">Avant production</p>
+        <h2>Documents a preparer</h2>
+      </div>
+    </div>
+
+    <div class="trust-document-grid">
+      <article>
+        <span>RGPD</span>
+        <strong>DPA et registre</strong>
+        <p>Contrat de sous-traitance, base legale, durees de conservation et procedure droits utilisateur.</p>
+      </article>
+      <article>
+        <span>Securite</span>
+        <strong>Plan incident</strong>
+        <p>Contact securite, severites, delais de notification, journalisation et reprise d'activite.</p>
+      </article>
+      <article>
+        <span>Operations</span>
+        <strong>SLA client</strong>
+        <p>Disponibilite cible, support, sauvegardes, monitoring et page statut.</p>
+      </article>
+    </div>
+  </section>
+</ng-template>

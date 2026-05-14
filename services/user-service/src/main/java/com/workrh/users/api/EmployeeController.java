@@ -3,9 +3,13 @@ package com.workrh.users.api;
 import com.workrh.common.subscription.FeatureCode;
 import com.workrh.common.subscription.RequiresFeature;
 import com.workrh.users.api.dto.EmployeeCreateRequest;
+import com.workrh.users.api.dto.EmployeeInvitationRequest;
+import com.workrh.users.api.dto.EmployeeInvitationResponse;
 import com.workrh.users.api.dto.EmployeeResponse;
 import com.workrh.users.api.dto.EmployeeUpdateRequest;
 import com.workrh.users.api.dto.PasswordUpdateRequest;
+import com.workrh.users.api.dto.TenantWorkspaceResponse;
+import com.workrh.users.api.dto.TenantWorkspaceUpdateRequest;
 import com.workrh.users.service.EmployeeService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -49,10 +53,34 @@ public class EmployeeController {
         return employeeService.currentProfile();
     }
 
+    @GetMapping("/workspace")
+    @PreAuthorize("hasAuthority('HR')")
+    public TenantWorkspaceResponse workspace() {
+        return employeeService.currentWorkspace();
+    }
+
+    @PutMapping("/workspace")
+    @PreAuthorize("hasAuthority('HR')")
+    public TenantWorkspaceResponse updateWorkspace(@Valid @RequestBody TenantWorkspaceUpdateRequest request) {
+        return employeeService.updateWorkspace(request);
+    }
+
     @PostMapping
     @PreAuthorize("hasAuthority('HR')")
     public EmployeeResponse create(@Valid @RequestBody EmployeeCreateRequest request) {
         return employeeService.create(request);
+    }
+
+    @GetMapping("/invitations")
+    @PreAuthorize("hasAuthority('HR')")
+    public List<EmployeeInvitationResponse> findInvitations() {
+        return employeeService.findInvitations();
+    }
+
+    @PostMapping("/invitations")
+    @PreAuthorize("hasAuthority('HR')")
+    public EmployeeInvitationResponse invite(@Valid @RequestBody EmployeeInvitationRequest request) {
+        return employeeService.inviteEmployee(request);
     }
 
     @PutMapping("/{employeeId}")

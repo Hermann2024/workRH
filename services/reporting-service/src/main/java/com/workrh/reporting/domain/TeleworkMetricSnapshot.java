@@ -24,6 +24,7 @@ public class TeleworkMetricSnapshot {
     private int month;
     private int usedDays;
     private int annualUsedDays;
+    private int annualFiscalLimitDays = 34;
     private int annualRemainingDays;
     private int weeklyUsedDays;
     private boolean annualFiscalLimitExceeded;

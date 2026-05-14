@@ -6,6 +6,10 @@ spring:
     username: workrh
     password: workrh
 subscription:
+  user-service:
+    base-url: ${USER_SERVICE_BASE_URL:http://localhost:9081}
+  workspace:
+    internal-key: ${WORKRH_WORKSPACE_INTERNAL_KEY:workrh-workspace-internal}
   preview-all-features:
     enabled: ${WORKRH_PREVIEW_ALL_FEATURES_ENABLED:true}
     user-emails: ${WORKRH_PREVIEW_ALL_FEATURES_USER_EMAILS:demo@company.com}

@@ -40,6 +40,7 @@ public class SubscriptionService {
     private final SubscriptionPlanRepository subscriptionPlanRepository;
     private final TenantSubscriptionRepository tenantSubscriptionRepository;
     private final StripeCheckoutService stripeCheckoutService;
+    private final WorkspaceSubscriptionSyncClient workspaceSubscriptionSyncClient;
 
     @Value("${subscription.preview-all-features.enabled:false}")
     private boolean previewAllFeaturesEnabled;
@@ -59,7 +60,7 @@ public class SubscriptionService {
     @Value("${notification.support.smtp-host:}")
     private String supportSmtpHost;
 
-    @Value("${notification.sms.enabled:true}")
+    @Value("${notification.sms.enabled:false}")
     private boolean smsEnabled;
 
     @Value("${notification.sms.webhook-url:}")
@@ -71,10 +72,12 @@ public class SubscriptionService {
     public SubscriptionService(
             SubscriptionPlanRepository subscriptionPlanRepository,
             TenantSubscriptionRepository tenantSubscriptionRepository,
-            StripeCheckoutService stripeCheckoutService) {
+            StripeCheckoutService stripeCheckoutService,
+            WorkspaceSubscriptionSyncClient workspaceSubscriptionSyncClient) {
         this.subscriptionPlanRepository = subscriptionPlanRepository;
         this.tenantSubscriptionRepository = tenantSubscriptionRepository;
         this.stripeCheckoutService = stripeCheckoutService;
+        this.workspaceSubscriptionSyncClient = workspaceSubscriptionSyncClient;
     }
 
     public List<PlanResponse> listPlans() {
@@ -247,6 +250,7 @@ public class SubscriptionService {
         subscription.setCancellationReason(request.reason());
         subscription.setUpdatedAt(Instant.now());
         TenantSubscription saved = tenantSubscriptionRepository.save(subscription);
+        workspaceSubscriptionSyncClient.sync(saved);
         return toSubscriptionResponse(saved, getPlan(saved.getPlanCode()));
     }
 
@@ -257,6 +261,7 @@ public class SubscriptionService {
         subscription.setCancellationReason(null);
         subscription.setUpdatedAt(Instant.now());
         TenantSubscription saved = tenantSubscriptionRepository.save(subscription);
+        workspaceSubscriptionSyncClient.sync(saved);
         return toSubscriptionResponse(saved, getPlan(saved.getPlanCode()));
     }
 
@@ -296,6 +301,7 @@ public class SubscriptionService {
         subscription.setUpdatedAt(Instant.now());
 
         TenantSubscription saved = tenantSubscriptionRepository.save(subscription);
+        workspaceSubscriptionSyncClient.sync(saved);
         return toSubscriptionResponse(saved, targetPlan);
     }
 

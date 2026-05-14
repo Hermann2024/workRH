@@ -51,6 +51,11 @@ public class Employee {
     private String phoneNumber;
     private String department;
     private String jobTitle;
+    private LocalDate birthDate;
+    @Enumerated(EnumType.STRING)
+    private EmployeeGender gender = EmployeeGender.AUTRES;
+    @Enumerated(EnumType.STRING)
+    private EmploymentContractType contractType = EmploymentContractType.CDI;
     private boolean crossBorderWorker;
     private LocalDate hireDate;
     private boolean active = true;

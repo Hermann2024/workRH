@@ -10,3 +10,13 @@ subscription:
     base-url: ${SUBSCRIPTION_SERVICE_BASE_URL:http://localhost:9087}
   bootstrap:
     key: ${WORKRH_SUBSCRIPTION_BOOTSTRAP_KEY:workrh-signup-bootstrap}
+notification:
+  service:
+    base-url: ${NOTIFICATION_SERVICE_BASE_URL:http://localhost:9085}
+  internal:
+    key: ${WORKRH_NOTIFICATION_INTERNAL_KEY:workrh-notification-internal}
+workrh:
+  public-base-url: ${WORKRH_PUBLIC_BASE_URL:http://localhost:4200}
+workspace:
+  internal:
+    key: ${WORKRH_WORKSPACE_INTERNAL_KEY:workrh-workspace-internal}

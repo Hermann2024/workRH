@@ -9,5 +9,6 @@ public interface TeleworkMetricRepository extends JpaRepository<TeleworkMetricSn
     List<TeleworkMetricSnapshot> findAllByTenantIdAndYearAndMonth(String tenantId, int year, int month);
     List<TeleworkMetricSnapshot> findAllByTenantIdAndYearOrderByMonthAsc(String tenantId, int year);
     Optional<TeleworkMetricSnapshot> findByTenantIdAndEmployeeIdAndYearAndMonth(String tenantId, Long employeeId, int year, int month);
+    Optional<TeleworkMetricSnapshot> findTopByTenantIdAndEmployeeIdAndYearAndMonthLessThanEqualOrderByMonthDesc(String tenantId, Long employeeId, int year, int month);
     List<TeleworkMetricSnapshot> findAllByTenantIdAndEmployeeId(String tenantId, Long employeeId);
 }

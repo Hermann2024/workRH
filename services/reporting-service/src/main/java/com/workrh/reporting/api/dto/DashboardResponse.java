@@ -20,6 +20,9 @@ public record DashboardResponse(
             int weeklyUsedDays,
             String annualAlertLevel,
             String annualAlertLabel,
+            int riskScorePercent,
+            String riskLevel,
+            String riskLabel,
             boolean annualFiscalLimitExceeded,
             boolean weeklyCompanyLimitExceeded
     ) {

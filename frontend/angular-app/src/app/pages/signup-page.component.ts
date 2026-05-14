@@ -4,11 +4,14 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../auth.service';
+import { TranslatePipe } from '../i18n/translate.pipe';
+import { I18nService } from '../i18n/i18n.service';
+import { PLAN_COMMERCIAL_CONTENT } from '../plan-commercial-content';
 
 type SignupPlanCode = 'STARTER' | 'PRO' | 'PREMIUM' | 'ENTERPRISE';
 type TrialPlanCode = 'STARTER' | 'PRO' | 'PREMIUM';
 type SignupAccountType = 'HR' | 'EMPLOYEE';
-type SignupFieldName = 'tenantId' | 'firstName' | 'lastName' | 'email' | 'password' | 'seatsPurchased';
+type SignupFieldName = 'companyName' | 'tenantId' | 'firstName' | 'lastName' | 'email' | 'password' | 'seatsPurchased';
 
 const PLAN_SEAT_RULES: Record<TrialPlanCode, { min: number; max: number | null; label: string }> = {
   STARTER: { min: 1, max: 10, label: 'Starter' },
@@ -19,7 +22,7 @@ const PLAN_SEAT_RULES: Record<TrialPlanCode, { min: number; max: number | null; 
 @Component({
   selector: 'app-signup-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe],
   templateUrl: './signup-page.component.html',
   styleUrl: './page-styles.css'
 })
@@ -28,6 +31,7 @@ export class SignupPageComponent {
   private readonly authService = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly i18n = inject(I18nService);
 
   readonly submitting = signal(false);
   readonly errorMessage = signal<string | null>(null);
@@ -36,7 +40,22 @@ export class SignupPageComponent {
   readonly requestedPlan = computed(() => this.parsePlanCode(this.route.snapshot.queryParamMap.get('plan')));
   readonly trialPlan = computed<TrialPlanCode>(() => this.resolveTrialPlan(this.requestedPlan()));
   readonly seatRules = computed(() => PLAN_SEAT_RULES[this.trialPlan()]);
+  readonly trialPlanSummary = computed(() => PLAN_COMMERCIAL_CONTENT[this.trialPlan()]);
+  readonly trialPlanSummaryDisplay = computed(() => {
+    this.i18n.locale();
+    const plan = this.trialPlan();
+    const headlineKey = `pricing.plan.${plan}.headline`;
+    const idealKey = `pricing.plan.${plan}.idealFor`;
+    const base = PLAN_COMMERCIAL_CONTENT[plan];
+    const headline = this.i18n.translate(headlineKey);
+    const idealFor = this.i18n.translate(idealKey);
+    return {
+      headline: headline !== headlineKey ? headline : base.headline,
+      idealFor: idealFor !== idealKey ? idealFor : base.idealFor
+    };
+  });
   readonly signupForm = this.formBuilder.nonNullable.group({
+    companyName: ['', [Validators.required, Validators.minLength(2)]],
     tenantId: ['', [Validators.required, Validators.minLength(3)]],
     firstName: ['', [Validators.required, Validators.minLength(2)]],
     lastName: ['', [Validators.required, Validators.minLength(2)]],
@@ -52,11 +71,16 @@ export class SignupPageComponent {
   selectAccountType(accountType: SignupAccountType): void {
     this.accountType.set(accountType);
     this.errorMessage.set(null);
+    const companyNameControl = this.signupForm.controls.companyName;
     if (accountType === 'HR') {
+      companyNameControl.setValidators([Validators.required, Validators.minLength(2)]);
+      companyNameControl.updateValueAndValidity({ emitEvent: false });
       this.applySeatRules();
       return;
     }
 
+    companyNameControl.clearValidators();
+    companyNameControl.updateValueAndValidity({ emitEvent: false });
     const seatsControl = this.signupForm.controls.seatsPurchased;
     seatsControl.clearValidators();
     seatsControl.updateValueAndValidity({ emitEvent: false });
@@ -69,7 +93,7 @@ export class SignupPageComponent {
 
     if (this.signupForm.invalid) {
       this.signupForm.markAllAsTouched();
-      this.errorMessage.set('Completez les champs obligatoires avant de creer le compte.');
+      this.errorMessage.set(this.i18n.translate('signup.error_incomplete'));
       return;
     }
 
@@ -77,6 +101,7 @@ export class SignupPageComponent {
     this.submitting.set(true);
     const raw = this.signupForm.getRawValue();
     this.authService.signup({
+      companyName: this.isHrSignup() ? raw.companyName : null,
       tenantId: raw.tenantId,
       firstName: raw.firstName,
       lastName: raw.lastName,
@@ -123,14 +148,14 @@ export class SignupPageComponent {
     }
 
     if (field.errors['required']) {
-      return 'Ce champ est obligatoire.';
+      return this.i18n.translate('signup.validation.required');
     }
     if (field.errors['email']) {
-      return 'Entrez une adresse email valide.';
+      return this.i18n.translate('signup.validation.email');
     }
     if (field.errors['minlength']) {
       const requiredLength = field.errors['minlength'].requiredLength;
-      return `Minimum ${requiredLength} caracteres.`;
+      return this.i18n.translate('signup.validation.minlength', { n: requiredLength });
     }
     if (field.errors['min']) {
       return this.formatSeatRangeError('minimum');
@@ -139,15 +164,20 @@ export class SignupPageComponent {
       return this.formatSeatRangeError('maximum');
     }
 
-    return 'Valeur invalide.';
+    return this.i18n.translate('signup.validation.invalid');
   }
 
   seatHelpText(): string {
+    this.i18n.locale();
     const rules = this.seatRules();
     if (rules.max === null) {
-      return `Minimum ${rules.min} employes pour l'essai ${rules.label}.`;
+      return this.i18n.translate('signup.seat_help_min', { min: rules.min, plan: rules.label });
     }
-    return `Entre ${rules.min} et ${rules.max} employes pour l'essai ${rules.label}.`;
+    return this.i18n.translate('signup.seat_help_range', {
+      min: rules.min,
+      max: rules.max,
+      plan: rules.label
+    });
   }
 
   private applySeatRules(): void {
@@ -182,42 +212,47 @@ export class SignupPageComponent {
   }
 
   private formatSeatRangeError(boundary: 'minimum' | 'maximum'): string {
+    this.i18n.locale();
     const rules = this.seatRules();
     if (boundary === 'minimum') {
       return rules.max === null
-        ? `Le plan ${rules.label} demande au moins ${rules.min} employes pour demarrer l'essai.`
-        : `Le plan ${rules.label} demande entre ${rules.min} et ${rules.max} employes pour demarrer l'essai.`;
+        ? this.i18n.translate('signup.seat_error_min', { plan: rules.label, min: rules.min })
+        : this.i18n.translate('signup.seat_error_between', {
+            plan: rules.label,
+            min: rules.min,
+            max: rules.max
+          });
     }
 
-    return `Le plan ${rules.label} accepte au maximum ${rules.max} employes pour demarrer l'essai.`;
+    return this.i18n.translate('signup.seat_error_max', { plan: rules.label, max: rules.max ?? '' });
   }
 
   private readSignupError(error: HttpErrorResponse): string {
     const backendMessage = error?.error?.message;
     if (typeof backendMessage !== 'string' || !backendMessage.trim()) {
-      return 'Une erreur est survenue lors de la creation du compte.';
+      return this.i18n.translate('signup.error_generic');
     }
 
     switch (backendMessage) {
       case 'This workspace already exists':
-        return 'Ce tenant existe deja. Choisissez un autre identifiant ou connectez-vous avec le compte existant.';
+        return this.i18n.translate('signup.err.workspace_exists');
       case 'This email is already used in the selected workspace':
-        return 'Cette adresse email est deja utilisee dans cet espace.';
+        return this.i18n.translate('signup.err.email_used');
       case 'Employee signup requires an existing workspace':
-        return "Le tenant indique n'existe pas encore. Demandez l'identifiant de l'espace a votre RH.";
+        return this.i18n.translate('signup.err.tenant_missing');
       case 'Tenant identifier is required':
-        return 'Le tenant est obligatoire.';
+        return this.i18n.translate('signup.err.tenant_required');
       case 'Tenant identifier must contain at least 3 characters':
-        return 'Le tenant doit contenir au moins 3 caracteres.';
+        return this.i18n.translate('signup.err.tenant_short');
       case 'Seats purchased is required for HR signup':
-        return "Le nombre d'employes est obligatoire pour creer un espace RH.";
+        return this.i18n.translate('signup.err.seats_required');
       case 'Seats below minimum plan size':
         return this.formatSeatRangeError('minimum');
       case 'Seats above maximum plan size':
         return this.formatSeatRangeError('maximum');
       case 'Unable to initialize the starter trial for this workspace.':
       case 'Unable to initialize the trial for this workspace.':
-        return "L'essai n'a pas pu etre initialise. Verifiez le plan et le nombre d'employes, puis reessayez.";
+        return this.i18n.translate('signup.err.trial_init');
       default:
         return backendMessage;
     }

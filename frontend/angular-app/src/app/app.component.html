@@ -5,7 +5,7 @@
         <p class="eyebrow">{{ shellSummary().badge }}</p>
         <h1 class="brand-title">
           <span>{{ shellSummary().title }}</span>
-          <span class="lux-flag" *ngIf="shellSummary().title === 'WorkRH'" aria-label="Drapeau luxembourgeois" title="Luxembourg">
+          <span class="lux-flag" *ngIf="shellSummary().title === 'WorkRH'" [attr.aria-label]="i18n.t('shell.lux_flag_aria')" [attr.title]="i18n.t('shell.lux_flag_title')">
             <span></span>
             <span></span>
             <span></span>
@@ -14,16 +14,22 @@
       </div>
 
       <div class="status-card">
-        <p class="status-label">État</p>
+        <p class="status-label">{{ i18n.t('shell.state_label') }}</p>
         <strong>{{ shellSummary().statusLabel }}</strong>
-        <span>{{ isAuthenticated() ? 'Modules disponibles' : 'Connexion requise' }}</span>
+        <span>{{ isAuthenticated() ? i18n.t('shell.modules_available') : i18n.t('shell.login_required') }}</span>
+        <label class="locale-picker">
+          <span class="status-label">{{ i18n.t('shell.lang_label') }}</span>
+          <select [value]="i18n.locale()" (change)="setLanguage($any($event.target).value)">
+            <option *ngFor="let opt of supportedLocales" [value]="opt.id">{{ opt.label }}</option>
+          </select>
+        </label>
       </div>
     </aside>
 
     <section class="shell-main">
       <header class="topbar">
         <div class="nav-block">
-          <p class="section-caption">Navigation</p>
+          <p class="section-caption">{{ i18n.t('shell.nav_caption') }}</p>
           <nav class="nav">
             <a *ngFor="let item of navItems()"
                [routerLink]="item.route"
@@ -40,7 +46,7 @@
             {{ currentSession.email }} - {{ currentSession.tenantId }}
           </span>
           <button class="nav-logout" *ngIf="isAuthenticated()" (click)="logout()">
-            Déconnexion
+            {{ i18n.t('shell.logout') }}
           </button>
         </div>
       </header>

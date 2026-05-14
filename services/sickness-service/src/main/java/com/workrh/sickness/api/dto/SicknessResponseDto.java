@@ -9,6 +9,10 @@ public record SicknessResponseDto(
         LocalDate startDate,
         LocalDate endDate,
         String comment,
+        boolean evidenceRequired,
+        boolean evidenceUploaded,
+        String evidenceFileName,
+        Instant evidenceUploadedAt,
         Instant createdAt,
         Instant updatedAt
 ) {

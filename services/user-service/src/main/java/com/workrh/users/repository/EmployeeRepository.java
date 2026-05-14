@@ -12,4 +12,6 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     boolean existsByTenantId(String tenantId);
     boolean existsByEmailAndTenantId(String email, String tenantId);
     boolean existsByEmailAndTenantIdAndIdNot(String email, String tenantId, Long id);
+    long countByTenantId(String tenantId);
+    long countByTenantIdAndActiveTrue(String tenantId);
 }

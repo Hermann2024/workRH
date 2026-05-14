@@ -7,7 +7,7 @@ import { catchError, forkJoin, of, switchMap } from 'rxjs';
 import { AuthService } from '../auth.service';
 import { SubscriptionCheckoutService } from '../subscription-checkout.service';
 import { SubscriptionLifecycleService } from '../subscription-lifecycle.service';
-import { CatalogReadinessResponse, NotificationResponse, SlaTicketResponse, SupportTicketResponse, WorkRhApiService, WorkRhVm } from '../workrh-api.service';
+import { CatalogReadinessResponse, NotificationResponse, SlaTicketResponse, SupportTicketResponse, TenantWorkspaceResponse, WorkRhApiService, WorkRhVm } from '../workrh-api.service';
 import { FRONTEND_BASE_URL, SHOW_DEMO_HINTS } from '../config';
 
 @Component({
@@ -35,10 +35,12 @@ export class BillingPageComponent {
   readonly opsMessage = signal<string | null>(null);
   readonly opsError = signal<string | null>(null);
   readonly supportLoading = signal(false);
+  readonly workspaceSaving = signal(false);
   readonly smsLoading = signal(false);
   readonly exportLoading = signal(false);
   readonly vm = signal<WorkRhVm | null>(null);
   readonly readiness = signal<CatalogReadinessResponse | null>(null);
+  readonly workspace = signal<TenantWorkspaceResponse | null>(null);
   readonly notifications = signal<NotificationResponse[]>([]);
   readonly supportTickets = signal<SupportTicketResponse[]>([]);
   readonly slaTickets = signal<SlaTicketResponse[]>([]);
@@ -74,6 +76,9 @@ export class BillingPageComponent {
     phoneNumber: '',
     message: ''
   };
+  workspaceDraft = {
+    companyName: ''
+  };
 
   constructor() {
     const checkoutParam = this.route.snapshot.queryParamMap.get('checkout');
@@ -97,11 +102,14 @@ export class BillingPageComponent {
 
     forkJoin({
       viewModel: viewModel$,
+      workspace: this.api.getWorkspace().pipe(catchError(() => of(null))),
       readiness: this.api.getCatalogReadiness().pipe(catchError(() => of(null)))
     }).subscribe({
-      next: ({ viewModel, readiness }) => {
+      next: ({ viewModel, workspace, readiness }) => {
         this.vm.set(viewModel);
+        this.workspace.set(workspace);
         this.readiness.set(readiness);
+        this.workspaceDraft.companyName = workspace?.companyName ?? '';
         this.loadError.set(null);
         this.seedDrafts();
         this.loadOperationsData(viewModel);
@@ -117,6 +125,29 @@ export class BillingPageComponent {
 
   hasEntitlement(feature: string): boolean {
     return this.vm()?.subscription.entitlements.includes(feature) ?? false;
+  }
+
+  saveWorkspace(): void {
+    const companyName = this.workspaceDraft.companyName.trim();
+    if (companyName.length < 2) {
+      this.opsError.set("Le nom de l'entreprise doit contenir au moins 2 caracteres.");
+      return;
+    }
+
+    this.workspaceSaving.set(true);
+    this.opsError.set(null);
+    this.api.updateWorkspace({ companyName }).subscribe({
+      next: (workspace) => {
+        this.workspace.set(workspace);
+        this.workspaceDraft.companyName = workspace.companyName;
+        this.workspaceSaving.set(false);
+        this.opsMessage.set('Espace entreprise mis a jour.');
+      },
+      error: (error: HttpErrorResponse) => {
+        this.workspaceSaving.set(false);
+        this.opsError.set(this.readBackendMessage(error, "Impossible de mettre a jour l'espace entreprise."));
+      }
+    });
   }
 
   startCheckout(planCode: 'STARTER' | 'PRO' | 'PREMIUM' | 'ENTERPRISE'): void {

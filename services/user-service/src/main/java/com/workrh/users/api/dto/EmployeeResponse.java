@@ -1,6 +1,8 @@
 package com.workrh.users.api.dto;
 
 import com.workrh.users.domain.Role;
+import com.workrh.users.domain.EmployeeGender;
+import com.workrh.users.domain.EmploymentContractType;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Set;
@@ -14,6 +16,9 @@ public record EmployeeResponse(
         String phoneNumber,
         String department,
         String jobTitle,
+        LocalDate birthDate,
+        EmployeeGender gender,
+        EmploymentContractType contractType,
         boolean crossBorderWorker,
         LocalDate hireDate,
         boolean active,

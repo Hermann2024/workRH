@@ -10,19 +10,41 @@ import com.workrh.leave.api.dto.LeaveRequestDto;
 import com.workrh.leave.api.dto.LeaveResponseDto;
 import com.workrh.leave.domain.LeaveRequestEntity;
 import com.workrh.leave.domain.LeaveStatus;
+import com.workrh.leave.domain.LeaveType;
 import com.workrh.leave.repository.LeaveRepository;
+import java.io.IOException;
 import java.time.Instant;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class LeaveService {
 
     private static final Logger log = LoggerFactory.getLogger(LeaveService.class);
+    private static final long MAX_EVIDENCE_SIZE_BYTES = 10L * 1024L * 1024L;
+    private static final Set<String> ALLOWED_EVIDENCE_CONTENT_TYPES = Set.of(
+            "application/pdf",
+            "image/jpeg",
+            "image/png"
+    );
+    private static final EnumSet<LeaveType> EVIDENCE_REQUIRED_TYPES = EnumSet.of(
+            LeaveType.PATERNITY,
+            LeaveType.MOVING,
+            LeaveType.MARRIAGE,
+            LeaveType.BIRTH_OR_ADOPTION,
+            LeaveType.FAMILY_CARE,
+            LeaveType.BEREAVEMENT,
+            LeaveType.MEDICAL_APPOINTMENT,
+            LeaveType.TRAINING,
+            LeaveType.ADMINISTRATIVE
+    );
 
     private final LeaveRepository leaveRepository;
     private final KafkaTemplate<String, Object> kafkaTemplate;
@@ -54,7 +76,56 @@ public class LeaveService {
         return toDto(getAccessibleLeave(leaveId));
     }
 
+    public LeaveResponseDto uploadEvidence(Long leaveId, MultipartFile file) {
+        LeaveRequestEntity entity = getAccessibleLeave(leaveId);
+        if (!requiresEvidence(entity.getType())) {
+            throw new BadRequestException("This leave type does not require supporting evidence");
+        }
+        if (entity.getStatus() != LeaveStatus.REQUESTED) {
+            throw new BadRequestException("Supporting evidence can only be uploaded while the leave request is pending");
+        }
+        if (file == null || file.isEmpty()) {
+            throw new BadRequestException("Supporting evidence file is required");
+        }
+        if (file.getSize() > MAX_EVIDENCE_SIZE_BYTES) {
+            throw new BadRequestException("Supporting evidence file must be 10 MB or less");
+        }
+
+        String contentType = file.getContentType();
+        if (contentType == null || !ALLOWED_EVIDENCE_CONTENT_TYPES.contains(contentType)) {
+            throw new BadRequestException("Supporting evidence must be a PDF, JPG or PNG file");
+        }
+
+        try {
+            entity.setEvidenceContent(file.getBytes());
+        } catch (IOException exception) {
+            throw new BadRequestException("Unable to read supporting evidence file");
+        }
+        entity.setEvidenceFileName(sanitizeFileName(file.getOriginalFilename()));
+        entity.setEvidenceContentType(contentType);
+        entity.setEvidenceUploadedAt(Instant.now());
+        entity.setEvidenceUploadedBy(SecurityUtils.currentUsername());
+        entity.setUpdatedAt(Instant.now());
+        return toDto(leaveRepository.save(entity));
+    }
+
+    public EvidenceDownload downloadEvidence(Long leaveId) {
+        LeaveRequestEntity entity = getAccessibleLeave(leaveId);
+        if (entity.getEvidenceContent() == null || entity.getEvidenceContent().length == 0) {
+            throw new NotFoundException("Supporting evidence not found");
+        }
+        return new EvidenceDownload(
+                entity.getEvidenceFileName(),
+                entity.getEvidenceContentType(),
+                entity.getEvidenceContent()
+        );
+    }
+
     public LeaveResponseDto approve(Long leaveId, LeaveDecisionRequestDto request) {
+        LeaveRequestEntity entity = getAccessibleLeave(leaveId);
+        if (requiresEvidence(entity.getType()) && entity.getEvidenceContent() == null) {
+            throw new BadRequestException("Supporting evidence is required before approval");
+        }
         return transitionLeave(leaveId, LeaveStatus.APPROVED, request.comment());
     }
 
@@ -139,9 +210,29 @@ public class LeaveService {
                 entity.getStartDate(),
                 entity.getEndDate(),
                 entity.getComment(),
+                requiresEvidence(entity.getType()),
+                entity.getEvidenceContent() != null && entity.getEvidenceContent().length > 0,
+                entity.getEvidenceFileName(),
+                entity.getEvidenceUploadedAt(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
         );
+    }
+
+    private boolean requiresEvidence(LeaveType type) {
+        return EVIDENCE_REQUIRED_TYPES.contains(type);
+    }
+
+    private String sanitizeFileName(String fileName) {
+        if (fileName == null || fileName.isBlank()) {
+            return "justificatif";
+        }
+        String normalized = fileName.replace('\\', '/');
+        String lastSegment = normalized.substring(normalized.lastIndexOf('/') + 1);
+        return lastSegment.replaceAll("[^A-Za-z0-9._-]", "_");
+    }
+
+    public record EvidenceDownload(String fileName, String contentType, byte[] content) {
     }
 
     private void publishLeaveStatusChanged(LeaveRequestEntity entity) {
