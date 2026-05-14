@@ -597,6 +597,7 @@ export interface LeaveResponse {
   evidenceRequired: boolean;
   evidenceUploaded: boolean;
   evidenceFileName: string | null;
+  evidenceSha256: string | null;
   evidenceUploadedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -611,6 +612,7 @@ export interface SicknessResponse {
   evidenceRequired: boolean;
   evidenceUploaded: boolean;
   evidenceFileName: string | null;
+  evidenceSha256: string | null;
   evidenceUploadedAt: string | null;
   createdAt: string;
   updatedAt: string;

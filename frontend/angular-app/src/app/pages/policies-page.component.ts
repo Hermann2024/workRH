@@ -4,6 +4,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { catchError, forkJoin, of } from 'rxjs';
 import { AuthService } from '../auth.service';
 import {
+  EmployeeProfileResponse,
   TeleworkPolicyRequest,
   TeleworkPolicyResponse,
   WorkRhApiService,
@@ -48,6 +49,7 @@ export class PoliciesPageComponent {
   readonly saving = signal(false);
   readonly vm = signal<WorkRhVm | null>(null);
   readonly policies = signal<TeleworkPolicyResponse[]>([]);
+  readonly employees = signal<EmployeeProfileResponse[]>([]);
   readonly selectedCountryCode = signal('');
   readonly policyMessage = signal<string | null>(null);
   readonly policyError = signal<string | null>(null);
@@ -101,6 +103,9 @@ export class PoliciesPageComponent {
   constructor() {
     forkJoin({
       viewModel: this.api.loadViewModel(),
+      employees: this.api.getEmployees().pipe(
+        catchError(() => of([] as EmployeeProfileResponse[]))
+      ),
       policies: this.api.getTeleworkPolicies().pipe(
         catchError(() => {
           this.policyError.set('Impossible de charger les règles de télétravail pour le moment.');
@@ -108,8 +113,9 @@ export class PoliciesPageComponent {
         })
       )
     }).subscribe({
-      next: ({ viewModel, policies }) => {
+      next: ({ viewModel, employees, policies }) => {
         this.vm.set(viewModel);
+        this.employees.set(employees);
         this.loadError.set(null);
         this.policies.set(policies);
         this.selectPolicy(policies[0]?.countryCode ?? 'DEFAULT');
@@ -187,6 +193,16 @@ export class PoliciesPageComponent {
 
   policySourceLabel(policy: TeleworkPolicyResponse): string {
     return policy.id ? 'Personnalisée' : 'Catalogue par défaut';
+  }
+
+  employeeDisplayName(employeeId: number): string {
+    const employee = this.employees().find((item) => item.id === employeeId);
+    if (!employee) {
+      return `#${employeeId}`;
+    }
+
+    const fullName = `${employee.firstName ?? ''} ${employee.lastName ?? ''}`.trim();
+    return fullName || employee.email || `#${employeeId}`;
   }
 
   private reloadPolicies(countryCodeToSelect: string): void {

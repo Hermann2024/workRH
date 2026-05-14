@@ -96,6 +96,12 @@ public class StripeCheckoutService {
         if (plan.isCustomPricing()) {
             throw new BadRequestException("Enterprise plan requires manual quotation");
         }
+        PlanEntitlementPolicy.rejectPremiumOptionsForNonPremiumPlan(
+                request.planCode(),
+                request.smsOptionEnabled(),
+                request.advancedAuditOptionEnabled(),
+                request.advancedExportOptionEnabled()
+        );
         if (stripeSecretKey == null || stripeSecretKey.isBlank()) {
             throw new BadRequestException("Stripe secret key is not configured");
         }
@@ -279,6 +285,7 @@ public class StripeCheckoutService {
         subscription.setSmsOptionEnabled(object.path("metadata").path("smsOptionEnabled").asBoolean(false));
         subscription.setAdvancedAuditOptionEnabled(object.path("metadata").path("advancedAuditOptionEnabled").asBoolean(false));
         subscription.setAdvancedExportOptionEnabled(object.path("metadata").path("advancedExportOptionEnabled").asBoolean(false));
+        PlanEntitlementPolicy.clearPremiumOptionsForNonPremiumPlan(subscription);
         subscription.setStripeCustomerEmail(firstNonBlank(
                 object.path("customer_details").path("email").asText(null),
                 object.path("customer_email").asText(null)

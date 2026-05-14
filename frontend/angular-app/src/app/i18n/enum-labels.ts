@@ -82,7 +82,7 @@ export const ENUM_LABELS: Record<LocaleId, Record<string, string>> = {
     'comp.MISSING_DATA': 'Missing data',
     'comp.MANUAL_REVIEW': 'Manual review',
     'step.NOT_STARTED': 'Not started',
-    'step.TO_PREPARE': 'To prepare',
+    'step.TO_PREPARE': 'To préparé',
     'step.SUBMITTED': 'Submitted',
     'step.VALIDATED': 'Validated',
     'step.EXPIRED': 'Expired',

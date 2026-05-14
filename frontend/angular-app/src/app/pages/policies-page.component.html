@@ -38,7 +38,7 @@
       </thead>
       <tbody>
         <tr *ngFor="let employee of summary.employees">
-          <td>#{{ employee.employeeId }}</td>
+          <td>{{ employeeDisplayName(employee.employeeId) }}</td>
           <td>{{ employee.policy.countryCode }}</td>
           <td>{{ employee.policy.annualFiscalLimitDays }}</td>
           <td>{{ employee.policy.annualFiscalRemainingDays }}</td>

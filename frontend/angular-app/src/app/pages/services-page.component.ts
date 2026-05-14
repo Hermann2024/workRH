@@ -37,7 +37,7 @@ export class ServicesPageComponent {
       status: 'API_REQUIRED',
       mode: 'API REST / OAuth 2.0',
       fields: ['Identite', 'contrat', 'manager', 'residence', 'departement'],
-      rollout: ['Valider scopes OAuth', 'mapper champs employes', 'tester synchro delta']
+      rollout: ['Valider scopes OAuth', 'mapper champs employés', 'tester synchro delta']
     },
     {
       name: 'SAP SuccessFactors',
@@ -68,8 +68,8 @@ export class ServicesPageComponent {
       category: 'SIRH',
       status: 'SCOPING',
       mode: 'API / CSV',
-      fields: ['Employes', 'contrats', 'absences', 'equipes'],
-      rollout: ['Jeton API', 'mapping pays residence', 'sync employes']
+      fields: ['Employés', 'contrats', 'absences', 'équipes'],
+      rollout: ['Jeton API', 'mapping pays residence', 'sync employés']
     },
     {
       name: 'BambooHR',
@@ -77,7 +77,7 @@ export class ServicesPageComponent {
       status: 'SCOPING',
       mode: 'API / report export',
       fields: ['Employee', 'jobTitle', 'department', 'hireDate'],
-      rollout: ['Cle API', 'rapport employes', 'controle doublons']
+      rollout: ['Cle API', 'rapport employés', 'controle doublons']
     }
   ];
   readonly activeModules = computed(() => this.modules().filter((module) => module.enabled));

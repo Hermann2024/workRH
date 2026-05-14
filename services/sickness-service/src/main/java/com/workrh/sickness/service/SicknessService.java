@@ -10,7 +10,10 @@ import com.workrh.sickness.api.dto.SicknessResponseDto;
 import com.workrh.sickness.domain.SicknessRecord;
 import com.workrh.sickness.repository.SicknessRepository;
 import java.io.IOException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Set;
 import org.slf4j.Logger;
@@ -116,6 +119,7 @@ public class SicknessService {
                 true,
                 record.getEvidenceContent() != null && record.getEvidenceContent().length > 0,
                 record.getEvidenceFileName(),
+                record.getEvidenceSha256(),
                 record.getEvidenceUploadedAt(),
                 record.getCreatedAt(),
                 record.getUpdatedAt()
@@ -134,7 +138,9 @@ public class SicknessService {
             throw new BadRequestException("Sickness supporting evidence must be a PDF, JPG or PNG file");
         }
         try {
-            record.setEvidenceContent(file.getBytes());
+            byte[] content = file.getBytes();
+            record.setEvidenceContent(content);
+            record.setEvidenceSha256(sha256(content));
         } catch (IOException exception) {
             throw new BadRequestException("Unable to read sickness supporting evidence file");
         }
@@ -151,6 +157,14 @@ public class SicknessService {
         String normalized = fileName.replace('\\', '/');
         String lastSegment = normalized.substring(normalized.lastIndexOf('/') + 1);
         return lastSegment.replaceAll("[^A-Za-z0-9._-]", "_");
+    }
+
+    private String sha256(byte[] content) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(content));
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 is not available", exception);
+        }
     }
 
     public record EvidenceDownload(String fileName, String contentType, byte[] content) {

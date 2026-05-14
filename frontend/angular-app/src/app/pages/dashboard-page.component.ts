@@ -215,7 +215,7 @@ export class DashboardPageComponent {
       error: (error) => {
         this.loadError.set(this.readBackendMessage(
           error,
-          'Impossible de charger le dashboard RH sans donnees de secours.'
+          'Impossible de charger le dashboard RH sans données de secours.'
         ));
         this.loading.set(false);
       }
@@ -232,7 +232,7 @@ export class DashboardPageComponent {
 
   employeeLabel(employee: EmployeeProfileResponse | null): string {
     if (!employee) {
-      return 'Employe non selectionne';
+      return 'Employé non sélectionné';
     }
     return `${employee.firstName} ${employee.lastName}`.trim();
   }
@@ -269,9 +269,9 @@ export class DashboardPageComponent {
   complianceStatusLabel(status: string): string {
     const labels: Record<string, string> = {
       OK: 'OK',
-      READY_FOR_REVIEW: 'Pret pour revue',
+      READY_FOR_REVIEW: 'Prêt pour revue',
       ACTION_REQUIRED: 'Action requise',
-      MISSING_DATA: 'Donnees manquantes',
+      MISSING_DATA: 'Données manquantes',
       MANUAL_REVIEW: 'Revue manuelle'
     };
     return labels[status] ?? status;
@@ -288,9 +288,9 @@ export class DashboardPageComponent {
   stepStatusLabel(status: string): string {
     const labels: Record<string, string> = {
       NOT_STARTED: 'Non demarre',
-      TO_PREPARE: 'A preparer',
+      TO_PREPARE: 'À préparer',
       SUBMITTED: 'Soumis',
-      VALIDATED: 'Valide',
+      VALIDATED: 'Validé',
       EXPIRED: 'Expire',
       NOT_APPLICABLE: 'Non applicable'
     };
@@ -300,7 +300,7 @@ export class DashboardPageComponent {
   saveComplianceCase(): void {
     const employee = this.selectedEmployee();
     if (!employee) {
-      this.opsError.set('Selectionnez un salarie avant de creer un dossier conformite.');
+      this.opsError.set('Sélectionnez un salarié avant de créer un dossier conformité.');
       return;
     }
 
@@ -332,12 +332,12 @@ export class DashboardPageComponent {
     this.api.saveTeleworkComplianceCase(request).subscribe({
       next: () => {
         this.complianceSaving.set(false);
-        this.opsMessage.set('Dossier conformite mis a jour.');
+        this.opsMessage.set('Dossier conformité mis a jour.');
         this.refreshComplianceCases();
       },
       error: (error) => {
         this.complianceSaving.set(false);
-        this.opsError.set(this.readBackendMessage(error, 'Impossible de mettre a jour le dossier conformite.'));
+        this.opsError.set(this.readBackendMessage(error, 'Impossible de mettre a jour le dossier conformité.'));
       }
     });
   }
@@ -345,7 +345,7 @@ export class DashboardPageComponent {
   addComplianceEvidence(): void {
     const complianceCase = this.selectedComplianceCase();
     if (!complianceCase) {
-      this.opsError.set('Creez le dossier conformite avant d ajouter une preuve.');
+      this.opsError.set('Creez le dossier conformité avant d ajouter une preuve.');
       return;
     }
     if (this.evidenceForm.invalid) {
@@ -377,7 +377,7 @@ export class DashboardPageComponent {
   recordSituationChange(): void {
     const employee = this.selectedEmployee();
     if (!employee) {
-      this.opsError.set('Selectionnez un salarie avant d enregistrer un changement.');
+      this.opsError.set('Sélectionnez un salarié avant d enregistrer un changement.');
       return;
     }
 
@@ -408,7 +408,7 @@ export class DashboardPageComponent {
     this.api.validateTeleworkComplianceCase(caseId).subscribe({
       next: () => {
         this.complianceSaving.set(false);
-        this.opsMessage.set('Dossier valide pour paie/RH.');
+        this.opsMessage.set('Dossier validé pour paie/RH.');
         this.refreshComplianceCases();
       },
       error: (error) => {
@@ -427,7 +427,7 @@ export class DashboardPageComponent {
       },
       error: (error) => {
         this.complianceExportLoading.set(false);
-        this.opsError.set(this.readBackendMessage(error, 'Impossible d exporter les dossiers conformite.'));
+        this.opsError.set(this.readBackendMessage(error, 'Impossible d exporter les dossiers conformité.'));
       }
     });
   }
@@ -450,7 +450,7 @@ export class DashboardPageComponent {
   createEmployee(): void {
     if (this.employeeForm.invalid) {
       this.employeeForm.markAllAsTouched();
-      this.opsError.set('Completez les informations obligatoires pour creer le salarie.');
+      this.opsError.set('Complétez les informations obligatoires pour créer le salarié.');
       return;
     }
 
@@ -479,7 +479,7 @@ export class DashboardPageComponent {
     this.api.createEmployee(request).subscribe({
       next: () => {
         this.employeeSaving.set(false);
-        this.opsMessage.set('salarie cree avec succes.');
+        this.opsMessage.set('salarié cree avec succes.');
         this.employeeForm.reset({
           email: '',
           password: '',
@@ -498,7 +498,7 @@ export class DashboardPageComponent {
       },
       error: (error) => {
         this.employeeSaving.set(false);
-        this.opsError.set(this.readBackendMessage(error, 'Impossible de creer le salarie.'));
+        this.opsError.set(this.readBackendMessage(error, 'Impossible de créer le salarié.'));
       }
     });
   }
@@ -515,12 +515,12 @@ export class DashboardPageComponent {
     request$.subscribe({
       next: () => {
         this.employeeToggleId.set(null);
-        this.opsMessage.set(employee.active ? 'Compte salarie desactive.' : 'Compte salarie reactive.');
+        this.opsMessage.set(employee.active ? 'Compte salarié désactivé.' : 'Compte salarié réactivé.');
         this.refreshEmployees(false);
       },
       error: (error) => {
         this.employeeToggleId.set(null);
-        this.opsError.set(this.readBackendMessage(error, 'Impossible de modifier le statut du salarie.'));
+        this.opsError.set(this.readBackendMessage(error, 'Impossible de modifier le statut du salarié.'));
       }
     });
   }
@@ -538,7 +538,7 @@ export class DashboardPageComponent {
     this.leaveActionId.set(`approve-${leave.id}`);
     this.opsError.set(null);
     this.opsMessage.set(null);
-    this.api.approveLeave(leave.id, 'Valide depuis le dashboard RH').subscribe({
+    this.api.approveLeave(leave.id, 'Validé depuis le dashboard RH').subscribe({
       next: () => {
         this.leaveActionId.set(null);
         this.opsMessage.set('Demande de conge approuvee.');
@@ -659,7 +659,7 @@ export class DashboardPageComponent {
       'WorkRH - pack de lancement client',
       `Date: ${this.toDateInput(new Date())}`,
       `Plan: ${this.currentPlan()?.name ?? viewModel?.subscription.planCode ?? 'Non renseigne'}`,
-      `Score deploiement: ${readiness.score}/100 - ${readiness.statusLabel}`,
+      `Score déploiement: ${readiness.score}/100 - ${readiness.statusLabel}`,
       `Score controle: ${command.score}/100 - ${command.levelLabel}`,
       '',
       'Checklist de lancement',
@@ -671,16 +671,16 @@ export class DashboardPageComponent {
         : ['- Aucune action prioritaire detectee.']),
       '',
       'Indicateurs',
-      `- Employes charges: ${this.employees().length}`,
-      `- Jours teletravail utilises: ${viewModel?.dashboard.totalUsedDays ?? 0}`,
+      `- Employés chargés: ${this.employees().length}`,
+      `- Jours télétravail utilisés: ${viewModel?.dashboard.totalUsedDays ?? 0}`,
       `- Alertes fiscales: ${viewModel?.dashboard.fiscalAlerts ?? 0}`,
       `- Justificatifs manquants: ${command.missingEvidenceCount}`,
-      `- Dossiers conformite ouverts: ${command.openCases}`,
+      `- Dossiers conformité ouverts: ${command.openCases}`,
       `- Exposition estimee evitee: ${this.valueProof().riskExposure} EUR`,
       `- Temps RH estime gagne: ${this.valueProof().adminHoursSaved} h`,
       '',
       'Note commerciale',
-      "Ce document sert de support d'onboarding et de revue avant demo client. Les controles fiscaux et sociaux doivent rester valides par les experts habilites avant usage officiel."
+      "Ce document sert de support d'onboarding et de revue avant demo client. Les contrôles fiscaux et sociaux doivent rester validés par les experts habilités avant usage officiel."
     ];
 
     this.saveBlob(new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' }), `workrh-pack-lancement-${this.currentYear}-${String(this.currentMonth).padStart(2, '0')}.txt`);
@@ -790,7 +790,7 @@ export class DashboardPageComponent {
         }
       },
       error: (error) => {
-        this.opsError.set(this.readBackendMessage(error, 'Gestion des salaries indisponible.'));
+        this.opsError.set(this.readBackendMessage(error, 'Gestion des salariés indisponible.'));
       }
     });
   }
@@ -799,7 +799,7 @@ export class DashboardPageComponent {
     this.api.getLeaves().subscribe({
       next: (leaves) => this.leaveRequests.set(leaves),
       error: (error) => {
-        this.opsError.set(this.readBackendMessage(error, 'Gestion des conges indisponible.'));
+        this.opsError.set(this.readBackendMessage(error, 'Gestion des congés indisponible.'));
       }
     });
   }
@@ -808,7 +808,7 @@ export class DashboardPageComponent {
     this.api.getSickness().subscribe({
       next: (records) => this.sicknessRecords.set(records),
       error: (error) => {
-        this.opsError.set(this.readBackendMessage(error, 'Suivi des arrets maladie indisponible.'));
+        this.opsError.set(this.readBackendMessage(error, 'Suivi des arrêts maladie indisponible.'));
       }
     });
   }
@@ -817,7 +817,7 @@ export class DashboardPageComponent {
     this.api.getRecentTeleworkDeclarations().subscribe({
       next: (records) => this.recentTeleworkDeclarations.set(records),
       error: (error) => {
-        this.opsError.set(this.readBackendMessage(error, 'Declarations teletravail indisponibles.'));
+        this.opsError.set(this.readBackendMessage(error, 'Déclarations télétravail indisponibles.'));
       }
     });
   }
@@ -848,7 +848,7 @@ export class DashboardPageComponent {
         this.complianceCases.set(cases);
         this.hydrateComplianceForm();
       },
-      error: (error) => this.opsError.set(this.readBackendMessage(error, 'Dossiers conformite indisponibles.'))
+      error: (error) => this.opsError.set(this.readBackendMessage(error, 'Dossiers conformité indisponibles.'))
     });
   }
 
@@ -938,7 +938,7 @@ export class DashboardPageComponent {
           id: `fiscal-${employee.employeeId}`,
           title: `${this.employeeName(employee.employeeId)} approche du seuil fiscal`,
           detail: `${employee.annualUsedDays} jours annuels, ${employee.remainingDays} jours restants, risque ${this.annualFiscalPercent(employee)}%.`,
-          source: 'Teletravail',
+          source: 'Télétravail',
           level: 'CRITICAL',
           employeeId: employee.employeeId
         });
@@ -1001,7 +1001,7 @@ export class DashboardPageComponent {
       if (complianceCase.status === 'ACTION_REQUIRED' || expiredStepCount > 0) {
         actions.push({
           id: `case-critical-${complianceCase.id}`,
-          title: `Dossier conformite bloque pour ${this.employeeName(complianceCase.employeeId)}`,
+          title: `Dossier conformité bloque pour ${this.employeeName(complianceCase.employeeId)}`,
           detail: `${expiredStepCount} piece(s) expiree(s), statut ${this.complianceStatusLabel(complianceCase.status)}.`,
           source: 'Dossier legal',
           level: 'CRITICAL',
@@ -1010,8 +1010,8 @@ export class DashboardPageComponent {
       } else if (preparationStepCount > 0 || complianceCase.status === 'DRAFT' || complianceCase.status === 'IN_REVIEW') {
         actions.push({
           id: `case-warning-${complianceCase.id}`,
-          title: `Dossier conformite a finaliser pour ${this.employeeName(complianceCase.employeeId)}`,
-          detail: `${preparationStepCount} etape(s) a preparer avant paie ou revue.`,
+          title: `Dossier conformité a finaliser pour ${this.employeeName(complianceCase.employeeId)}`,
+          detail: `${preparationStepCount} etape(s) à préparer avant paie ou revue.`,
           source: 'Workflow',
           level: 'WARNING',
           employeeId: complianceCase.employeeId
@@ -1058,7 +1058,7 @@ export class DashboardPageComponent {
       level,
       levelLabel: level === 'OK' ? 'Sous controle' : level === 'WARNING' ? 'A surveiller' : 'Action urgente',
       headline: level === 'OK'
-        ? 'Aucun blocage critique detecte sur les donnees disponibles.'
+        ? 'Aucun blocage critique detecte sur les données disponibles.'
         : `${criticalCount + warningCount} action(s) prioritaire(s) avant paie, audit ou validation client.`,
       criticalCount,
       warningCount,
@@ -1117,16 +1117,16 @@ export class DashboardPageComponent {
       {
         id: 'subscription',
         label: 'Abonnement et droits',
-        detail: viewModel ? `${this.currentPlan()?.name ?? viewModel.subscription.planCode} actif avec ${seats} siege(s).` : 'Aucun abonnement charge.',
+        detail: viewModel ? `${this.currentPlan()?.name ?? viewModel.subscription.planCode} actif avec ${seats} siege(s).` : 'Aucun abonnement chargé.',
         status: viewModel && viewModel.subscription.status === 'ACTIVE' ? 'OK' : 'CRITICAL',
         actionLabel: 'Voir billing'
       },
       {
         id: 'employees',
-        label: 'Base salaries',
-        detail: employees.length ? `${activeEmployees}/${employees.length} salarie(s) actifs.` : 'Aucun salarie charge dans le tenant.',
+        label: 'Base salariés',
+        detail: employees.length ? `${activeEmployees}/${employees.length} salarié(s) actifs.` : 'Aucun salarié chargé dans le tenant.',
         status: employees.length > 0 && activeEmployees > 0 ? 'OK' : 'CRITICAL',
-        actionLabel: 'Gerer salaries'
+        actionLabel: 'Gérer salariés'
       },
       {
         id: 'profiles',
@@ -1137,22 +1137,22 @@ export class DashboardPageComponent {
       },
       {
         id: 'compliance',
-        label: 'Dossier legal teletravail',
-        detail: dossier ? `${dossier.declarationsReviewed} declaration(s), ${dossier.fiscalAlerts} alerte(s) fiscale(s), ${dossier.socialSecurityAlerts} alerte(s) sociale(s).` : 'Dossier legal non disponible sur le plan ou les donnees actuelles.',
+        label: 'Dossier legal télétravail',
+        detail: dossier ? `${dossier.declarationsReviewed} déclaration(s), ${dossier.fiscalAlerts} alerte(s) fiscale(s), ${dossier.socialSecurityAlerts} alerte(s) sociale(s).` : 'Dossier legal non disponible sur le plan ou les données actuelles.',
         status: dossier && dossier.overallStatus === 'READY_FOR_REVIEW' && command.criticalCount === 0 ? 'OK' : dossier ? 'WARNING' : 'CRITICAL',
         actionLabel: 'Ouvrir legal'
       },
       {
         id: 'evidence',
         label: 'Justificatifs RH',
-        detail: command.missingEvidenceCount === 0 ? 'Aucun justificatif obligatoire manquant.' : `${command.missingEvidenceCount} justificatif(s) obligatoire(s) a recuperer.`,
+        detail: command.missingEvidenceCount === 0 ? 'Aucun justificatif obligatoire manquant.' : `${command.missingEvidenceCount} justificatif(s) obligatoire(s) a récupérer.`,
         status: command.missingEvidenceCount === 0 ? 'OK' : 'WARNING',
         actionLabel: 'Traiter'
       },
       {
         id: 'payroll',
         label: 'Passage paie',
-        detail: cases.length ? `${readyCases}/${cases.length} dossier(s) conformite prets paie ou clotures.` : 'Aucun dossier paie/conformite cree.',
+        detail: cases.length ? `${readyCases}/${cases.length} dossier(s) conformité prets paie ou clotures.` : 'Aucun dossier paie/conformité cree.',
         status: cases.length === 0 ? 'WARNING' : readyCases === cases.length ? 'OK' : 'WARNING',
         actionLabel: 'Preparer'
       },
@@ -1232,9 +1232,9 @@ export class DashboardPageComponent {
       auditEvidenceItems,
       narrative: riskExposure > 0
         ? 'WorkRH transforme les alertes en prevention mesurable avant paie, audit ou controle frontalier.'
-        : 'WorkRH documente la conformite et maintient une preuve exploitable meme sans alerte critique.',
+        : 'WorkRH documente la conformité et maintient une preuve exploitable meme sans alerte critique.',
       assumptions: [
-        '2 500 EUR d exposition indicative par salarie au seuil fiscal critique.',
+        '2 500 EUR d exposition indicative par salarié au seuil fiscal critique.',
         '1 800 EUR d exposition indicative par point social A1 ou Article 13.',
         '0,25 h gagnee par preuve deja centralisee et 0,35 h par workflow guide.'
       ]

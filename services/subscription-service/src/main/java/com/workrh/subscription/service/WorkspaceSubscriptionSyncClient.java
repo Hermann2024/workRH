@@ -19,7 +19,7 @@ public class WorkspaceSubscriptionSyncClient {
     @Value("${subscription.user-service.base-url:http://localhost:9081}")
     private String userServiceBaseUrl;
 
-    @Value("${subscription.workspace.internal-key:workrh-workspace-internal}")
+    @Value("${subscription.workspace.internal-key:}")
     private String internalKey;
 
     public WorkspaceSubscriptionSyncClient(RestTemplate restTemplate) {

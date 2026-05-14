@@ -139,7 +139,7 @@ class SupportServiceTest {
         ticket.setStatus(SupportTicketStatus.OPEN);
         ticket.setCreatedAt(Instant.now());
 
-        when(supportTicketRepository.findById(44L)).thenReturn(Optional.of(ticket));
+        when(supportTicketRepository.findByIdAndTenantId(44L, "tenant-a")).thenReturn(Optional.of(ticket));
         when(supportTicketRepository.save(any(SupportTicket.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(supportEmailService.sendResolution(any(SupportTicket.class))).thenReturn(false);
 

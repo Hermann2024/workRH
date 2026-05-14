@@ -9,8 +9,8 @@
   <ng-container *ngIf="vm() as data; else loadingState">
     <section class="hero">
       <div>
-        <p class="section-tag">Operations RH</p>
-        <h2>Conformite frontaliere et pilotage RH</h2>
+        <p class="section-tag">Opérations RH</p>
+        <h2>Conformité frontaliere et pilotage RH</h2>
       </div>
 
       <div class="subscription-card" *ngIf="currentPlan() as plan">
@@ -20,7 +20,7 @@
         <p class="pricing-amount" *ngIf="plan.customPricing">Sur devis</p>
         <p class="meta">{{ data.subscription.seatsPurchased }} utilisateurs</p>
         <p class="meta">Statut: {{ data.subscription.status }}</p>
-        <p class="meta">Periode: {{ currentMonth }}/{{ currentYear }}</p>
+        <p class="meta">Période: {{ currentMonth }}/{{ currentYear }}</p>
         <a class="checkout-button outline small" href="/services">Voir les services du plan</a>
       </div>
     </section>
@@ -29,7 +29,7 @@
     <div class="checkout-banner cancelled" *ngIf="opsError() as errorMessage">{{ errorMessage }}</div>
 
     <section class="stats-grid">
-      <article class="metric-card"><span>Jours utilises</span><strong>{{ data.dashboard.totalUsedDays }}</strong></article>
+      <article class="metric-card"><span>Jours utilisés</span><strong>{{ data.dashboard.totalUsedDays }}</strong></article>
       <article class="metric-card"><span>Jours restants</span><strong>{{ data.dashboard.totalRemainingDays }}</strong></article>
       <article class="metric-card alert-card"><span>Alertes annuelles</span><strong>{{ data.dashboard.annualAlerts }}</strong></article>
       <article class="metric-card alert-card"><span>Alertes fiscales</span><strong>{{ data.dashboard.fiscalAlerts }}</strong></article>
@@ -54,7 +54,7 @@
               <span>/100</span>
             </div>
           </div>
-          <p>Score de controle calcule avec les alertes TAD, dossiers conformite et justificatifs manquants.</p>
+          <p>Score de controle calcule avec les alertes TAD, dossiers conformité et justificatifs manquants.</p>
         </article>
 
         <div class="command-kpis">
@@ -100,7 +100,7 @@
       <ng-template #noCommandActions>
         <div class="command-empty">
           <strong>Aucune action prioritaire</strong>
-          <p class="hint">Les donnees chargees ne signalent pas de blocage fiscal, legal ou RH.</p>
+          <p class="hint">Les données chargees ne signalent pas de blocage fiscal, legal ou RH.</p>
         </div>
       </ng-template>
     </section>
@@ -120,7 +120,7 @@
 
       <div class="launch-readiness-grid">
         <article class="launch-score" [ngClass]="commandLevelClass(launch.status)">
-          <span>Score deploiement</span>
+            <span>Score déploiement</span>
           <strong>{{ launch.score }}%</strong>
           <small>{{ launch.readyCount }} pret(s), {{ launch.warningCount }} a cadrer, {{ launch.blockedCount }} bloquant(s)</small>
           <button
@@ -219,7 +219,7 @@
             <article *ngFor="let item of contractDistribution()">
               <span class="contract-dot" [class.contract-cdi]="item.type === 'CDI'" [class.contract-cdd]="item.type === 'CDD'" [class.contract-stage]="item.type === 'STAGE'" [class.contract-alternance]="item.type === 'ALTERNANCE'" [class.contract-autres]="item.type === 'AUTRES'"></span>
               <strong>{{ item.label }}</strong>
-              <small>{{ item.count }} salarie(s)</small>
+              <small>{{ item.count }} salarié(s)</small>
             </article>
           </div>
         </div>
@@ -258,7 +258,7 @@
             <article *ngFor="let item of genderDistribution()">
               <span class="contract-dot" [class.gender-feminin]="item.type === 'FEMININ'" [class.gender-masculin]="item.type === 'MASCULIN'" [class.gender-autres]="item.type === 'AUTRES'"></span>
               <strong>{{ item.label }}</strong>
-              <small>{{ item.count }} salarie(s), {{ item.percent }}%</small>
+              <small>{{ item.count }} salarié(s), {{ item.percent }}%</small>
             </article>
           </div>
         </div>
@@ -273,14 +273,14 @@
         </div>
 
         <div class="entitlement-grid">
-          <article class="entitlement" [class.enabled]="isEntitled('DASHBOARD_BASIC')"><h3>Dashboard RH</h3><p>Vue consolidee des jours utilises et des alertes.</p></article>
-          <article class="entitlement" [class.enabled]="isEntitled('TELEWORK_COMPLIANCE_34')"><h3>Conformite 34 jours</h3><p>Controle fiscal frontalier Luxembourg.</p></article>
-          <article class="entitlement" [class.enabled]="isEntitled('MONTHLY_STATS')"><h3>Stats mensuelles</h3><p>Tendance annuelle et charge RH.</p></article>
+          <article class="entitlement" [class.enabled]="isEntitled('DASHBOARD_BASIC')"><h3>Dashboard RH</h3><p>Vue consolidee des jours utilisés et des alertes.</p></article>
+          <article class="entitlement" [class.enabled]="isEntitled('TELEWORK_COMPLIANCE_34')"><h3>Conformité 34 jours</h3><p>Controle fiscal frontalier Luxembourg.</p></article>
+          <article class="entitlement" [class.enabled]="isEntitled('MONTHLY_STATS')"><h3>Stats mensuelles</h3><p>Tendance annuelle et chargé RH.</p></article>
           <article class="entitlement" [class.enabled]="isEntitled('EXPORTS')"><h3>Exports</h3><p>Exports CSV, PDF et synthese texte.</p></article>
-          <article class="entitlement" [class.enabled]="isEntitled('EMPLOYEE_MANAGEMENT')"><h3>Employes</h3><p>Creation et activation des comptes.</p></article>
-          <article class="entitlement" [class.enabled]="isEntitled('LEAVE_MANAGEMENT')"><h3>Conges</h3><p>Validation RH des demandes.</p></article>
-          <article class="entitlement" [class.enabled]="isEntitled('SICKNESS_MANAGEMENT')"><h3>Arrets maladie</h3><p>Lecture des absences maladie.</p></article>
-          <article class="entitlement" [class.enabled]="isEntitled('DECLARATION_AUDIT')"><h3>Audit declaratif</h3><p>Historique des jours declares.</p></article>
+          <article class="entitlement" [class.enabled]="isEntitled('EMPLOYEE_MANAGEMENT')"><h3>Employés</h3><p>Creation et activation des comptes.</p></article>
+          <article class="entitlement" [class.enabled]="isEntitled('LEAVE_MANAGEMENT')"><h3>Congés</h3><p>Validation RH des demandes.</p></article>
+          <article class="entitlement" [class.enabled]="isEntitled('SICKNESS_MANAGEMENT')"><h3>Arrêts maladie</h3><p>Lecture des absences maladie.</p></article>
+          <article class="entitlement" [class.enabled]="isEntitled('DECLARATION_AUDIT')"><h3>Audit déclaratif</h3><p>Historique des jours declares.</p></article>
         </div>
       </section>
 
@@ -296,7 +296,7 @@
         <div class="action-row" *ngIf="isEntitled('EXPORTS')">
           <button class="checkout-button small" (click)="downloadDashboardExport('csv')" [disabled]="exportLoading() === 'csv'">{{ exportLoading() === 'csv' ? 'Export CSV...' : 'Exporter CSV' }}</button>
           <button class="checkout-button small" (click)="downloadDashboardExport('pdf')" [disabled]="exportLoading() === 'pdf'">{{ exportLoading() === 'pdf' ? 'Export PDF...' : 'Exporter PDF' }}</button>
-          <button class="checkout-button outline small" (click)="downloadDashboardExport('pdf-placeholder')" [disabled]="exportLoading() === 'pdf-placeholder'">{{ exportLoading() === 'pdf-placeholder' ? 'Generation...' : 'Version texte' }}</button>
+          <button class="checkout-button outline small" (click)="downloadDashboardExport('pdf-placeholder')" [disabled]="exportLoading() === 'pdf-placeholder'">{{ exportLoading() === 'pdf-placeholder' ? 'Génération...' : 'Version texte' }}</button>
         </div>
       </section>
     </section>
@@ -305,7 +305,7 @@
       <div class="section-head"><div><p class="section-tag">Tableau RH</p><h2>Vue de base</h2></div></div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Employe</th><th>Mois</th><th>Annuel</th><th>Risque TAD</th><th>Restant</th><th>Hebdo</th><th>Fiscal</th><th>Politique</th></tr></thead>
+          <thead><tr><th>Employé</th><th>Mois</th><th>Annuel</th><th>Risque TAD</th><th>Restant</th><th>Hebdo</th><th>Fiscal</th><th>Politique</th></tr></thead>
           <tbody>
             <tr *ngFor="let employee of data.dashboard.employees">
               <td>
@@ -327,10 +327,10 @@
     </section>
 
     <section class="panel" *ngIf="companySummary() as summary">
-      <div class="section-head"><div><p class="section-tag">Entreprise</p><h2>Vue avancee</h2></div></div>
+      <div class="section-head"><div><p class="section-tag">Entreprise</p><h2>Vue avancée</h2></div></div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Employe</th><th>Mois</th><th>Annuel</th><th>Restant</th><th>Hebdo</th><th>Fiscal</th><th>Politique</th></tr></thead>
+          <thead><tr><th>Employé</th><th>Mois</th><th>Annuel</th><th>Restant</th><th>Hebdo</th><th>Fiscal</th><th>Politique</th></tr></thead>
           <tbody>
             <tr *ngFor="let employee of summary.employees">
               <td>
@@ -353,14 +353,14 @@
     <section class="panel" *ngIf="isEntitled('DASHBOARD_ADVANCED')">
       <div class="section-head">
         <div>
-          <p class="section-tag">Fiscalite</p>
+          <p class="section-tag">Fiscalité</p>
           <h2>Simulation d'imposition hors Luxembourg</h2>
         </div>
       </div>
 
       <form class="workspace-inline-fields" [formGroup]="taxSimulationForm" (ngSubmit)="simulateTaxImpact()">
         <label class="workspace-field">
-          <span>Employe</span>
+          <span>Employé</span>
           <select formControlName="employeeId">
             <option [ngValue]="0">Selectionner</option>
             <option *ngFor="let employee of data.dashboard.employees" [ngValue]="employee.employeeId">
@@ -404,18 +404,18 @@
       </p>
       <div class="compliance-note">
         <strong>Cadre fiscal et RGPD</strong>
-        <p class="hint">Les simulations sont des aides RH documentaires, pas un avis fiscal. Les donnees salariales et de residence doivent rester limitees aux utilisateurs habilites, conservees selon la politique RGPD de l'entreprise et revues par un fiscaliste avant usage paie ou declaration officielle.</p>
+        <p class="hint">Les simulations sont des aides RH documentaires, pas un avis fiscal. Les données salariales et de residence doivent rester limitees aux utilisateurs habilités, conservees selon la politique RGPD de l'entreprise et revues par un fiscaliste avant usage paie ou déclaration officielle.</p>
       </div>
     </section>
 
     <section class="panel">
       <div class="section-head">
         <div>
-          <p class="section-tag">Integrations</p>
+          <p class="section-tag">Intégrations</p>
           <h2>Connecteurs SIRH et paie</h2>
         </div>
       </div>
-      <div class="integration-grid">
+      <div class="intégration-grid">
         <article class="entitlement enabled"><h3>SAP</h3><p>Connecteur a cadrer via API ou export.</p></article>
         <article class="entitlement enabled"><h3>Workday</h3><p>Connecteur a cadrer via API ou export.</p></article>
         <article class="entitlement enabled"><h3>Factorial</h3><p>Connecteur a cadrer via API ou export.</p></article>
@@ -429,15 +429,15 @@
     <section class="panel compliance-panel" *ngIf="complianceDossier() as dossier">
       <div class="section-head">
         <div>
-          <p class="section-tag">Conformite</p>
-          <h2>Dossier teletravail Luxembourg</h2>
+          <p class="section-tag">Conformité</p>
+          <h2>Dossier télétravail Luxembourg</h2>
         </div>
         <span class="badge" [class.badge-alert]="dossier.overallStatus !== 'READY_FOR_REVIEW'">{{ complianceStatusLabel(dossier.overallStatus) }}</span>
       </div>
 
       <div class="compliance-metrics">
         <article class="metric-card">
-          <span>Declarations</span>
+          <span>Déclarations</span>
           <strong>{{ dossier.declarationsReviewed }}</strong>
         </article>
         <article class="metric-card">
@@ -468,7 +468,7 @@
 
         <div class="table-wrap" *ngIf="dossier.employeeRisks.length">
           <table>
-            <thead><tr><th>Employe</th><th>Pays</th><th>Fiscal</th><th>Social</th><th>Risque</th></tr></thead>
+            <thead><tr><th>Employé</th><th>Pays</th><th>Fiscal</th><th>Social</th><th>Risque</th></tr></thead>
             <tbody>
               <tr *ngFor="let risk of dossier.employeeRisks">
                 <td>
@@ -534,14 +534,14 @@
           </div>
 
           <div class="workspace-inline-fields">
-            <label class="workspace-field"><span>CCSS / A1</span><select formControlName="ccssA1Status"><option value="TO_PREPARE">A preparer</option><option value="SUBMITTED">Soumis</option><option value="VALIDATED">Valide</option><option value="EXPIRED">Expire</option><option value="NOT_APPLICABLE">Non applicable</option></select></label>
-            <label class="workspace-field"><span>Avenant teletravail</span><select formControlName="teleworkAgreementStatus"><option value="TO_PREPARE">A preparer</option><option value="SUBMITTED">Soumis</option><option value="VALIDATED">Valide</option><option value="EXPIRED">Expire</option><option value="NOT_APPLICABLE">Non applicable</option></select></label>
-            <label class="workspace-field"><span>Equipement</span><select formControlName="equipmentStatus"><option value="TO_PREPARE">A preparer</option><option value="VALIDATED">Valide</option><option value="NOT_APPLICABLE">Non applicable</option></select></label>
-            <label class="workspace-field"><span>Sante / securite</span><select formControlName="healthSafetyStatus"><option value="TO_PREPARE">A preparer</option><option value="VALIDATED">Valide</option><option value="NOT_APPLICABLE">Non applicable</option></select></label>
-            <label class="workspace-field"><span>Accident travail</span><select formControlName="accidentCoverageStatus"><option value="TO_PREPARE">A preparer</option><option value="VALIDATED">Valide</option><option value="NOT_APPLICABLE">Non applicable</option></select></label>
-            <label class="workspace-field"><span>Protection donnees</span><select formControlName="dataProtectionStatus"><option value="TO_PREPARE">A preparer</option><option value="VALIDATED">Valide</option><option value="NOT_APPLICABLE">Non applicable</option></select></label>
-            <label class="workspace-field"><span>Regles pays residence</span><select formControlName="residenceCountryRulesStatus"><option value="TO_PREPARE">A preparer</option><option value="VALIDATED">Valide</option><option value="NOT_APPLICABLE">Non applicable</option></select></label>
-            <label class="workspace-field"><span>Veille juridique</span><select formControlName="legalWatchStatus"><option value="TO_PREPARE">A preparer</option><option value="VALIDATED">Valide</option><option value="EXPIRED">Expire</option></select></label>
+            <label class="workspace-field"><span>CCSS / A1</span><select formControlName="ccssA1Status"><option value="TO_PREPARE">À préparer</option><option value="SUBMITTED">Soumis</option><option value="VALIDATED">Validé</option><option value="EXPIRED">Expire</option><option value="NOT_APPLICABLE">Non applicable</option></select></label>
+            <label class="workspace-field"><span>Avenant télétravail</span><select formControlName="teleworkAgreementStatus"><option value="TO_PREPARE">À préparer</option><option value="SUBMITTED">Soumis</option><option value="VALIDATED">Validé</option><option value="EXPIRED">Expire</option><option value="NOT_APPLICABLE">Non applicable</option></select></label>
+            <label class="workspace-field"><span>Équipement</span><select formControlName="equipmentStatus"><option value="TO_PREPARE">À préparer</option><option value="VALIDATED">Validé</option><option value="NOT_APPLICABLE">Non applicable</option></select></label>
+            <label class="workspace-field"><span>Santé / sécurité</span><select formControlName="healthSafetyStatus"><option value="TO_PREPARE">À préparer</option><option value="VALIDATED">Validé</option><option value="NOT_APPLICABLE">Non applicable</option></select></label>
+            <label class="workspace-field"><span>Accident travail</span><select formControlName="accidentCoverageStatus"><option value="TO_PREPARE">À préparer</option><option value="VALIDATED">Validé</option><option value="NOT_APPLICABLE">Non applicable</option></select></label>
+            <label class="workspace-field"><span>Protection données</span><select formControlName="dataProtectionStatus"><option value="TO_PREPARE">À préparer</option><option value="VALIDATED">Validé</option><option value="NOT_APPLICABLE">Non applicable</option></select></label>
+            <label class="workspace-field"><span>Regles pays residence</span><select formControlName="residenceCountryRulesStatus"><option value="TO_PREPARE">À préparer</option><option value="VALIDATED">Validé</option><option value="NOT_APPLICABLE">Non applicable</option></select></label>
+            <label class="workspace-field"><span>Veille juridique</span><select formControlName="legalWatchStatus"><option value="TO_PREPARE">À préparer</option><option value="VALIDATED">Validé</option><option value="EXPIRED">Expire</option></select></label>
           </div>
 
           <div class="workspace-inline-fields">
@@ -568,7 +568,7 @@
 
         <div class="workspace-form-grid">
           <form class="workspace-form-card" [formGroup]="evidenceForm" (ngSubmit)="addComplianceEvidence()">
-            <div class="workspace-form-head"><div><h3>Preuves</h3><p class="hint">A1, avenant, equipement, RGPD, revue pays.</p></div></div>
+            <div class="workspace-form-head"><div><h3>Preuves</h3><p class="hint">A1, avenant, équipement, RGPD, revue pays.</p></div></div>
             <div class="workspace-inline-fields">
               <label class="workspace-field"><span>Type</span><input formControlName="evidenceType"></label>
               <label class="workspace-field"><span>Libelle</span><input formControlName="label"></label>
@@ -579,8 +579,8 @@
           </form>
 
           <form class="workspace-form-card" [formGroup]="situationChangeForm" (ngSubmit)="recordSituationChange()">
-            <div class="workspace-form-head"><div><h3>Changement de situation</h3><p class="hint">Residence, activite secondaire, taux teletravail, secteur.</p></div></div>
-            <label class="workspace-field"><span>Type</span><select formControlName="type"><option value="RESIDENCE_COUNTRY_CHANGE">Pays residence</option><option value="ADDRESS_CHANGE">Adresse</option><option value="SECONDARY_ACTIVITY">Activite secondaire</option><option value="TELEWORK_RATE_CHANGE">Taux teletravail</option><option value="EMPLOYMENT_SECTOR_CHANGE">Secteur</option><option value="OTHER">Autre</option></select></label>
+            <div class="workspace-form-head"><div><h3>Changement de situation</h3><p class="hint">Residence, activite secondaire, taux télétravail, secteur.</p></div></div>
+            <label class="workspace-field"><span>Type</span><select formControlName="type"><option value="RESIDENCE_COUNTRY_CHANGE">Pays residence</option><option value="ADDRESS_CHANGE">Adresse</option><option value="SECONDARY_ACTIVITY">Activite secondaire</option><option value="TELEWORK_RATE_CHANGE">Taux télétravail</option><option value="EMPLOYMENT_SECTOR_CHANGE">Secteur</option><option value="OTHER">Autre</option></select></label>
             <label class="workspace-field"><span>Date effet</span><input type="date" formControlName="effectiveDate"></label>
             <div class="workspace-inline-fields">
               <label class="workspace-field"><span>Avant</span><input formControlName="previousValue"></label>
@@ -594,7 +594,7 @@
 
       <div class="table-wrap" *ngIf="complianceCases().length">
         <table>
-          <thead><tr><th>Employe</th><th>Secteur</th><th>Dossier</th><th>A1</th><th>Avenant</th><th>Preuves</th><th>Audit</th></tr></thead>
+          <thead><tr><th>Employé</th><th>Secteur</th><th>Dossier</th><th>A1</th><th>Avenant</th><th>Preuves</th><th>Audit</th></tr></thead>
           <tbody>
             <tr *ngFor="let item of complianceCases()">
               <td>{{ employeeName(item.employeeId) }}</td>
@@ -622,10 +622,10 @@
     </section>
 
     <section class="panel" *ngIf="isEntitled('LEAVE_MANAGEMENT')">
-      <div class="section-head"><div><p class="section-tag">Conges</p><h2>Validation RH</h2></div><p class="hint">{{ pendingLeaveRequests().length }} en attente.</p></div>
+      <div class="section-head"><div><p class="section-tag">Congés</p><h2>Validation RH</h2></div><p class="hint">{{ pendingLeaveRequests().length }} en attente.</p></div>
       <div class="table-wrap" *ngIf="leaveRequests().length; else emptyLeaves">
         <table>
-          <thead><tr><th>Employe</th><th>Type</th><th>Periode</th><th>Statut</th><th>Justificatif</th><th>Commentaire</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Employé</th><th>Type</th><th>Période</th><th>Statut</th><th>Justificatif</th><th>Commentaire</th><th>Actions</th></tr></thead>
           <tbody>
             <tr *ngFor="let leave of leaveRequests()">
               <td>
@@ -665,10 +665,10 @@
     </section>
 
     <section class="panel" *ngIf="isEntitled('SICKNESS_MANAGEMENT')">
-      <div class="section-head"><div><p class="section-tag">Sante</p><h2>Arrets maladie</h2></div></div>
+      <div class="section-head"><div><p class="section-tag">Santé</p><h2>Arrêts maladie</h2></div></div>
       <div class="table-wrap" *ngIf="latestSicknessRecords().length; else emptySickness">
         <table>
-          <thead><tr><th>Employe</th><th>Debut</th><th>Fin</th><th>Justificatif</th><th>Commentaire</th></tr></thead>
+          <thead><tr><th>Employé</th><th>Début</th><th>Fin</th><th>Justificatif</th><th>Commentaire</th></tr></thead>
           <tbody>
             <tr *ngFor="let record of latestSicknessRecords()">
               <td>
@@ -700,14 +700,14 @@
     <section class="panel" *ngIf="isEntitled('TELEWORK_BASIC')">
       <div class="section-head">
         <div>
-          <p class="section-tag">Teletravail</p>
-          <h2>Declarations recentes</h2>
+          <p class="section-tag">Télétravail</p>
+          <h2>Déclarations récentes</h2>
         </div>
-        <p class="hint">{{ latestTeleworkDeclarations().length }} declaration(s).</p>
+        <p class="hint">{{ latestTeleworkDeclarations().length }} déclaration(s).</p>
       </div>
       <div class="table-wrap" *ngIf="latestTeleworkDeclarations().length; else emptyTeleworkDeclarations">
         <table>
-          <thead><tr><th>Employe</th><th>Date</th><th>Pays residence</th><th>Teletravail</th><th>Autre residence</th><th>Autre pays</th><th>Statut</th></tr></thead>
+          <thead><tr><th>Employé</th><th>Date</th><th>Pays residence</th><th>Télétravail</th><th>Autre residence</th><th>Autre pays</th><th>Statut</th></tr></thead>
           <tbody>
             <tr *ngFor="let item of latestTeleworkDeclarations()">
               <td>
@@ -728,7 +728,7 @@
     </section>
 
     <section class="panel" *ngIf="isEntitled('DECLARATION_AUDIT')">
-      <div class="section-head"><div><p class="section-tag">Audit</p><h2>Historique declaratif</h2></div><p class="hint">Employe selectionne: {{ employeeLabel(selectedEmployee()) }}</p></div>
+      <div class="section-head"><div><p class="section-tag">Audit</p><h2>Historique déclaratif</h2></div><p class="hint">Employé sélectionné: {{ employeeLabel(selectedEmployee()) }}</p></div>
       <div class="action-row" *ngIf="employees().length">
         <button class="checkout-button outline small" type="button" *ngFor="let employee of employees().slice(0, 8)" (click)="selectEmployee(employee.id)">{{ selectedEmployeeId() === employee.id ? 'Audit actif' : (employee.firstName + ' ' + employee.lastName) }}</button>
       </div>
@@ -758,7 +758,7 @@
           <article class="monthly-stat-card" *ngFor="let month of stats.months">
             <span>{{ monthLabel(month.month) }}</span>
             <strong>{{ month.usedDays }} j</strong>
-            <small>{{ month.employeesTracked }} employes suivis</small>
+            <small>{{ month.employeesTracked }} employés suivis</small>
             <small>{{ month.fiscalAlerts + month.weeklyAlerts }} alertes</small>
           </article>
         </div>
@@ -781,9 +781,9 @@
 </ng-template>
 
 <ng-template #emptyNotifications><p class="hint">Aucune notification automatisee journalisee pour le moment.</p></ng-template>
-<ng-template #emptyEmployees><p class="hint">Aucun compte salarie charge pour le tenant actif.</p></ng-template>
-<ng-template #emptyLeaves><p class="hint">Aucune demande de conge remontee par le backend pour le moment.</p></ng-template>
+<ng-template #emptyEmployees><p class="hint">Aucun compte salarié chargé pour le tenant actif.</p></ng-template>
+<ng-template #emptyLeaves><p class="hint">Aucune demande de conge remontée par le backend pour le moment.</p></ng-template>
 <ng-template #emptySickness><p class="hint">Aucun arret maladie remonte pour le moment.</p></ng-template>
-<ng-template #emptyTeleworkDeclarations><p class="hint">Aucune declaration teletravail remontee pour le tenant actif.</p></ng-template>
-<ng-template #emptyAuditHistory><p class="hint">Aucun historique declaratif disponible pour l'employe selectionne.</p></ng-template>
+<ng-template #emptyTeleworkDeclarations><p class="hint">Aucune déclaration télétravail remontée pour le tenant actif.</p></ng-template>
+<ng-template #emptyAuditHistory><p class="hint">Aucun historique déclaratif disponible pour l'employé sélectionné.</p></ng-template>
 <ng-template #loadingState><app-loading-skeleton></app-loading-skeleton></ng-template>

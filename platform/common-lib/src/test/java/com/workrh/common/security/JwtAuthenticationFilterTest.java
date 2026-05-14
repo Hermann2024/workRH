@@ -14,7 +14,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 class JwtAuthenticationFilterTest {
 
-    private final JwtAuthenticationFilter filter = new JwtAuthenticationFilter(null);
+    private final JwtAuthenticationFilter filter = new JwtAuthenticationFilter(null, true);
 
     @AfterEach
     void tearDown() {

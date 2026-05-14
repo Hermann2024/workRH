@@ -10,27 +10,27 @@
     <div>
       <p class="section-tag">Salariés</p>
       <h2>Creation et gestion des comptes</h2>
-      <p class="lede">Ajoutez les collaborateurs du tenant actif, puis utilisez leurs comptes dans l'espace employe.</p>
+      <p class="lede">Ajoutez les collaborateurs du tenant actif, puis utilisez leurs comptes dans l'espace employé.</p>
     </div>
     <article class="subscription-card">
       <p class="section-tag">Comptes</p>
       <h3>{{ employees().length }}</h3>
-      <p class="hint">Salarie(s) rattache(s) au tenant courant.</p>
+      <p class="hint">Salarié(s) rattache(s) au tenant courant.</p>
     </article>
   </section>
 
   <section class="panel">
     <div class="tabs">
       <button class="tab-button" type="button" [class.active]="activeTab() === 'invite'" (click)="activeTab.set('invite')">Inviter</button>
-      <button class="tab-button" type="button" [class.active]="activeTab() === 'create'" (click)="activeTab.set('create')">Creer</button>
+      <button class="tab-button" type="button" [class.active]="activeTab() === 'create'" (click)="activeTab.set('create')">Créer</button>
       <button class="tab-button" type="button" [class.active]="activeTab() === 'import'" (click)="activeTab.set('import')">Import CSV</button>
       <button class="tab-button" type="button" [class.active]="activeTab() === 'list'" (click)="activeTab.set('list')">Comptes</button>
     </div>
     <div class="checkout-banner cancelled" *ngIf="isSeatLimitReached()">
-      Limite de sieges atteinte. Augmentez l'abonnement ou desactivez un compte avant d'ajouter un salarie.
+      Limite de sieges atteinte. Augmentez l'abonnement ou desactivez un compte avant d'ajouter un salarié.
     </div>
     <p class="hint" *ngIf="workspace() as company">
-      Sieges utilises : {{ company.seatsUsed }} / {{ company.seatsPurchased || 'illimite' }}.
+      Sieges utilisés : {{ company.seatsUsed }} / {{ company.seatsPurchased || 'illimite' }}.
     </p>
   </section>
 
@@ -38,7 +38,7 @@
       <div class="section-head">
         <div>
           <p class="section-tag">Onboarding</p>
-          <h2>Inviter un salarie</h2>
+          <h2>Inviter un salarié</h2>
         </div>
       </div>
 
@@ -64,12 +64,12 @@
           <label class="workspace-field"><span>Statut contrat</span><select formControlName="contractType"><option *ngFor="let type of contractTypes" [value]="type">{{ contractTypeLabel(type) }}</option></select></label>
           <label class="workspace-field"><span>Date d'embauche</span><input type="date" formControlName="hireDate"></label>
         </div>
-        <button class="checkout-button" type="submit" [disabled]="inviting() || isSeatLimitReached()">{{ inviting() ? 'Creation...' : 'Creer l invitation' }}</button>
+        <button class="checkout-button" type="submit" [disabled]="inviting() || isSeatLimitReached()">{{ inviting() ? 'Creation...' : 'Créer l invitation' }}</button>
       </form>
 
       <div class="workspace-form-card" *ngIf="invitationLink() as link">
         <p class="section-tag">Lien d'activation</p>
-        <p class="hint">Envoyez ce lien au salarie pour qu'il definisse son mot de passe et active son espace.</p>
+        <p class="hint">Envoyez ce lien au salarié pour qu'il definisse son mot de passe et active son espace.</p>
         <div class="action-row">
           <input class="link-output" type="text" [value]="link" readonly>
           <button class="checkout-button small" type="button" (click)="copyInvitationLink(link)">Copier</button>
@@ -98,7 +98,7 @@
       <div class="section-head">
         <div>
           <p class="section-tag">Nouveau compte</p>
-          <h2>Creer un salarie</h2>
+          <h2>Créer un salarié</h2>
         </div>
       </div>
 
@@ -127,7 +127,7 @@
           <label class="workspace-field"><span>Statut contrat</span><select formControlName="contractType"><option *ngFor="let type of contractTypes" [value]="type">{{ contractTypeLabel(type) }}</option></select></label>
           <label class="workspace-field"><span>Telephone</span><input type="text" formControlName="phoneNumber" autocomplete="tel"></label>
         </div>
-        <button class="checkout-button" type="submit" [disabled]="saving() || isSeatLimitReached()">{{ saving() ? 'Creation...' : 'Creer le salarie' }}</button>
+        <button class="checkout-button" type="submit" [disabled]="saving() || isSeatLimitReached()">{{ saving() ? 'Creation...' : 'Créer le salarié' }}</button>
       </form>
   </section>
 
@@ -135,7 +135,7 @@
     <div class="section-head">
       <div>
         <p class="section-tag">Onboarding en lot</p>
-        <h2>Importer et inviter des salaries</h2>
+        <h2>Importer et inviter des salariés</h2>
         <p class="hint">Colonnes attendues : email, firstName, lastName, countryOfResidence, department, jobTitle, birthDate, gender, contractType, hireDate, phoneNumber.</p>
       </div>
       <button class="checkout-button outline small" type="button" (click)="downloadEmployeeCsvTemplate()">Modele CSV</button>
@@ -144,7 +144,7 @@
     <div class="workspace-form-card import-panel">
       <label class="file-picker">
         <span>{{ importFileName() || 'Selectionner un fichier CSV' }}</span>
-        <small>Les salaries seront invites, pas crees avec un mot de passe temporaire.</small>
+        <small>Les salariés seront invites, pas crees avec un mot de passe temporaire.</small>
         <input type="file" accept=".csv,text/csv" (change)="handleEmployeeCsvUpload($event)">
       </label>
 
@@ -154,7 +154,7 @@
           <strong>{{ importRows().length }}</strong>
         </article>
         <article>
-          <span>Valides</span>
+          <span>Validés</span>
           <strong>{{ importRows().length - invalidImportRowCount() }}</strong>
         </article>
         <article>
@@ -169,14 +169,14 @@
           type="button"
           (click)="importCsvEmployees()"
           [disabled]="importRunning() || isSeatLimitReached()">
-          {{ importRunning() ? 'Import en cours...' : 'Creer les invitations' }}
+          {{ importRunning() ? 'Import en cours...' : 'Créer les invitations' }}
         </button>
       </div>
     </div>
 
     <div class="table-wrap" *ngIf="importRows().length">
       <table>
-        <thead><tr><th>Ligne</th><th>Salarie</th><th>Residence</th><th>Profil</th><th>Contrat</th><th>Validation</th></tr></thead>
+        <thead><tr><th>Ligne</th><th>Salarié</th><th>Residence</th><th>Profil</th><th>Contrat</th><th>Validation</th></tr></thead>
         <tbody>
           <tr *ngFor="let row of importRows()">
             <td>{{ row.lineNumber }}</td>
@@ -218,7 +218,7 @@
 
       <div class="table-wrap" *ngIf="employees().length; else emptyEmployees">
         <table>
-          <thead><tr><th>Salarie</th><th>Residence</th><th>Fonction</th><th>Profil</th><th>Statut contrat</th><th>Compte</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Salarié</th><th>Residence</th><th>Fonction</th><th>Profil</th><th>Statut contrat</th><th>Compte</th><th>Actions</th></tr></thead>
           <tbody>
             <tr *ngFor="let employee of employees()" [formGroup]="editForm">
               <ng-container *ngIf="editingId() === employee.id; else readEmployeeRow">
@@ -286,4 +286,4 @@
   </section>
 </ng-template>
 
-<ng-template #emptyEmployees><p class="hint">Aucun salarie charge pour le tenant actif.</p></ng-template>
+<ng-template #emptyEmployees><p class="hint">Aucun salarié chargé pour le tenant actif.</p></ng-template>

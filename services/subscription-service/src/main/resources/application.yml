@@ -17,14 +17,14 @@ spring:
       auto-offset-reset: earliest
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: ${WORKRH_HIBERNATE_DDL_AUTO:validate}
     properties:
       hibernate:
         format_sql: true
 
 security:
   jwt:
-    secret: ${WORKRH_JWT_SECRET:c29tZS1yZWFsbHktbG9uZy1iYXNlNjQtc2VjcmV0LWZvci13b3JrcmgtZGVtby1vbmx5}
+    secret: ${WORKRH_JWT_SECRET}
     expiration: 86400
 
 eureka:
@@ -57,7 +57,7 @@ subscription:
     enabled: ${WORKRH_PREVIEW_ALL_FEATURES_ENABLED:false}
     user-emails: ${WORKRH_PREVIEW_ALL_FEATURES_USER_EMAILS:}
   bootstrap:
-    key: ${WORKRH_SUBSCRIPTION_BOOTSTRAP_KEY:workrh-signup-bootstrap}
+    key: ${WORKRH_SUBSCRIPTION_BOOTSTRAP_KEY}
   enterprise:
     enabled: ${WORKRH_ENTERPRISE_ENABLED:false}
 

@@ -16,6 +16,7 @@ public record LeaveResponseDto(
         boolean evidenceRequired,
         boolean evidenceUploaded,
         String evidenceFileName,
+        String evidenceSha256,
         Instant evidenceUploadedAt,
         Instant createdAt,
         Instant updatedAt

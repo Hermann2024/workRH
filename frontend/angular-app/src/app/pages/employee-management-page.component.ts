@@ -128,7 +128,7 @@ export class EmployeeManagementPageComponent {
     }
     if (this.employeeForm.invalid) {
       this.employeeForm.markAllAsTouched();
-      this.toastService.error('Completez les champs obligatoires du salarie.');
+      this.toastService.error('Complétez les champs obligatoires du salarié.');
       return;
     }
 
@@ -155,7 +155,7 @@ export class EmployeeManagementPageComponent {
     this.api.createEmployee(request).subscribe({
       next: (employee) => {
         this.saving.set(false);
-        this.toastService.success(`Salarie cree : ${employee.firstName} ${employee.lastName}.`);
+        this.toastService.success(`Salarié cree : ${employee.firstName} ${employee.lastName}.`);
         this.employeeForm.reset({
           email: '',
           password: '',
@@ -175,7 +175,7 @@ export class EmployeeManagementPageComponent {
       },
       error: (error) => {
         this.saving.set(false);
-        this.toastService.error(this.readBackendMessage(error, 'Impossible de creer le salarie.'));
+        this.toastService.error(this.readBackendMessage(error, 'Impossible de créer le salarié.'));
       }
     });
   }
@@ -187,7 +187,7 @@ export class EmployeeManagementPageComponent {
     }
     if (this.invitationForm.invalid) {
       this.invitationForm.markAllAsTouched();
-      this.toastService.error('Completez les champs obligatoires de l invitation.');
+      this.toastService.error('Complétez les champs obligatoires de l invitation.');
       return;
     }
 
@@ -230,7 +230,7 @@ export class EmployeeManagementPageComponent {
       },
       error: (error) => {
         this.inviting.set(false);
-        this.toastService.error(this.readBackendMessage(error, 'Impossible de creer l invitation.'));
+        this.toastService.error(this.readBackendMessage(error, 'Impossible de créer l invitation.'));
       }
     });
   }
@@ -252,7 +252,7 @@ export class EmployeeManagementPageComponent {
       'marie.dupont@example.com,Marie,Dupont,FR,RH,HR Manager,1990-04-12,FEMININ,CDI,2024-01-15,+33600000000',
       'sam.muller@example.com,Sam,Muller,BE,Finance,Comptable,1988-09-30,AUTRES,CDD,2025-03-01,+32400000000'
     ].join('\n');
-    this.saveBlob(new Blob([content], { type: 'text/csv;charset=utf-8' }), 'workrh-modele-import-salaries.csv');
+    this.saveBlob(new Blob([content], { type: 'text/csv;charset=utf-8' }), 'workrh-modele-import-salariés.csv');
   }
 
   async handleEmployeeCsvUpload(event: Event): Promise<void> {
@@ -269,11 +269,11 @@ export class EmployeeManagementPageComponent {
     this.importRows.set(rows);
     const invalidRows = rows.filter((row) => row.errors.length > 0).length;
     if (rows.length === 0) {
-      this.toastService.error('Aucune ligne salarie exploitable dans ce fichier.');
+      this.toastService.error('Aucune ligne salarié exploitable dans ce fichier.');
     } else if (invalidRows > 0) {
       this.toastService.error(`${invalidRows} ligne(s) a corriger avant import.`);
     } else {
-      this.toastService.success(`${rows.length} salarie(s) pret(s) a inviter.`);
+      this.toastService.success(`${rows.length} salarié(s) pret(s) a inviter.`);
     }
     input.value = '';
   }
@@ -294,7 +294,7 @@ export class EmployeeManagementPageComponent {
     if (workspace?.seatsPurchased != null) {
       const remainingSeats = Math.max(workspace.seatsPurchased - workspace.seatsUsed, 0);
       if (rows.length > remainingSeats) {
-        this.toastService.error(`Import bloque : ${remainingSeats} siege(s) disponible(s) pour ${rows.length} salarie(s).`);
+        this.toastService.error(`Import bloque : ${remainingSeats} siege(s) disponible(s) pour ${rows.length} salarié(s).`);
         return;
       }
     }
@@ -344,7 +344,7 @@ export class EmployeeManagementPageComponent {
     request$.subscribe({
       next: () => {
         this.toggleId.set(null);
-        this.toastService.info(employee.active ? 'Compte salarie desactive.' : 'Compte salarie reactive.');
+        this.toastService.info(employee.active ? 'Compte salarié désactivé.' : 'Compte salarié réactivé.');
         this.refreshEmployees(false);
       },
       error: (error) => {
@@ -389,7 +389,7 @@ export class EmployeeManagementPageComponent {
     }
     if (this.editForm.invalid) {
       this.editForm.markAllAsTouched();
-      this.toastService.error('Completez les champs obligatoires avant de sauvegarder.');
+      this.toastService.error('Complétez les champs obligatoires avant de sauvegarder.');
       return;
     }
 
@@ -417,12 +417,12 @@ export class EmployeeManagementPageComponent {
       next: () => {
         this.updating.set(false);
         this.editingId.set(null);
-        this.toastService.success('Salarie modifie.');
+        this.toastService.success('Salarié modifie.');
         this.refreshEmployees(false);
       },
       error: (error) => {
         this.updating.set(false);
-        this.toastService.error(this.readBackendMessage(error, 'Impossible de modifier le salarie.'));
+        this.toastService.error(this.readBackendMessage(error, 'Impossible de modifier le salarié.'));
       }
     });
   }
@@ -440,12 +440,12 @@ export class EmployeeManagementPageComponent {
         if (this.editingId() === employee.id) {
           this.editingId.set(null);
         }
-        this.toastService.info('Salarie supprime.');
+        this.toastService.info('Salarié supprime.');
         this.refreshEmployees(false);
       },
       error: (error) => {
         this.deletingId.set(null);
-        this.toastService.error(this.readBackendMessage(error, 'Impossible de supprimer le salarie.'));
+        this.toastService.error(this.readBackendMessage(error, 'Impossible de supprimer le salarié.'));
       }
     });
   }

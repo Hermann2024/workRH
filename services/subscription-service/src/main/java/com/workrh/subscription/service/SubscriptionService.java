@@ -113,7 +113,7 @@ public class SubscriptionService {
                 module(FeatureCode.DASHBOARD_BASIC, "Tableau de bord RH de base", "Pilotage RH",
                         "Vue consolidée des salariés suivis, jours utilisés, jours restants et alertes principales.",
                         "reporting-service: /api/reports/dashboard", "Ouvrir le dashboard", "/dashboard", entitlements),
-                module(FeatureCode.DASHBOARD_ADVANCED, "Tableau de bord avance", "Pilotage RH",
+                module(FeatureCode.DASHBOARD_ADVANCED, "Tableau de bord avancé", "Pilotage RH",
                         "Synthèse entreprise avec détail annuel, hebdomadaire, fiscal et politique par salarié.",
                         "telework-service: /api/telework/company-summary", "Voir la vue avancee", "/dashboard", entitlements),
                 module(FeatureCode.MONTHLY_STATS, "Statistiques mensuelles", "Reporting",
@@ -122,16 +122,16 @@ public class SubscriptionService {
                 module(FeatureCode.EXPORTS, "Exports de données", "Reporting",
                         "Exports CSV, PDF et synthèse texte des données RH et télétravail du mois.",
                         "reporting-service: /api/reports/dashboard/export/{format}", "Exporter les données", "/dashboard", entitlements),
-                module(FeatureCode.TELEWORK_BASIC, "Suivi simple du teletravail", "Teletravail",
+                module(FeatureCode.TELEWORK_BASIC, "Suivi simple du télétravail", "Télétravail",
                         "Déclaration salarié et lecture RH des derniers jours de télétravail du même tenant.",
-                        "telework-service: /api/telework, /api/telework/recent", "Voir les declarations", "/dashboard", entitlements),
-                module(FeatureCode.TELEWORK_COMPLIANCE_34, "Conformite teletravail frontalier Luxembourg 34 jours", "Teletravail",
+                        "telework-service: /api/telework, /api/telework/recent", "Voir les déclarations", "/dashboard", entitlements),
+                module(FeatureCode.TELEWORK_COMPLIANCE_34, "Conformité télétravail frontalier Luxembourg 34 jours", "Télétravail",
                         "Calcul du seuil fiscal frontalier, jours restants, dépassements et règles applicables par pays.",
                         "telework-service: /api/telework/summary/{employeeId}, /api/telework/policies", "Gérer les règles", "/policies", entitlements),
-                module(FeatureCode.AUTO_EXCLUSION, "Exclusions automatiques des jours non comptables", "Teletravail",
+                module(FeatureCode.AUTO_EXCLUSION, "Exclusions automatiques des jours non comptables", "Télétravail",
                         "Les congés et arrêts maladie alimentent les périodes exclues afin d'éviter de compter des jours non travaillables.",
                         "telework-service: exclusions internes + evenements leave/sickness", "Controler les exclusions", "/dashboard", entitlements),
-                module(FeatureCode.THRESHOLD_ALERTS, "Alertes de depassement de seuil", "Alertes",
+                module(FeatureCode.THRESHOLD_ALERTS, "Alertes de dépassement de seuil", "Alertes",
                         "Détection des dépassements fiscaux ou hebdomadaires, avec journalisation pour la RH.",
                         "telework-service + notification-service", "Voir les alertes", "/dashboard", entitlements),
                 module(FeatureCode.EMPLOYEE_MANAGEMENT, "Gestion des employés", "Administration",
@@ -151,12 +151,33 @@ public class SubscriptionService {
                         "notification-service: /api/support/tickets", "Contacter le support", "/billing", entitlements),
                 module(FeatureCode.PRIORITY_SUPPORT, "Support prioritaire", "Support",
                         "Tickets support priorisés avec suivi SLA quand le plan le permet.",
-                        "notification-service: /api/support/tickets/priority", "Ouvrir un ticket prioritaire", "/billing", entitlements)
+                        "notification-service: /api/support/tickets/priority", "Ouvrir un ticket prioritaire", "/billing", entitlements),
+                module(FeatureCode.DECLARATION_AUDIT, "Audit des déclarations", "Gouvernance",
+                        "Historique et traçabilité renforcée des déclarations pour les contrôles internes.",
+                        "telework-service + reporting-service: audit déclaratif", "Consulter l'audit", "/dashboard", entitlements),
+                module(FeatureCode.ACCOUNTING_EXPORT, "Exports comptables", "Finance",
+                        "Export CSV des factures et lignes d'abonnement pour le rapprochement comptable.",
+                        "subscription-service: /api/subscriptions/invoices/accounting-export/csv", "Exporter la comptabilité", "/billing", entitlements),
+                module(FeatureCode.SMS_NOTIFICATIONS, "Notifications SMS", "Alertes",
+                        "Canal SMS pour les notifications critiques lorsque le provider SMS est configuré.",
+                        "notification-service: provider SMS", "Activer le canal SMS", "/billing", entitlements),
+                module(FeatureCode.SLA_SUPPORT, "Support avec SLA", "Support",
+                        "Engagement de niveau de service renforcé pour les demandes support Premium.",
+                        "notification-service: support SLA", "Voir le support SLA", "/billing", entitlements),
+                module(FeatureCode.ONBOARDING_SUPPORT, "Accompagnement onboarding", "Support",
+                        "Accompagnement de déploiement pour cadrer la configuration initiale et les usages RH.",
+                        "support: onboarding assisté", "Planifier l'onboarding", "/billing", entitlements)
         );
     }
 
     public SubscriptionResponse upsertSubscription(SubscriptionRequest request) {
         SubscriptionPlan plan = getPlan(request.planCode());
+        PlanEntitlementPolicy.rejectPremiumOptionsForNonPremiumPlan(
+                request.planCode(),
+                request.smsOptionEnabled(),
+                request.advancedAuditOptionEnabled(),
+                request.advancedExportOptionEnabled()
+        );
         validateSeats(plan, request.seatsPurchased());
 
         TenantSubscription subscription = tenantSubscriptionRepository.findByTenantId(TenantContext.getTenantId())
@@ -269,6 +290,12 @@ public class SubscriptionService {
         TenantSubscription subscription = getTenantSubscription();
         SubscriptionPlan currentPlan = getPlan(subscription.getPlanCode());
         SubscriptionPlan targetPlan = getPlan(request.targetPlanCode());
+        PlanEntitlementPolicy.rejectPremiumOptionsForNonPremiumPlan(
+                request.targetPlanCode(),
+                request.smsOptionEnabled(),
+                request.advancedAuditOptionEnabled(),
+                request.advancedExportOptionEnabled()
+        );
         validateSeats(targetPlan, request.seatsPurchased());
 
         if (upgrade
@@ -314,10 +341,13 @@ public class SubscriptionService {
     }
 
     private boolean isUpsellAllowed(FeatureCode featureCode, TenantSubscription subscription) {
+        if (!PlanEntitlementPolicy.premiumOptionAllowed(subscription.getPlanCode(), featureCode)) {
+            return false;
+        }
         return switch (featureCode) {
-            case SMS_NOTIFICATIONS -> subscription.isSmsOptionEnabled();
+            case SMS_NOTIFICATIONS -> subscription.isSmsOptionEnabled() && isSmsDeliveryAvailable();
             case DECLARATION_AUDIT -> subscription.isAdvancedAuditOptionEnabled();
-            case EXPORTS, ACCOUNTING_EXPORT -> subscription.isAdvancedExportOptionEnabled();
+            case ACCOUNTING_EXPORT -> subscription.isAdvancedExportOptionEnabled();
             default -> false;
         };
     }
@@ -391,6 +421,7 @@ public class SubscriptionService {
 
     private SubscriptionResponse toSubscriptionResponse(TenantSubscription subscription, SubscriptionPlan plan) {
         boolean previewAllFeaturesActive = hasPreviewAllFeaturesAccess();
+        boolean premiumTier = PlanEntitlementPolicy.isPremiumTier(subscription.getPlanCode());
         Set<String> entitlements = previewAllFeaturesActive
                 ? Arrays.stream(FeatureCode.values()).map(Enum::name).collect(Collectors.toSet())
                 : buildEntitlements(subscription, plan);
@@ -401,9 +432,9 @@ public class SubscriptionService {
                 subscription.getPendingPlanCode(),
                 subscription.getStatus(),
                 subscription.getSeatsPurchased(),
-                subscription.isSmsOptionEnabled(),
-                subscription.isAdvancedAuditOptionEnabled(),
-                subscription.isAdvancedExportOptionEnabled(),
+                premiumTier && subscription.isSmsOptionEnabled(),
+                premiumTier && subscription.isAdvancedAuditOptionEnabled(),
+                premiumTier && subscription.isAdvancedExportOptionEnabled(),
                 subscription.isCancelAtPeriodEnd(),
                 subscription.getCancellationReason(),
                 subscription.getStartsAt(),
@@ -419,15 +450,18 @@ public class SubscriptionService {
 
     private Set<String> buildEntitlements(TenantSubscription subscription, SubscriptionPlan plan) {
         Set<String> entitlements = plan.getFeatures().stream().map(Enum::name).collect(Collectors.toSet());
-        if (subscription.isSmsOptionEnabled()) {
+        if (PlanEntitlementPolicy.premiumOptionAllowed(subscription.getPlanCode(), FeatureCode.SMS_NOTIFICATIONS)
+                && subscription.isSmsOptionEnabled()
+                && isSmsDeliveryAvailable()) {
             entitlements.add(FeatureCode.SMS_NOTIFICATIONS.name());
         }
-        if (subscription.isAdvancedAuditOptionEnabled()) {
+        if (PlanEntitlementPolicy.premiumOptionAllowed(subscription.getPlanCode(), FeatureCode.DECLARATION_AUDIT)
+                && subscription.isAdvancedAuditOptionEnabled()) {
             entitlements.add(FeatureCode.DECLARATION_AUDIT.name());
         }
-        if (subscription.isAdvancedExportOptionEnabled()) {
+        if (PlanEntitlementPolicy.premiumOptionAllowed(subscription.getPlanCode(), FeatureCode.ACCOUNTING_EXPORT)
+                && subscription.isAdvancedExportOptionEnabled()) {
             entitlements.add(FeatureCode.ACCOUNTING_EXPORT.name());
-            entitlements.add(FeatureCode.EXPORTS.name());
         }
         return entitlements;
     }

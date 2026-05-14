@@ -221,7 +221,7 @@ public class ReportingService {
         List<TeleworkMetricSnapshot> metrics = teleworkMetricRepository.findAllByTenantIdAndYearAndMonth(TenantContext.getTenantId(), year, month);
         DashboardResponse dashboard = dashboard(year, month);
         StringBuilder csv = new StringBuilder("\uFEFFsep=;\n");
-        csv.append(csvRow("WorkRH - Export reporting teletravail")).append('\n');
+        csv.append(csvRow("WorkRH - Export reporting télétravail")).append('\n');
         csv.append(csvRow("Tenant", TenantContext.getTenantId())).append('\n');
         csv.append(csvRow("Periode", "%02d/%d".formatted(month, year))).append('\n');
         csv.append(csvRow("Genere le", DateTimeFormatter.ISO_INSTANT.format(Instant.now()))).append('\n');
@@ -366,7 +366,7 @@ public class ReportingService {
         contentStream.fill();
 
         writeText(contentStream, boldFont, 22, margin, y - 8, "WorkRH Reporting");
-        writeText(contentStream, regularFont, 11, margin, y - 30, "Dashboard teletravail et alertes RH");
+            writeText(contentStream, regularFont, 11, margin, y - 30, "Dashboard télétravail et alertes RH");
         drawPill(contentStream, regularFont, pageWidth - 154, y - 22, 112, 22, "Periode %02d/%d".formatted(month, year), WORKRH_SKY, WORKRH_NAVY);
         writeText(contentStream, regularFont, 8, margin, 747, "Tenant: %s  |  Genere le %s".formatted(
                 TenantContext.getTenantId(),
@@ -587,7 +587,7 @@ public class ReportingService {
         int annualLimit = effectiveAnnualLimit(metric);
         int riskScore = riskScorePercent(annualUsedDays, annualLimit);
         if (riskScore > 100) {
-            return "Depassement annuel: %d/%d jours".formatted(annualUsedDays, annualLimit);
+        return "Dépassement annuel: %d/%d jours".formatted(annualUsedDays, annualLimit);
         }
         if (riskScore >= RISK_ORANGE_THRESHOLD_PERCENT) {
             return "A surveiller: %d/%d jours".formatted(annualUsedDays, annualLimit);

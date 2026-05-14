@@ -115,6 +115,7 @@ services:
     environment:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:9761/eureka
       SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:9888
+      WORKRH_FRONTEND_ORIGIN: ${WORKRH_FRONTEND_ORIGIN:-http://localhost:4200}
     depends_on:
       - discovery-service
       - config-server
@@ -138,6 +139,9 @@ services:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:9761/eureka
       SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:9888
       SUBSCRIPTION_SERVICE_BASE_URL: http://subscription-service:9087
+      WORKRH_JWT_SECRET: ${WORKRH_JWT_SECRET:?WORKRH_JWT_SECRET is required}
+      WORKRH_DEMO_AUTHENTICATION_ENABLED: ${WORKRH_DEMO_AUTHENTICATION_ENABLED:-false}
+      WORKRH_HIBERNATE_DDL_AUTO: ${WORKRH_HIBERNATE_DDL_AUTO:-validate}
     depends_on:
       - postgres-users
       - kafka
@@ -155,6 +159,9 @@ services:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:9761/eureka
       SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:9888
       SUBSCRIPTION_SERVICE_BASE_URL: http://subscription-service:9087
+      WORKRH_JWT_SECRET: ${WORKRH_JWT_SECRET:?WORKRH_JWT_SECRET is required}
+      WORKRH_DEMO_AUTHENTICATION_ENABLED: ${WORKRH_DEMO_AUTHENTICATION_ENABLED:-false}
+      WORKRH_HIBERNATE_DDL_AUTO: ${WORKRH_HIBERNATE_DDL_AUTO:-validate}
     depends_on:
       - postgres-leaves
       - kafka
@@ -172,6 +179,9 @@ services:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:9761/eureka
       SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:9888
       SUBSCRIPTION_SERVICE_BASE_URL: http://subscription-service:9087
+      WORKRH_JWT_SECRET: ${WORKRH_JWT_SECRET:?WORKRH_JWT_SECRET is required}
+      WORKRH_DEMO_AUTHENTICATION_ENABLED: ${WORKRH_DEMO_AUTHENTICATION_ENABLED:-false}
+      WORKRH_HIBERNATE_DDL_AUTO: ${WORKRH_HIBERNATE_DDL_AUTO:-validate}
     depends_on:
       - postgres-sickness
       - kafka
@@ -189,6 +199,9 @@ services:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:9761/eureka
       SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:9888
       SUBSCRIPTION_SERVICE_BASE_URL: http://subscription-service:9087
+      WORKRH_JWT_SECRET: ${WORKRH_JWT_SECRET:?WORKRH_JWT_SECRET is required}
+      WORKRH_DEMO_AUTHENTICATION_ENABLED: ${WORKRH_DEMO_AUTHENTICATION_ENABLED:-false}
+      WORKRH_HIBERNATE_DDL_AUTO: ${WORKRH_HIBERNATE_DDL_AUTO:-validate}
     depends_on:
       - postgres-telework
       - kafka
@@ -206,6 +219,9 @@ services:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:9761/eureka
       SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:9888
       SUBSCRIPTION_SERVICE_BASE_URL: http://subscription-service:9087
+      WORKRH_JWT_SECRET: ${WORKRH_JWT_SECRET:?WORKRH_JWT_SECRET is required}
+      WORKRH_DEMO_AUTHENTICATION_ENABLED: ${WORKRH_DEMO_AUTHENTICATION_ENABLED:-false}
+      WORKRH_HIBERNATE_DDL_AUTO: ${WORKRH_HIBERNATE_DDL_AUTO:-validate}
     depends_on:
       - postgres-notifications
       - kafka
@@ -223,6 +239,10 @@ services:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:9761/eureka
       SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:9888
       SUBSCRIPTION_SERVICE_BASE_URL: http://subscription-service:9087
+      WORKRH_JWT_SECRET: ${WORKRH_JWT_SECRET:?WORKRH_JWT_SECRET is required}
+      WORKRH_DEMO_AUTHENTICATION_ENABLED: ${WORKRH_DEMO_AUTHENTICATION_ENABLED:-false}
+      WORKRH_CONNECTOR_SECRET_KEY: ${WORKRH_CONNECTOR_SECRET_KEY:?WORKRH_CONNECTOR_SECRET_KEY is required}
+      WORKRH_HIBERNATE_DDL_AUTO: ${WORKRH_HIBERNATE_DDL_AUTO:-validate}
     depends_on:
       - postgres-reporting
       - kafka
@@ -252,6 +272,9 @@ services:
       WORKRH_SMS_ENABLED: ${WORKRH_SMS_ENABLED:-false}
       WORKRH_SMS_WEBHOOK_URL: ${WORKRH_SMS_WEBHOOK_URL:-}
       SMTP_HOST: ${SMTP_HOST:-}
+      WORKRH_JWT_SECRET: ${WORKRH_JWT_SECRET:?WORKRH_JWT_SECRET is required}
+      WORKRH_DEMO_AUTHENTICATION_ENABLED: ${WORKRH_DEMO_AUTHENTICATION_ENABLED:-false}
+      WORKRH_HIBERNATE_DDL_AUTO: ${WORKRH_HIBERNATE_DDL_AUTO:-validate}
     depends_on:
       - postgres-subscriptions
       - kafka

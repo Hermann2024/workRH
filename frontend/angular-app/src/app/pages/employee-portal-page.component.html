@@ -1,6 +1,6 @@
 <ng-container *ngIf="loadError() as errorMessage; else workspaceState">
   <section class="panel loading-panel">
-    <h2>Espace employe indisponible</h2>
+    <h2>Espace employé indisponible</h2>
     <p>{{ errorMessage }}</p>
   </section>
 </ng-container>
@@ -9,7 +9,7 @@
 <ng-container *ngIf="workspace() as data; else loadingState">
   <section class="hero employee-hero">
     <div>
-      <p class="section-tag">{{ isManagedEmployeeWorkspace() ? 'Dossier salarie' : 'Mon espace' }}</p>
+      <p class="section-tag">{{ isManagedEmployeeWorkspace() ? 'Dossier salarié' : 'Mon espace' }}</p>
       <h2>{{ data.profile.firstName }} {{ data.profile.lastName }}</h2>
 
       <div class="employee-meta-grid">
@@ -68,7 +68,7 @@
 
   <section class="panel">
     <div class="tabs">
-      <button class="tab-button" type="button" [class.active]="activeTab() === 'telework'" (click)="activeTab.set('telework')">Teletravail</button>
+      <button class="tab-button" type="button" [class.active]="activeTab() === 'telework'" (click)="activeTab.set('telework')">Télétravail</button>
       <button class="tab-button" type="button" [class.active]="activeTab() === 'leave'" (click)="activeTab.set('leave')">Absences</button>
       <button class="tab-button" type="button" [class.active]="activeTab() === 'sickness'" (click)="activeTab.set('sickness')">Maladie</button>
       <button class="tab-button" type="button" [class.active]="activeTab() === 'history'" (click)="activeTab.set('history')">Historique</button>
@@ -197,7 +197,7 @@
                 <input type="file" accept="application/pdf,image/jpeg,image/png" (change)="onLeaveEvidenceSelected($event)">
               </label>
               <p class="workspace-helper" *ngIf="selectedLeaveEvidenceFile() as evidenceFile">
-                Fichier selectionne : {{ evidenceFile.name }}
+                Fichier sélectionné : {{ evidenceFile.name }}
               </p>
             </ng-container>
             <ng-template #evidenceNotRequired>
@@ -248,7 +248,7 @@
           </label>
 
           <p class="workspace-helper" *ngIf="selectedSicknessEvidenceFile() as evidenceFile">
-            Fichier selectionne : {{ evidenceFile.name }}
+            Fichier sélectionné : {{ evidenceFile.name }}
           </p>
 
           <button class="checkout-button" type="submit" [disabled]="submittingSickness()">
@@ -362,7 +362,7 @@
       <div class="section-head">
         <div>
           <p class="section-tag">Absences</p>
-          <h2>{{ isManagedEmployeeWorkspace() ? 'Demandes du salarie' : 'Mes demandes' }}</h2>
+          <h2>{{ isManagedEmployeeWorkspace() ? 'Demandes du salarié' : 'Mes demandes' }}</h2>
         </div>
       </div>
 
@@ -374,6 +374,7 @@
             <p class="small-copy" *ngIf="item.evidenceRequired">
               Justificatif : {{ item.evidenceUploaded ? (item.evidenceFileName || 'recu') : 'manquant' }}
             </p>
+            <p class="small-copy" *ngIf="item.evidenceSha256">Empreinte SHA-256 : {{ item.evidenceSha256 | slice:0:12 }}...</p>
           </div>
           <div class="history-actions">
             <span
@@ -426,6 +427,7 @@
           <p class="small-copy">
             Justificatif : {{ item.evidenceUploaded ? (item.evidenceFileName || 'recu') : 'manquant' }}
           </p>
+          <p class="small-copy" *ngIf="item.evidenceSha256">Empreinte SHA-256 : {{ item.evidenceSha256 | slice:0:12 }}...</p>
         </div>
         <span class="badge">Enregistré</span>
         <div class="history-actions">

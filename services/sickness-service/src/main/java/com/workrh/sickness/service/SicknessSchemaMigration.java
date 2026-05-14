@@ -19,6 +19,7 @@ public class SicknessSchemaMigration implements CommandLineRunner {
     public void run(String... args) {
         jdbcTemplate.execute("ALTER TABLE sickness_records ADD COLUMN IF NOT EXISTS evidence_file_name VARCHAR(255)");
         jdbcTemplate.execute("ALTER TABLE sickness_records ADD COLUMN IF NOT EXISTS evidence_content_type VARCHAR(120)");
+        jdbcTemplate.execute("ALTER TABLE sickness_records ADD COLUMN IF NOT EXISTS evidence_sha256 VARCHAR(64)");
         jdbcTemplate.execute("ALTER TABLE sickness_records ADD COLUMN IF NOT EXISTS evidence_content BYTEA");
         jdbcTemplate.execute("ALTER TABLE sickness_records ADD COLUMN IF NOT EXISTS evidence_uploaded_at TIMESTAMP WITH TIME ZONE");
         jdbcTemplate.execute("ALTER TABLE sickness_records ADD COLUMN IF NOT EXISTS evidence_uploaded_by VARCHAR(255)");

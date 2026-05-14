@@ -12,7 +12,9 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.workrh.common.tenant.TenantContext;
+import com.workrh.common.web.BadRequestException;
 import com.workrh.common.web.NotFoundException;
+import com.workrh.subscription.api.dto.StripeCheckoutRequest;
 import com.workrh.subscription.domain.BillingCycle;
 import com.workrh.subscription.domain.PlanCode;
 import com.workrh.subscription.domain.SubscriptionPlan;
@@ -89,7 +91,7 @@ class StripeCheckoutServiceTest {
                             "seatsPurchased": "25",
                             "smsOptionEnabled": "false",
                             "advancedAuditOptionEnabled": "false",
-                            "advancedExportOptionEnabled": "true"
+                            "advancedExportOptionEnabled": "false"
                           },
                           "customer_details": {
                             "email": "rh@acme.com"
@@ -110,7 +112,7 @@ class StripeCheckoutServiceTest {
         assertThat(subscription.getStatus()).isEqualTo(SubscriptionStatus.TRIAL);
         assertThat(subscription.getStripeCheckoutSessionId()).isEqualTo("cs_123");
         assertThat(subscription.getStripeSubscriptionId()).isEqualTo("sub_123");
-        assertThat(subscription.isAdvancedExportOptionEnabled()).isTrue();
+        assertThat(subscription.isAdvancedExportOptionEnabled()).isFalse();
         assertThat(subscription.getStartsAt()).isEqualTo(LocalDate.of(2025, 11, 1));
         assertThat(subscription.getRenewsAt()).isEqualTo(LocalDate.of(2025, 11, 15));
         verify(workspaceSubscriptionSyncClient, atLeastOnce()).sync(subscription);
@@ -138,6 +140,25 @@ class StripeCheckoutServiceTest {
         assertThatThrownBy(() -> stripeCheckoutService.confirmCheckoutSession("cs_other"))
                 .isInstanceOf(NotFoundException.class);
         verify(subscriptionRepository, never()).save(any(TenantSubscription.class));
+    }
+
+    @Test
+    void shouldRejectPremiumOptionsForProCheckout() {
+        TenantContext.setTenantId("acme");
+        SubscriptionPlan proPlan = buildPlan(PlanCode.PRO);
+        when(planRepository.findByCode(PlanCode.PRO)).thenReturn(Optional.of(proPlan));
+
+        assertThatThrownBy(() -> stripeCheckoutService.createCheckoutSession(new StripeCheckoutRequest(
+                PlanCode.PRO,
+                25,
+                java.util.List.of("card"),
+                false,
+                true,
+                true,
+                "rh@acme.com",
+                "http://localhost:4200/billing/success",
+                "http://localhost:4200/billing"
+        ))).isInstanceOf(BadRequestException.class);
     }
 
     private SubscriptionPlan buildPlan(PlanCode code) {
